@@ -1,0 +1,1569 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+
+<div class="topbar">
+
+  <div class="user-info">
+    👮 Petugas Piket
+  </div>
+
+  <button
+    class="logout-btn"
+    onclick="logout()"
+  >
+    Logout
+  </button>
+
+</div>
+
+<meta charset="UTF-8"/>
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1"
+/>
+
+<title>
+Dashboard Piket
+</title>
+
+<link
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+  rel="stylesheet"
+/>
+
+<style>
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+
+  transition:
+    background .2s,
+    border .2s,
+    transform .2s,
+    box-shadow .2s;
+}
+
+:root{
+
+  --primary:#2563eb;
+  --primary2:#1d4ed8;
+
+}
+
+body{
+
+  font-family:
+    Inter,
+    sans-serif;
+
+  background:
+    linear-gradient(
+      180deg,
+      #eef4ff 0%,
+      #f8fbff 100%
+    );
+
+  color:#0f172a;
+
+  padding:24px;
+
+  min-height:100vh;
+
+}
+
+.container{
+
+  max-width:1700px;
+  margin:auto;
+
+}
+
+.topbar{
+
+  display:flex;
+
+  justify-content:
+    space-between;
+
+  align-items:center;
+
+  margin-bottom:24px;
+
+}
+
+.user-info{
+
+  font-size:15px;
+
+  font-weight:700;
+
+  opacity:.95;
+
+}
+
+.logout-btn{
+
+  border:none;
+
+  background:
+    rgba(0, 64, 255, 0.98);
+
+  color:#ffffff;
+
+  padding:
+    12px 18px;
+
+  border-radius:16px;
+
+  font-size:14px;
+
+  font-weight:800;
+
+  cursor:pointer;
+
+  backdrop-filter:
+    blur(10px);
+
+  border:
+    1px solid rgba(255,255,255,.2);
+
+}
+
+.logout-btn:hover{
+
+  background:
+    rgba(0, 72, 255, 0.98);
+
+  transform:
+    translateY(-2px);
+
+}
+
+/* =====================================
+HEADER
+===================================== */
+
+.header{
+
+  background:
+    linear-gradient(
+      135deg,
+      #2563eb,
+      #1d4ed8
+    );
+
+  border-radius:36px;
+
+  padding:38px;
+
+  color:#fff;
+
+  margin-bottom:32px;
+
+  box-shadow:
+    0 14px 40px rgba(37,99,235,.25);
+
+}
+
+.header h1{
+
+  font-size:42px;
+  font-weight:800;
+  letter-spacing:-1px;
+
+  margin-bottom:10px;
+
+}
+
+.header p{
+
+  font-size:18px;
+  opacity:.92;
+
+}
+
+/* =====================================
+FILTER
+===================================== */
+
+.filter-wrap{
+
+  margin-top:28px;
+
+  display:flex;
+
+  gap:16px;
+
+  flex-wrap:wrap;
+
+}
+
+.filter-wrap input{
+
+  background:
+    rgba(255,255,255,.18);
+
+  border:
+    1px solid rgba(255,255,255,.28);
+
+  color:#fff;
+
+  backdrop-filter:
+    blur(12px);
+
+  padding:16px 20px;
+
+  border-radius:18px;
+
+  font-size:16px;
+
+  min-width:240px;
+
+  outline:none;
+
+}
+
+.filter-wrap input::-webkit-calendar-picker-indicator{
+  filter:invert(1);
+}
+
+.filter-wrap button{
+
+  border:none;
+
+  background:#fff;
+
+  color:#1d4ed8;
+
+  padding:16px 26px;
+
+  border-radius:18px;
+
+  font-size:16px;
+
+  font-weight:800;
+
+  cursor:pointer;
+
+  backdrop-filter:blur(12px);
+
+  box-shadow:
+    0 10px 25px rgba(0,0,0,.08);
+
+}
+
+.filter-wrap button:hover{
+
+  transform:translateY(-2px);
+
+}
+
+/* =====================================
+GRID
+===================================== */
+
+.kelas-grid{
+
+  display:grid;
+
+  grid-template-columns:
+    repeat(
+      auto-fit,
+      minmax(420px,1fr)
+    );
+
+  gap:26px;
+
+}
+
+/* =====================================
+CARD
+===================================== */
+
+.kelas-card{
+
+  background:
+    rgba(255,255,255,.88);
+
+  backdrop-filter:
+    blur(14px);
+
+  border:
+    1px solid rgba(255,255,255,.7);
+
+  border-radius:32px;
+
+  padding:28px;
+
+  box-shadow:
+    0 15px 40px rgba(15,23,42,.06);
+
+}
+
+.kelas-card:hover{
+
+  transform:
+    translateY(-4px);
+
+  box-shadow:
+    0 22px 50px rgba(37,99,235,.12);
+
+}
+
+/* =====================================
+CARD HEADER
+===================================== */
+
+.kelas-header{
+
+  display:flex;
+
+  justify-content:
+    space-between;
+
+  align-items:center;
+
+  margin-bottom:24px;
+
+}
+
+.kelas-title{
+
+  font-size:42px;
+
+  font-weight:800;
+
+  letter-spacing:-1px;
+
+}
+
+.badge{
+
+  min-width:72px;
+  height:72px;
+
+  border-radius:22px;
+
+  display:flex;
+
+  align-items:center;
+  justify-content:center;
+
+  color:#fff;
+
+  font-size:26px;
+  font-weight:800;
+
+  box-shadow:
+    0 10px 25px rgba(0,0,0,.12);
+
+}
+
+.H{
+  background:#16a34a;
+}
+
+.SI{
+  background:#f59e0b;
+}
+
+.A{
+  background:#dc2626;
+}
+
+.C{
+  background:#7c3aed;
+}
+
+/* =====================================
+STAT
+===================================== */
+
+.stat-grid{
+
+  display:grid;
+
+  grid-template-columns:
+    repeat(5,1fr);
+
+  gap:14px;
+
+  margin-bottom:24px;
+
+}
+
+.stat-item{
+
+  background:#f8fbff;
+
+  border:
+    1px solid #e5edff;
+
+  border-radius:22px;
+
+  padding:18px;
+
+  text-align:center;
+
+}
+
+.stat-item:hover{
+
+  background:#ffffff;
+
+  transform:translateY(-2px);
+
+}
+
+.stat-item span{
+
+  display:block;
+
+  color:#64748b;
+
+  font-size:13px;
+
+  font-weight:700;
+
+  margin-bottom:8px;
+
+}
+
+.stat-item strong{
+
+  font-size:38px;
+  font-weight:800;
+
+}
+
+/* =====================================
+INFO CHIP
+===================================== */
+
+.info-wrap{
+
+  display:flex;
+
+  gap:14px;
+
+  flex-wrap:wrap;
+
+  margin-bottom:24px;
+
+}
+
+.info-chip{
+
+  background:#eff6ff;
+
+  color:#1e3a8a;
+
+  padding:14px 18px;
+
+  border-radius:16px;
+
+  font-size:14px;
+
+  font-weight:700;
+
+}
+
+/* =====================================
+GURU
+===================================== */
+
+.guru-title{
+
+  font-size:24px;
+
+  font-weight:800;
+
+  margin-bottom:16px;
+
+}
+
+.guru-box{
+
+  border:
+    1px solid #e2e8f0;
+
+  background:#fbfdff;
+
+  border-radius:22px;
+
+  padding:18px;
+
+  margin-bottom:14px;
+
+}
+
+.guru-box:hover{
+
+  border-color:#bfdbfe;
+
+  transform:translateY(-2px);
+
+}
+
+.guru-nama{
+
+  font-size:18px;
+
+  font-weight:800;
+
+  margin-bottom:8px;
+
+}
+
+.guru-jam{
+
+  color:#475569;
+
+  font-size:14px;
+
+  margin-bottom:14px;
+
+}
+
+.guru-stat{
+
+  display:flex;
+
+  gap:10px;
+
+  flex-wrap:wrap;
+
+}
+
+.pill{
+
+  color:#fff;
+
+  padding:9px 14px;
+
+  border-radius:999px;
+
+  font-weight:700;
+
+  font-size:13px;
+
+}
+
+.pill.h{
+  background:#16a34a;
+}
+
+.pill.s{
+  background:#f59e0b;
+}
+
+.pill.i{
+  background:#0ea5e9;
+}
+
+.pill.a{
+  background:#dc2626;
+}
+
+.pill.c{
+  background:#7c3aed;
+}
+
+/* =====================================
+BUTTON
+===================================== */
+
+.btn-detail{
+
+  width:100%;
+
+  border:none;
+
+  background:
+    linear-gradient(
+      135deg,
+      #2563eb,
+      #1d4ed8
+    );
+
+  color:#fff;
+
+  padding:16px;
+
+  border-radius:18px;
+
+  font-size:16px;
+
+  font-weight:800;
+
+  margin-top:20px;
+
+  cursor:pointer;
+
+  box-shadow:
+    0 12px 24px rgba(37,99,235,.2);
+
+}
+
+.btn-detail:hover{
+
+  transform:translateY(-2px);
+
+  opacity:.95;
+
+}
+
+/* =====================================
+DETAIL
+===================================== */
+
+.detail-box{
+
+  background:
+    rgba(255,255,255,.92);
+
+  backdrop-filter:blur(12px);
+
+  border-radius:32px;
+
+  padding:28px;
+
+  margin-top:32px;
+
+  box-shadow:
+    0 10px 28px rgba(0,0,0,.06);
+
+}
+
+.detail-box h2{
+
+  font-size:32px;
+
+  font-weight:800;
+
+  margin-bottom:24px;
+
+}
+
+/* =====================================
+TABLE
+===================================== */
+
+.table-wrap{
+
+  overflow:auto;
+
+  border:
+    1px solid #e2e8f0;
+
+  border-radius:24px;
+
+}
+
+table{
+
+  width:100%;
+
+  border-collapse:
+    collapse;
+
+  min-width:1200px;
+
+}
+
+thead{
+
+  background:#eff6ff;
+
+}
+
+th{
+
+  padding:18px;
+
+  font-size:15px;
+
+  color:#1e3a8a;
+
+  font-weight:800;
+
+  text-align:center;
+
+}
+
+td{
+
+  padding:15px;
+
+  border-top:
+    1px solid #edf2ff;
+
+  text-align:center;
+
+  font-size:15px;
+
+}
+
+tbody tr:hover td{
+
+  background:#f8fbff;
+
+}
+
+.nama-cell{
+
+  text-align:left;
+
+  min-width:240px;
+
+  background:#ffffff;
+
+  position:sticky;
+
+  left:0;
+
+  z-index:2;
+
+  font-weight:700;
+
+  box-shadow:
+    10px 0 18px rgba(15,23,42,.03);
+
+}
+
+/* =====================================
+EMPTY
+===================================== */
+
+.empty{
+
+  background:#fff;
+
+  border-radius:30px;
+
+  padding:60px;
+
+  text-align:center;
+
+  font-size:22px;
+
+  font-weight:700;
+
+  box-shadow:
+    0 10px 28px rgba(0,0,0,.06);
+
+}
+
+/* =====================================
+RESPONSIVE
+===================================== */
+
+@media(max-width:768px){
+
+  body{
+    padding:14px;
+  }
+
+  .header{
+    padding:24px;
+    border-radius:24px;
+  }
+
+  .header h1{
+    font-size:30px;
+  }
+
+  .kelas-title{
+    font-size:28px;
+  }
+
+  .stat-grid{
+    grid-template-columns:
+      repeat(2,1fr);
+  }
+
+  .badge{
+    width:60px;
+    height:60px;
+    font-size:22px;
+  }
+
+}
+
+/* =====================================
+SUMMARY
+===================================== */
+
+.summary-wrap{
+
+  display:grid;
+
+  grid-template-columns:
+    repeat(auto-fit,minmax(220px,1fr));
+
+  gap:18px;
+
+  margin-bottom:28px;
+
+}
+
+.summary-card{
+
+  background:#fff;
+
+  border-radius:28px;
+
+  padding:24px;
+
+  box-shadow:
+    0 10px 25px rgba(0,0,0,.06);
+
+  border:2px solid #e2e8f0;
+
+}
+
+.summary-card span{
+
+  display:block;
+
+  font-size:16px;
+
+  color:#64748b;
+
+  margin-bottom:10px;
+
+  font-weight:700;
+
+}
+
+.summary-card strong{
+
+  font-size:42px;
+
+  font-weight:800;
+
+}
+
+.summary-card.hadir{
+  border-color:#16a34a;
+}
+
+.summary-card.sakit{
+  border-color:#f59e0b;
+}
+
+.summary-card.alpha{
+  border-color:#dc2626;
+}
+
+.summary-card.warning{
+  border-color:#7c3aed;
+}
+
+/* =====================================
+SEARCH
+===================================== */
+
+.search-wrap{
+
+  margin-bottom:28px;
+
+}
+
+.search-wrap select{
+
+  width:100%;
+
+  padding:20px 24px;
+
+  border:none;
+
+  border-radius:24px;
+
+  background:#fff;
+
+  font-size:18px;
+
+  font-weight:700;
+
+  box-shadow:
+    0 10px 25px rgba(0,0,0,.06);
+
+  outline:none;
+
+  cursor:pointer;
+
+}
+
+/* =====================================
+STATUS BORDER KELAS
+===================================== */
+
+.kelas-card{
+
+  border-left:10px solid #cbd5e1;
+
+}
+
+.kelas-card.status-H{
+  border-left-color:#16a34a;
+}
+
+.kelas-card.status-SI{
+  border-left-color:#f59e0b;
+}
+
+.kelas-card.status-A{
+  border-left-color:#dc2626;
+}
+
+.kelas-card.status-C{
+  border-left-color:#7c3aed;
+}
+
+/* =====================================
+BELUM ABSEN
+===================================== */
+
+.not-yet{
+
+  background:
+    linear-gradient(
+      135deg,
+      #fee2e2,
+      #fecaca
+    );
+
+  color:#991b1b;
+
+  padding:14px 18px;
+
+  border-radius:18px;
+
+  font-weight:800;
+
+  margin-bottom:18px;
+
+  font-size:16px;
+
+  border:2px solid #ef4444;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+  <div class="header">
+
+    <h1>
+      DASHBOARD PIKET
+    </h1>
+
+    <p>
+      Monitoring Absensi Harian Siswa
+    </p>
+
+    <div class="filter-wrap">
+
+      <input
+        type="date"
+        id="tanggal"
+      />
+
+      <button onclick="loadDashboard()">
+        Refresh Dashboard
+      </button>
+
+    </div>
+
+  </div>
+
+    <!-- =====================================================
+  SUMMARY BAR
+  TARUH DI BAWAH HEADER
+  ===================================================== -->
+
+  <div class="summary-wrap">
+
+    <div class="summary-card">
+      <span>Total Kelas</span>
+      <strong id="sumKelas">0</strong>
+    </div>
+
+    <div class="summary-card hadir">
+      <span>Total Hadir</span>
+      <strong id="sumHadir">0</strong>
+    </div>
+
+    <div class="summary-card sakit">
+      <span>Sakit/Izin</span>
+      <strong id="sumSI">0</strong>
+    </div>
+
+    <div class="summary-card alpha">
+      <span>Alpha/Cabut</span>
+      <strong id="sumAlpha">0</strong>
+    </div>
+
+    <div class="summary-card warning">
+      <span>Belum Diabsen</span>
+      <strong id="sumBelum">0</strong>
+    </div>
+
+  </div>
+
+  <!-- SEARCH -->
+
+  <div class="search-wrap">
+
+    <select id="filterKelas">
+
+      <option value="">
+        Semua Kelas
+      </option>
+
+    </select>
+
+  </div>
+
+  <div
+    id="kelasContainer"
+    class="kelas-grid"
+  ></div>
+
+  <div
+    id="detailContainer"
+  ></div>
+
+</div>
+
+<script>
+
+// =====================================
+// API
+// =====================================
+
+const API_URL =
+"https://script.google.com/macros/s/AKfycbw_6HNjl9sS8PqlDvOwnlUCEc5ZOgBbEXjOT2KgGlMsoAWcUqOMSS6U5rrD6-CSmvs/exec";
+
+let ALL_KELAS = [];
+let DASHBOARD_DATA = [];
+
+// =====================================
+// INIT
+// =====================================
+
+window.onload = async ()=>{
+
+  document.getElementById(
+    "tanggal"
+  ).value =
+    new Date()
+    .toISOString()
+    .split("T")[0];
+
+  await loadDashboard();
+
+};
+
+// =====================================
+// LOAD DASHBOARD
+// =====================================
+
+async function loadDashboard(){
+
+  try{
+
+    const tanggal =
+      document.getElementById(
+        "tanggal"
+      ).value;
+
+    const kelas = "SEMUA";
+
+    const res =
+      await fetch(
+
+        API_URL +
+
+        "?action=getDashboardPiket" +
+
+        "&tanggal=" +
+        encodeURIComponent(tanggal) +
+
+        "&kelas=" +
+        encodeURIComponent(kelas)
+
+      );
+
+    const result =
+      await res.json();
+
+    if(!result.success){
+
+      throw new Error(
+        result.error
+      );
+
+    }
+
+    DASHBOARD_DATA =
+      result.data || [];
+
+    renderFilterKelas();
+    renderCards();
+
+  }catch(err){
+
+    console.error(err);
+
+    document.getElementById(
+      "kelasContainer"
+    ).innerHTML =
+    `
+    <div class="empty">
+      ${err.message}
+    </div>
+    `;
+
+  }
+
+}
+
+function renderFilterKelas(){
+
+  const select =
+  document.getElementById(
+    "filterKelas"
+  );
+
+  const kelasList =
+
+  [...new Set(
+
+    DASHBOARD_DATA.map(
+      x => x.kelas
+    )
+
+  )].sort();
+
+  select.innerHTML =
+  `
+  <option value="">
+    Semua Kelas
+  </option>
+  `;
+
+  kelasList.forEach(kelas=>{
+
+    select.innerHTML +=
+    `
+    <option value="${kelas}">
+      ${kelas}
+    </option>
+    `;
+
+  });
+
+}
+
+
+// =====================================
+// RENDER CARD
+// =====================================
+
+function renderCards(){
+
+  const wrap =
+  document.getElementById(
+    "kelasContainer"
+  );
+
+  const selectedKelas =
+document.getElementById(
+  "filterKelas"
+).value;
+
+  // =====================================
+  // SORTING KELAS TERBURUK
+  // =====================================
+
+  const sorted =
+  [...DASHBOARD_DATA]
+
+  .sort((a,b)=>{
+
+    const aAlpha =
+    (a.statistik?.A || 0) +
+    (a.statistik?.C || 0);
+
+    const bAlpha =
+    (b.statistik?.A || 0) +
+    (b.statistik?.C || 0);
+
+    return bAlpha - aAlpha;
+
+  })
+
+  .filter(item=>
+
+  !selectedKelas ||
+
+  item.kelas === selectedKelas
+
+  );
+
+  // =====================================
+  // SUMMARY
+  // =====================================
+
+  let totalH = 0;
+  let totalSI = 0;
+  let totalA = 0;
+  let totalBelum = 0;
+
+  sorted.forEach(item=>{
+
+    const s =
+    item.statistik || {};
+
+    totalH += s.H || 0;
+
+    totalSI +=
+    (s.S || 0) +
+    (s.I || 0);
+
+    totalA +=
+    (s.A || 0) +
+    (s.C || 0);
+
+    if(
+      !item.guruList ||
+      item.guruList.length <= 0
+    ){
+      totalBelum++;
+    }
+
+  });
+
+  document.getElementById(
+    "sumKelas"
+  ).innerText =
+  sorted.length;
+
+  document.getElementById(
+    "sumHadir"
+  ).innerText =
+  totalH;
+
+  document.getElementById(
+    "sumSI"
+  ).innerText =
+  totalSI;
+
+  document.getElementById(
+    "sumAlpha"
+  ).innerText =
+  totalA;
+
+  document.getElementById(
+    "sumBelum"
+  ).innerText =
+  totalBelum;
+
+  // =====================================
+  // CARD
+  // =====================================
+
+  wrap.innerHTML =
+
+  sorted.map(item=>{
+
+    const statistik =
+    item.statistik || {};
+
+    const guruList =
+    Array.isArray(item.guruList)
+    ? item.guruList
+    : [];
+
+    const belumAbsen =
+    guruList.length <= 0;
+
+    return `
+
+    <div class="
+      kelas-card
+      status-${item.finalStatus}
+    ">
+
+      ${
+        belumAbsen
+        ?
+        `
+        <div class="not-yet">
+          ⚠ BELUM ADA GURU MENGABSEN
+        </div>
+        `
+        :
+        ""
+      }
+
+      <div class="kelas-header">
+
+        <div class="kelas-title">
+          ${item.kelas}
+        </div>
+
+        <div class="badge ${item.finalStatus}">
+          ${item.finalStatus}
+        </div>
+
+      </div>
+
+      <div class="stat-grid">
+
+        <div class="stat-item">
+          <span>HADIR</span>
+          <strong>${statistik.H || 0}</strong>
+        </div>
+
+        <div class="stat-item">
+          <span>SAKIT</span>
+          <strong>${statistik.S || 0}</strong>
+        </div>
+
+        <div class="stat-item">
+          <span>IZIN</span>
+          <strong>${statistik.I || 0}</strong>
+        </div>
+
+        <div class="stat-item">
+          <span>ALPA</span>
+          <strong>${statistik.A || 0}</strong>
+        </div>
+
+        <div class="stat-item">
+          <span>CABUT</span>
+          <strong>${statistik.C || 0}</strong>
+        </div>
+
+      </div>
+
+      <div class="info-wrap">
+
+        <div class="info-chip">
+          👨‍🎓 ${item.totalSiswa} Siswa
+        </div>
+
+        <div class="info-chip">
+          👨‍🏫 ${item.totalGuru} Guru
+        </div>
+
+      </div>
+
+      <button
+        class="btn-detail"
+        onclick="showDetail('${item.kelas}')"
+      >
+        Lihat Detail
+      </button>
+
+    </div>
+
+    `;
+
+  }).join("");
+
+}
+
+
+
+// =====================================
+// DETAIL
+// =====================================
+
+function showDetail(kelasNama){
+
+  const item =
+    DASHBOARD_DATA.find(
+      x=>x.kelas === kelasNama
+    );
+
+  if(!item){
+    return;
+  }
+
+  document.getElementById(
+    "detailContainer"
+  ).innerHTML =
+
+  `
+  <div class="detail-box">
+
+    <h2>
+      Detail Absensi ${kelasNama}
+    </h2>
+
+    ${renderTable(item)}
+
+  </div>
+  `;
+
+  window.scrollTo({
+
+    top:
+      document
+      .getElementById(
+        "detailContainer"
+      )
+      .offsetTop - 30,
+
+    behavior:
+      "smooth"
+
+  });
+
+}
+
+// =====================================
+// TABLE
+// =====================================
+
+function renderTable(item){
+
+  const siswaList =
+    item.siswaList || [];
+
+  return `
+
+  <div class="table-wrap">
+
+    <table>
+
+      <thead>
+
+        <tr>
+
+          <th>
+            Nama Siswa
+          </th>
+
+          ${
+            Array
+            .from(
+              {length:11},
+              (_,i)=>`
+              <th>${i+1}</th>
+              `
+            ).join("")
+          }
+
+        </tr>
+
+      </thead>
+
+      <tbody>
+
+      ${
+
+        siswaList.map(siswa=>{
+
+          return `
+
+          <tr>
+
+            <td class="nama-cell">
+              ${siswa.nama}
+            </td>
+
+            ${
+
+              Array
+              .from(
+                {length:11},
+                (_,i)=>{
+
+                  const jam =
+                    i + 1;
+
+                  let status =
+                    siswa.jam?.[jam] || "-";
+
+                  if(status === "H"){
+                    status = "✓";
+                  }
+
+                  return `
+                  <td>
+                    ${status}
+                  </td>
+                  `;
+
+                }
+              ).join("")
+
+            }
+
+          </tr>
+
+          `;
+
+        }).join("")
+
+      }
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+  `;
+
+}
+
+document
+.getElementById("filterKelas")
+.addEventListener(
+  "change",
+  renderCards
+);
+
+function logout(){
+
+  const yes =
+  confirm(
+    "Yakin ingin logout?"
+  );
+
+  if(!yes){
+    return;
+  }
+
+  localStorage.removeItem(
+    "user"
+  );
+
+  localStorage.removeItem(
+    "userData"
+  );
+
+  window.location.href =
+  "index.html";
+
+}
+
+</script>
+
+</body>
+</html>

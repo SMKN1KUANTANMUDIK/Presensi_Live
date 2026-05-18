@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+
+<meta charset="UTF-8" />
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0"
+/>
+
+<title>Dashboard • Absensi Premium</title>
+
+<!-- FONT -->
+<link
+  href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+  rel="stylesheet"
+/>
+
+<!-- LUCIDE -->
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<style>
+
+/* =========================================================
+ROOT
+========================================================= */
+
+:root{
+
+  --primary:#2563eb;
+  --primary2:#1d4ed8;
+
+  --bg:#f3f7ff;
+  --card:#ffffff;
+
+  --text:#0f172a;
+  --text-soft:#64748b;
+
+  --border:#dbe7ff;
+
+  --success:#16a34a;
+  --danger:#dc2626;
+  --warning:#f59e0b;
+
+  --shadow:
+  0 10px 35px rgba(37,99,235,.08);
+
+}
+
+/* DARK MODE */
+
+body.dark{
+
+  --bg:#081120;
+  --card:#0f172a;
+
+  --text:#f8fafc;
+  --text-soft:#94a3b8;
+
+  --border:#1e293b;
+
+  --shadow:
+  0 10px 35px rgba(0,0,0,.35);
+
+}
+
+/* =========================================================
+RESET
+========================================================= */
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+html{
+  scroll-behavior:smooth;
+}
+
+body{
+
+  font-family:
+  'Plus Jakarta Sans',
+  sans-serif;
+
+  background:
+  radial-gradient(
+    circle at top left,
+    rgba(37,99,235,.08),
+    transparent 35%
+  ),
+  var(--bg);
+
+  color:var(--text);
+
+  overflow:hidden;
+
+  transition:.3s;
+
+}
+
+/* =========================================================
+LAYOUT
+========================================================= */
+
+.app-layout{
+
+  display:flex;
+
+  min-height:100vh;
+
+}
+
+/* =========================================================
+SIDEBAR
+========================================================= */
+
+.sidebar{
+
+  width:300px;
+
+  background:var(--card);
+
+  border-right:
+  1px solid var(--border);
+
+  padding:24px 18px;
+
+  display:flex;
+  flex-direction:column;
+
+  position:fixed;
+
+  top:0;
+  left:0;
+  bottom:0;
+
+  overflow-y:auto;
+
+  z-index:999;
+
+  transition:.3s;
+
+}
+
+/* SCROLLBAR */
+
+.sidebar::-webkit-scrollbar{
+  width:8px;
+}
+
+.sidebar::-webkit-scrollbar-thumb{
+
+  background:
+  linear-gradient(
+    180deg,
+    #2563eb,
+    #1d4ed8
+  );
+
+  border-radius:999px;
+
+}
+
+.sidebar-logo{
+
+  display:flex;
+  align-items:center;
+  gap:16px;
+
+  margin-bottom:35px;
+
+  padding-bottom:24px;
+
+  border-bottom:
+  1px solid var(--border);
+
+}
+
+.logo-box{
+
+  width:62px;
+  height:62px;
+
+  border-radius:22px;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  background:
+  linear-gradient(
+    135deg,
+    var(--primary),
+    var(--primary2)
+  );
+
+  color:white;
+
+  box-shadow:
+  0 12px 25px rgba(37,99,235,.25);
+
+}
+
+.logo-box svg{
+
+  width:30px;
+  height:30px;
+
+}
+
+.sidebar-logo h2{
+
+  font-size:22px;
+  font-weight:800;
+
+}
+
+.sidebar-logo p{
+
+  font-size:13px;
+
+  color:var(--text-soft);
+
+  margin-top:4px;
+
+}
+
+.sidebar-menu{
+
+  display:flex;
+  flex-direction:column;
+
+  gap:10px;
+
+}
+
+.side-link{
+
+  display:flex;
+  align-items:center;
+  gap:16px;
+
+  padding:16px 18px;
+
+  border-radius:20px;
+
+  text-decoration:none;
+
+  color:var(--text);
+
+  font-weight:700;
+
+  transition:.25s ease;
+
+}
+
+.side-link:hover{
+
+  background:
+  rgba(37,99,235,.08);
+
+  transform:translateX(4px);
+
+}
+
+.side-link.active{
+
+  background:
+  linear-gradient(
+    135deg,
+    var(--primary),
+    var(--primary2)
+  );
+
+  color:white;
+
+  box-shadow:
+  0 10px 25px rgba(37,99,235,.2);
+
+}
+
+.side-icon{
+
+  width:46px;
+  height:46px;
+
+  border-radius:16px;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  background:
+  rgba(37,99,235,.08);
+
+  flex-shrink:0;
+
+}
+
+.side-link.active .side-icon{
+
+  background:
+  rgba(255,255,255,.15);
+
+}
+
+.side-icon svg{
+
+  width:22px;
+  height:22px;
+
+}
+
+.logout-btn{
+
+  margin-top:auto;
+
+  border:none;
+
+  background:
+  linear-gradient(
+    135deg,
+    #ef4444,
+    #dc2626
+  );
+
+  color:white;
+
+  padding:22px;
+
+  border-radius:22px;
+
+  font-size:17px;
+  font-weight:800;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:14px;
+
+  cursor:pointer;
+
+  transition:.3s ease;
+
+  box-shadow:
+  0 12px 25px rgba(220,38,38,.22);
+
+}
+
+.logout-btn:hover{
+
+  transform:translateY(-4px);
+
+}
+
+/* =========================================================
+MAIN
+========================================================= */
+
+.main-content{
+
+  margin-left:300px;
+
+  width:calc(100% - 300px);
+
+  min-height:100vh;
+
+  overflow-y:auto;
+
+  padding:34px;
+
+}
+
+/* =========================================================
+TOPBAR
+========================================================= */
+
+.topbar{
+
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+
+  gap:20px;
+
+  margin-bottom:32px;
+
+  flex-wrap:wrap;
+
+}
+
+.topbar-left h1{
+
+  font-size:42px;
+  font-weight:800;
+
+  line-height:1.1;
+
+  margin-bottom:10px;
+
+  background:
+  linear-gradient(
+    135deg,
+    var(--text),
+    var(--primary)
+  );
+
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+
+}
+
+.topbar-left p{
+
+  color:var(--text-soft);
+
+  line-height:1.8;
+
+}
+
+.topbar-right{
+
+  display:flex;
+  align-items:center;
+  gap:14px;
+
+}
+
+.top-btn{
+
+  border:none;
+
+  background:var(--card);
+
+  border:
+  1px solid var(--border);
+
+  color:var(--text);
+
+  padding:16px 22px;
+
+  border-radius:18px;
+
+  display:flex;
+  align-items:center;
+  gap:12px;
+
+  font-weight:700;
+
+  cursor:pointer;
+
+  transition:.25s;
+
+}
+
+.top-btn:hover{
+
+  transform:translateY(-3px);
+
+  box-shadow:var(--shadow);
+
+}
+
+/* =========================================================
+KPI GRID
+========================================================= */
+
+.dashboard-grid{
+
+  display:grid;
+
+  grid-template-columns:
+  repeat(auto-fit,minmax(260px,1fr));
+
+  gap:24px;
+
+  margin-bottom:34px;
+
+}
+
+.stat-card{
+
+  background:
+  linear-gradient(
+    180deg,
+    var(--card),
+    rgba(255,255,255,.6)
+  );
+
+  border:
+  1px solid var(--border);
+
+  border-radius:32px;
+
+  padding:30px;
+
+  position:relative;
+
+  overflow:hidden;
+
+  transition:.3s ease;
+
+  box-shadow:var(--shadow);
+
+}
+
+.stat-card:hover{
+
+  transform:translateY(-6px);
+
+}
+
+.stat-top{
+
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+
+  gap:20px;
+
+}
+
+.stat-title{
+
+  font-size:14px;
+  font-weight:700;
+
+  color:var(--text-soft);
+
+  margin-bottom:14px;
+
+}
+
+.stat-value{
+
+  font-size:52px;
+  font-weight:800;
+
+  line-height:1;
+
+}
+
+.stat-desc{
+
+  margin-top:18px;
+
+  color:var(--success);
+
+  font-size:13px;
+  font-weight:700;
+
+}
+
+.stat-icon{
+
+  width:78px;
+  height:78px;
+
+  border-radius:24px;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  color:white;
+
+  background:
+  linear-gradient(
+    135deg,
+    var(--primary),
+    var(--primary2)
+  );
+
+  box-shadow:
+  0 14px 28px rgba(37,99,235,.25);
+
+}
+
+.stat-icon svg{
+
+  width:34px;
+  height:34px;
+
+}
+
+/* =========================================================
+ACTIVITY
+========================================================= */
+
+.activity-box{
+
+  background:var(--card);
+
+  border:
+  1px solid var(--border);
+
+  border-radius:34px;
+
+  padding:34px;
+
+  box-shadow:var(--shadow);
+
+}
+
+.section-head{
+
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+
+  gap:20px;
+
+  margin-bottom:26px;
+
+}
+
+.section-head h2{
+
+  font-size:28px;
+  font-weight:800;
+
+}
+
+.activity-list{
+
+  display:flex;
+  flex-direction:column;
+
+  gap:18px;
+
+}
+
+.activity-item{
+
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+
+  gap:20px;
+
+  padding:22px;
+
+  border-radius:24px;
+
+  border:
+  1px solid transparent;
+
+  transition:.25s;
+
+}
+
+.activity-item:hover{
+
+  background:
+  rgba(37,99,235,.04);
+
+  border-color:
+  var(--border);
+
+}
+
+.activity-left{
+
+  display:flex;
+  align-items:center;
+  gap:18px;
+
+}
+
+.activity-icon{
+
+  width:64px;
+  height:64px;
+
+  border-radius:22px;
+
+  background:
+  linear-gradient(
+    135deg,
+    var(--primary),
+    var(--primary2)
+  );
+
+  color:white;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  flex-shrink:0;
+
+}
+
+.activity-icon svg{
+
+  width:28px;
+  height:28px;
+
+}
+
+.activity-info strong{
+
+  display:block;
+
+  font-size:16px;
+
+  margin-bottom:8px;
+
+}
+
+.activity-info p{
+
+  font-size:14px;
+
+  color:var(--text-soft);
+
+}
+
+.badge{
+
+  padding:12px 18px;
+
+  border-radius:999px;
+
+  font-size:12px;
+  font-weight:800;
+
+  background:#dcfce7;
+  color:#166534;
+
+}
+
+/* =========================================================
+RESPONSIVE
+========================================================= */
+
+@media(max-width:1100px){
+
+  .sidebar{
+
+    width:260px;
+
+  }
+
+  .main-content{
+
+    margin-left:260px;
+
+    width:calc(100% - 260px);
+
+  }
+
+}
+
+@media(max-width:900px){
+
+  body{
+    overflow:auto;
+  }
+
+  .app-layout{
+    flex-direction:column;
+  }
+
+  .sidebar{
+
+    position:relative;
+
+    width:100%;
+
+    height:auto;
+
+    border-right:none;
+
+    border-bottom:
+    1px solid var(--border);
+
+  }
+
+  .main-content{
+
+    margin-left:0;
+
+    width:100%;
+
+    padding:22px;
+
+  }
+
+  .topbar{
+
+    flex-direction:column;
+    align-items:flex-start;
+
+  }
+
+  .topbar-left h1{
+
+    font-size:34px;
+
+  }
+
+  .stat-value{
+
+    font-size:42px;
+
+  }
+
+}
+
+@media(max-width:600px){
+
+  .dashboard-grid{
+
+    grid-template-columns:1fr;
+
+  }
+
+  .activity-item{
+
+    flex-direction:column;
+    align-items:flex-start;
+
+  }
+
+  .topbar-right{
+
+    width:100%;
+
+  }
+
+  .top-btn{
+
+    width:100%;
+    justify-content:center;
+
+  }
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="app-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <div class="sidebar-logo">
+
+      <div class="logo-box">
+        <i data-lucide="graduation-cap"></i>
+      </div>
+
+      <div>
+
+        <h2>ABSENSI</h2>
+
+        <p>Premium System</p>
+
+      </div>
+
+    </div>
+
+    <nav class="sidebar-menu">
+
+      <a href="admin.html" class="side-link active">
+
+        <div class="side-icon">
+          <i data-lucide="layout-dashboard"></i>
+        </div>
+
+        Dashboard
+
+      </a>
+
+      <a href="input.html" class="side-link">
+
+        <div class="side-icon">
+          <i data-lucide="clipboard-check"></i>
+        </div>
+
+        Input Absensi
+
+      </a>
+
+      <a href="report.html" class="side-link">
+
+        <div class="side-icon">
+          <i data-lucide="bar-chart-3"></i>
+        </div>
+
+        Report Absensi
+
+      </a>
+
+      <a href="piket.html" class="side-link">
+
+        <div class="side-icon">
+          <i data-lucide="shield-alert"></i>
+        </div>
+
+        Dashboard Piket
+
+      </a>
+
+      <a href="kepsek.html" class="side-link">
+
+        <div class="side-icon">
+          <i data-lucide="monitor-smartphone"></i>
+        </div>
+
+        Dashboard Kepsek
+
+      </a>
+
+      <a href="riwayat.html" class="side-link">
+
+        <div class="side-icon">
+          <i data-lucide="history"></i>
+        </div>
+
+        Riwayat Absensi
+
+      </a>
+
+    </nav>
+
+    <button
+      class="logout-btn"
+      onclick="logoutApp()"
+    >
+
+      <i data-lucide="log-out"></i>
+
+      Logout
+
+    </button>
+
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-content">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+
+      <div class="topbar-left">
+
+        <h1>
+          Dashboard Utama
+        </h1>
+
+        <p>
+          Sistem monitoring absensi sekolah modern,
+          profesional, realtime, dan responsive.
+        </p>
+
+      </div>
+
+      <div class="topbar-right">
+
+        <button class="top-btn">
+
+          <i data-lucide="calendar-days"></i>
+
+          2025 / 2026
+
+        </button>
+
+        <button
+          class="top-btn"
+          onclick="toggleDarkMode()"
+        >
+
+          <i data-lucide="moon-star"></i>
+
+          Dark Mode
+
+        </button>
+
+      </div>
+
+    </div>
+
+    <!-- KPI -->
+    <div class="dashboard-grid">
+
+      <!-- SISWA -->
+      <div class="stat-card">
+
+        <div class="stat-top">
+
+          <div>
+
+            <div class="stat-title">
+              Total Siswa
+            </div>
+
+            <div
+              class="stat-value"
+              id="totalSiswa"
+            >
+              0
+            </div>
+
+            <div class="stat-desc">
+              Data siswa aktif
+            </div>
+
+          </div>
+
+          <div class="stat-icon">
+            <i data-lucide="graduation-cap"></i>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- HADIR -->
+      <div class="stat-card">
+
+        <div class="stat-top">
+
+          <div>
+
+            <div class="stat-title">
+              Kehadiran Hari Ini
+            </div>
+
+            <div
+              class="stat-value"
+              id="persenHadir"
+            >
+              0%
+            </div>
+
+            <div class="stat-desc">
+              Kehadiran realtime
+            </div>
+
+          </div>
+
+          <div class="stat-icon">
+            <i data-lucide="badge-check"></i>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- GURU -->
+      <div class="stat-card">
+
+        <div class="stat-top">
+
+          <div>
+
+            <div class="stat-title">
+              Total Guru
+            </div>
+
+            <div
+              class="stat-value"
+              id="totalGuru"
+            >
+              0
+            </div>
+
+            <div class="stat-desc">
+              Guru aktif sekolah
+            </div>
+
+          </div>
+
+          <div class="stat-icon">
+            <i data-lucide="briefcase-business"></i>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- PELANGGARAN -->
+      <div class="stat-card">
+
+        <div class="stat-top">
+
+          <div>
+
+            <div class="stat-title">
+              Pelanggaran Hari Ini
+            </div>
+
+            <div
+              class="stat-value"
+              id="totalPelanggaran"
+            >
+              0
+            </div>
+
+            <div class="stat-desc">
+              Monitoring disiplin
+            </div>
+
+          </div>
+
+          <div class="stat-icon">
+            <i data-lucide="triangle-alert"></i>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ACTIVITY -->
+    <section class="activity-box">
+
+      <div class="section-head">
+
+        <h2>
+          Aktivitas Terbaru
+        </h2>
+
+      </div>
+
+      <div
+        class="activity-list"
+        id="activityList"
+      ></div>
+
+    </section>
+
+  </main>
+
+</div>
+
+<script>
+
+/* =========================================================
+API
+========================================================= */
+
+const API_URL =
+"https://script.google.com/macros/s/AKfycbw_6HNjl9sS8PqlDvOwnlUCEc5ZOgBbEXjOT2KgGlMsoAWcUqOMSS6U5rrD6-CSmvs/exec";
+
+/* =========================================================
+DARK MODE
+========================================================= */
+
+function toggleDarkMode(){
+
+  document.body.classList.toggle("dark");
+
+}
+
+/* =========================================================
+LOGOUT
+========================================================= */
+
+function logoutApp(){
+
+  localStorage.removeItem("user");
+
+  window.location.href =
+  "index.html";
+
+}
+
+/* =========================================================
+LOAD DASHBOARD
+========================================================= */
+
+async function loadDashboard(){
+
+  try{
+
+    const response =
+    await fetch(
+      API_URL +
+      "?action=getDashboardAdmin"
+    );
+
+    const json =
+    await response.json();
+
+    if(!json.success){
+
+      return;
+
+    }
+
+    const data =
+    json.data || {};
+
+    document.getElementById(
+      "totalSiswa"
+    ).innerText =
+    data.totalSiswa || 0;
+
+    document.getElementById(
+      "totalGuru"
+    ).innerText =
+    data.totalGuru || 0;
+
+    document.getElementById(
+      "persenHadir"
+    ).innerText =
+    (data.hadirPersen || 0) + "%";
+
+    document.getElementById(
+      "totalPelanggaran"
+    ).innerText =
+    data.pelanggaran || 0;
+
+    renderActivity(
+      data.aktivitas || []
+    );
+
+  }catch(error){
+
+    console.log(error);
+
+  }
+
+}
+
+/* =========================================================
+RENDER ACTIVITY
+========================================================= */
+
+function renderActivity(data){
+
+  const activity =
+  document.getElementById(
+    "activityList"
+  );
+
+  activity.innerHTML = "";
+
+  data.forEach(item=>{
+
+    activity.innerHTML += `
+
+      <div class="activity-item">
+
+        <div class="activity-left">
+
+          <div class="activity-icon">
+
+            <i data-lucide="user-check"></i>
+
+          </div>
+
+          <div class="activity-info">
+
+            <strong>
+              ${item.siswa || "-"}
+            </strong>
+
+            <p>
+              ${item.kelas || "-"}
+              •
+              ${item.tanggal || "-"}
+            </p>
+
+          </div>
+
+        </div>
+
+        <div class="badge">
+
+          ${item.status || "Hadir"}
+
+        </div>
+
+      </div>
+
+    `;
+
+  });
+
+  lucide.createIcons();
+
+}
+
+/* =========================================================
+START APP
+========================================================= */
+
+document.addEventListener(
+  "DOMContentLoaded",
+  async ()=>{
+
+    const user =
+    JSON.parse(
+      localStorage.getItem("user")
+    );
+
+    if(!user){
+
+      window.location.href =
+      "login.html";
+
+      return;
+
+    }
+
+    await loadDashboard();
+
+    lucide.createIcons();
+
+  }
+);
+
+</script>
+
+</body>
+</html>

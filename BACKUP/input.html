@@ -1,0 +1,1524 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0"
+/>
+
+<title>Input Absensi</title>
+
+<style>
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+body{
+  font-family:Arial,sans-serif;
+  background:#f3f5f7;
+  color:#333;
+  padding:15px;
+}
+
+.container{
+  max-width:1200px;
+  margin:auto;
+}
+
+.header{
+  background:#fff;
+  padding:20px;
+  border-radius:12px;
+  margin-bottom:15px;
+  box-shadow:0 2px 8px rgba(0,0,0,.08);
+}
+
+.header h1{
+  font-size:24px;
+  margin-bottom:5px;
+}
+
+.header p{
+  color:#666;
+}
+
+.card{
+  background:#fff;
+  padding:20px;
+  border-radius:12px;
+  margin-bottom:15px;
+  box-shadow:0 2px 8px rgba(0,0,0,.08);
+}
+
+.form-grid{
+  display:grid;
+  grid-template-columns:
+    repeat(auto-fit,minmax(200px,1fr));
+  gap:15px;
+}
+
+.form-group{
+  display:flex;
+  flex-direction:column;
+}
+
+.form-group label{
+  margin-bottom:5px;
+  font-weight:bold;
+}
+
+.form-group select{
+  padding:10px;
+  border:1px solid #ccc;
+  border-radius:8px;
+  font-size:14px;
+}
+
+.btn{
+  border:none;
+  padding:12px 18px;
+  border-radius:10px;
+  cursor:pointer;
+  font-size:14px;
+  font-weight:bold;
+}
+
+.btn-primary{
+  background:#1976d2;
+  color:#fff;
+}
+
+.btn-primary:hover{
+  opacity:.9;
+}
+
+.btn-primary:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+}
+
+.action{
+  margin-top:20px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.table-wrap{
+  overflow:auto;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:900px;
+}
+
+th,td{
+  border:1px solid #ddd;
+  padding:10px;
+  text-align:center;
+}
+
+th{
+  background:#1976d2;
+  color:#fff;
+}
+
+td.nama{
+  text-align:left;
+}
+
+.info{
+  margin-top:15px;
+  font-size:14px;
+}
+
+.loading{
+  color:#1976d2;
+}
+
+.success{
+  color:green;
+}
+
+.error{
+  color:red;
+}
+
+</style>
+
+</head>
+<body>
+
+<div class="container">
+
+  <!-- HEADER -->
+
+  <div class="header">
+
+    <h1>INPUT ABSENSI</h1>
+
+    <p id="tanggalHari"></p>
+
+  </div>
+
+  <!-- FILTER -->
+
+  <div class="card">
+
+    <div class="form-grid">
+
+      <div class="form-group">
+
+        <label>Kelas</label>
+
+        <select id="kelas">
+
+          <option value="">
+            Pilih Kelas
+          </option>
+
+        </select>
+
+      </div>
+
+      <div class="form-group">
+
+        <label>Mata Pelajaran</label>
+
+        <select id="mapel">
+
+          <option value="">
+            Pilih Mapel
+          </option>
+
+        </select>
+
+      </div>
+
+      <div class="form-group">
+
+        <label>Guru</label>
+
+        <select id="guru">
+
+          <option value="">
+            Pilih Guru
+          </option>
+
+        </select>
+
+      </div>
+
+      <div class="form-group">
+
+        <label>Jam Mulai</label>
+
+        <select id="jamMulai">
+
+          <option value="">
+            Pilih Jam
+          </option>
+
+        </select>
+
+      </div>
+
+      <div class="form-group">
+
+        <label>Jam Selesai</label>
+
+        <select id="jamSelesai">
+
+          <option value="">
+            Pilih Jam
+          </option>
+
+        </select>
+
+      </div>
+
+    </div>
+
+    <div class="action">
+
+      <button
+        id="btnTampilkan"
+        class="btn btn-primary"
+      >
+        Tampilkan Siswa
+      </button>
+
+    </div>
+
+    <div
+      id="info"
+      class="info"
+    ></div>
+
+  </div>
+
+  <!-- TABEL -->
+
+  <div class="card">
+
+    <div class="table-wrap">
+
+      <table>
+
+        <thead>
+
+          <tr>
+
+            <th>No</th>
+            <th>NISN</th>
+            <th>Nama Siswa</th>
+            <th>H</th>
+            <th>S</th>
+            <th>I</th>
+            <th>A</th>
+            <th>C</th>
+
+          </tr>
+
+        </thead>
+
+        <tbody id="tbodySiswa">
+
+          <tr>
+
+            <td colspan="8">
+              Belum ada data
+            </td>
+
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+<!-- ====================================== -->
+<!-- FOTO -->
+<!-- ====================================== -->
+
+<div class="card">
+
+  <h2
+    style="
+      margin-bottom:15px;
+      text-align:center;
+    "
+  >
+    Foto Kelas
+  </h2>
+
+  <div
+    style="
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:15px;
+      width:100%;
+    "
+  >
+
+    <video
+      id="video"
+      autoplay
+      playsinline
+      style="
+        width:100%;
+        max-width:500px;
+        border-radius:12px;
+        background:#000;
+      "
+    ></video>
+
+    <canvas
+      id="canvas"
+      style="display:none;"
+    ></canvas>
+
+    <img
+      id="previewFoto"
+      style="
+        width:100%;
+        max-width:500px;
+        border-radius:12px;
+        display:none;
+        border:2px solid #ddd;
+        object-fit:cover;
+      "
+    >
+
+    <div
+      style="
+        display:flex;
+        gap:10px;
+        flex-wrap:wrap;
+        justify-content:center;
+      "
+    >
+
+      <button
+        id="btnBukaKamera"
+        class="btn btn-primary"
+      >
+        Buka Kamera
+      </button>
+
+      <button
+        id="btnAmbilFoto"
+        class="btn btn-primary"
+      >
+        Ambil Foto
+      </button>
+
+      <button
+        id="btnUploadFoto"
+        class="btn btn-primary"
+      >
+        Upload Foto
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+    <div class="action">
+
+      <button
+        id="btnSimpan"
+        class="btn btn-primary"
+      >
+        Simpan Absensi
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+
+// ======================================
+// API
+// ======================================
+
+const API_URL =
+  "https://script.google.com/macros/s/AKfycbwQLCfMDc4P8oTfjGNOftI_mhXUX73a1a7PpjRdcEKEtOQc13L5Bhi2W-fxHhsyn_Q/exec";
+
+// ======================================
+// ELEMENT
+// ======================================
+
+const tbodySiswa =
+  document.getElementById("tbodySiswa");
+
+const elKelas =
+  document.getElementById("kelas");
+
+const elMapel =
+  document.getElementById("mapel");
+
+const elGuru =
+  document.getElementById("guru");
+
+const elJamMulai =
+  document.getElementById("jamMulai");
+
+const elJamSelesai =
+  document.getElementById("jamSelesai");
+
+const elInfo =
+  document.getElementById("info");
+
+const btnTampilkan =
+  document.getElementById("btnTampilkan");
+
+const btnSimpan =
+  document.getElementById("btnSimpan");
+
+const video =
+  document.getElementById("video");
+
+const canvas =
+  document.getElementById("canvas");
+
+const previewFoto =
+  document.getElementById("previewFoto");
+
+const btnBukaKamera =
+  document.getElementById("btnBukaKamera");
+
+const btnAmbilFoto =
+  document.getElementById("btnAmbilFoto");
+
+const btnUploadFoto =
+  document.getElementById("btnUploadFoto");
+
+// ======================================
+// GLOBAL
+// ======================================
+
+const today =
+  new Date()
+  .toISOString()
+  .split("T")[0];
+
+document.getElementById(
+  "tanggalHari"
+).innerText = today;
+
+let JAM_DATA = [];
+let JAM_TERISI = [];
+let SISWA_DATA = [];
+
+let IS_SAVING = false;
+
+let FOTO_BASE64 = "";
+let FOTO_URL = "";
+
+// ======================================
+// FETCH JSON SUPER FIX
+// ======================================
+
+async function fetchJSON(
+  url,
+  options = {}
+){
+
+  try{
+
+    const response =
+      await fetch(url,{
+
+        method:
+          options.method || "GET",
+
+        headers:{
+          "Content-Type":
+            "text/plain;charset=utf-8"
+        },
+
+        body:
+          options.body || null,
+
+        redirect:"follow"
+
+      });
+
+    const text =
+      await response.text();
+
+    console.log(
+      "RAW:",
+      text
+    );
+
+    if(!response.ok){
+
+      throw new Error(
+        "HTTP " + response.status
+      );
+
+    }
+
+    if(!text){
+
+      throw new Error(
+        "Response kosong"
+      );
+
+    }
+
+    let result;
+
+    try{
+
+      result =
+        JSON.parse(text);
+
+    }catch(err){
+
+      console.error(text);
+
+      throw new Error(
+        "Response bukan JSON"
+      );
+
+    }
+
+    return result;
+
+  }catch(err){
+
+    console.error(err);
+
+    throw new Error(
+      "Failed to fetch"
+    );
+
+  }
+
+}
+
+// ======================================
+// HELPER
+// ======================================
+
+function formatJam(waktu){
+
+  if(!waktu){
+
+    return "";
+
+  }
+
+  const match =
+    String(waktu)
+    .match(/(\d{2}):(\d{2})/);
+
+  if(match){
+
+    return `${match[1]}:${match[2]}`;
+
+  }
+
+  return waktu;
+
+}
+
+function createOption(
+  value,
+  text
+){
+
+  const opt =
+    document.createElement(
+      "option"
+    );
+
+  opt.value =
+    value;
+
+  opt.textContent =
+    text;
+
+  return opt;
+
+}
+
+// ======================================
+// VALIDASI
+// ======================================
+
+function validateTampilSiswa(){
+
+  if(!elKelas.value){
+
+    throw new Error(
+      "Pilih kelas"
+    );
+
+  }
+
+  if(!elMapel.value){
+
+    throw new Error(
+      "Pilih mapel"
+    );
+
+  }
+
+  if(!elGuru.value){
+
+    throw new Error(
+      "Pilih guru"
+    );
+
+  }
+
+}
+
+function validateForm(){
+
+  validateTampilSiswa();
+
+  if(!elJamMulai.value){
+
+    throw new Error(
+      "Pilih jam mulai"
+    );
+
+  }
+
+  if(!elJamSelesai.value){
+
+    throw new Error(
+      "Pilih jam selesai"
+    );
+
+  }
+
+  for(
+
+    let jam = Number(elJamMulai.value);
+    jam <= Number(elJamSelesai.value);
+    jam++
+
+  ){
+
+    if(
+      JAM_TERISI.includes(jam)
+    ){
+
+      throw new Error(
+        "Jam ke-" +
+        jam +
+        " sudah terisi"
+      );
+
+    }
+
+  }
+
+}
+
+// ======================================
+// JAM
+// ======================================
+
+function renderJamMulai(){
+
+  elJamMulai.innerHTML =
+    `
+    <option value="">
+      Pilih Jam
+    </option>
+    `;
+
+  JAM_DATA.forEach(j=>{
+
+    const noJam =
+      Number(j.no_jam);
+
+    const bentrok =
+      JAM_TERISI.includes(
+        noJam
+      );
+
+    const opt =
+      createOption(
+
+        noJam,
+
+        bentrok
+        ? `Jam ${noJam} • SUDAH TERISI`
+        : `Jam ${noJam} • ${formatJam(j.mulai)}`
+
+      );
+
+    if(bentrok){
+
+      opt.disabled = true;
+
+    }
+
+    elJamMulai.appendChild(opt);
+
+  });
+
+}
+
+function updateJamSelesai(){
+
+  elJamSelesai.innerHTML =
+    `
+    <option value="">
+      Pilih Jam
+    </option>
+    `;
+
+  if(
+    elJamMulai.value === ""
+  ){
+
+    return;
+
+  }
+
+  const mulai =
+    Number(
+      elJamMulai.value
+    );
+
+  JAM_DATA.forEach(j=>{
+
+    const noJam =
+      Number(j.no_jam);
+
+    if(noJam < mulai){
+
+      return;
+
+    }
+
+    const bentrok =
+      JAM_TERISI.includes(
+        noJam
+      );
+
+    const opt =
+      createOption(
+
+        noJam,
+
+        bentrok
+        ? `Jam ${noJam} • SUDAH TERISI`
+        : `Jam ${noJam} • ${formatJam(j.mulai)}`
+
+      );
+
+    if(bentrok){
+
+      opt.disabled = true;
+
+    }
+
+    elJamSelesai.appendChild(opt);
+
+  });
+
+}
+
+// ======================================
+// LOAD CONFIG
+// ======================================
+
+async function loadConfig(){
+
+  try{
+
+    elInfo.innerHTML =
+      `
+      <span class="loading">
+        Loading config...
+      </span>
+      `;
+
+    const data =
+      await fetchJSON(
+        API_URL +
+        "?action=getConfig"
+      );
+
+    if(!data.success){
+
+      throw new Error(
+        data.error ||
+        "Gagal load config"
+      );
+
+    }
+
+    elKelas.innerHTML =
+      `<option value="">Pilih Kelas</option>`;
+
+    elMapel.innerHTML =
+      `<option value="">Pilih Mapel</option>`;
+
+    elGuru.innerHTML =
+      `<option value="">Pilih Guru</option>`;
+
+    (data.kelas || [])
+    .forEach(k=>{
+
+      elKelas.appendChild(
+        createOption(k,k)
+      );
+
+    });
+
+    (data.mapel || [])
+    .forEach(m=>{
+
+      elMapel.appendChild(
+        createOption(
+          m.nama,
+          m.nama
+        )
+      );
+
+    });
+
+    (data.guru || [])
+    .forEach(g=>{
+
+      elGuru.appendChild(
+        createOption(g,g)
+      );
+
+    });
+
+    JAM_DATA =
+      data.jamTersedia || [];
+
+    renderJamMulai();
+
+    elInfo.innerHTML =
+      `
+      <span class="success">
+        Config berhasil dimuat
+      </span>
+      `;
+
+  }catch(err){
+
+    elInfo.innerHTML =
+      `
+      <span class="error">
+        ${err.message}
+      </span>
+      `;
+
+  }
+
+}
+
+// ======================================
+// LOAD JAM TERISI
+// ======================================
+
+async function loadJamTerisi(){
+
+  try{
+
+    if(!elKelas.value){
+
+      return;
+
+    }
+
+    const data =
+      await fetchJSON(
+
+        API_URL +
+
+        "?action=getJamTerisi" +
+
+        "&tanggal=" +
+        today +
+
+        "&kelas=" +
+        encodeURIComponent(
+          elKelas.value
+        )
+
+      );
+
+    JAM_TERISI =
+      (data.jamTerisi || [])
+      .map(Number);
+
+    renderJamMulai();
+
+  }catch(err){
+
+    console.error(err);
+
+  }
+
+}
+
+// ======================================
+// LOAD SISWA
+// ======================================
+
+async function loadSiswa(){
+
+  try{
+
+    tbodySiswa.innerHTML =
+      `
+      <tr>
+        <td colspan="8">
+          Loading siswa...
+        </td>
+      </tr>
+      `;
+
+    const data =
+      await fetchJSON(
+
+        API_URL +
+
+        "?action=getSiswa" +
+
+        "&kelas=" +
+
+        encodeURIComponent(
+          elKelas.value
+        )
+
+      );
+
+    if(!data.success){
+
+      throw new Error(
+        data.error ||
+        "Gagal load siswa"
+      );
+
+    }
+
+    SISWA_DATA =
+      data.data || [];
+
+    renderSiswa();
+
+  }catch(err){
+
+    tbodySiswa.innerHTML =
+      `
+      <tr>
+        <td colspan="8">
+          ${err.message}
+        </td>
+      </tr>
+      `;
+
+  }
+
+}
+
+// ======================================
+// TABLE
+// ======================================
+
+function renderRadio(
+  nisn,
+  status,
+  checked = false
+){
+
+  return `
+  <td>
+    <input
+      type="radio"
+      name="status_${nisn}"
+      value="${status}"
+      ${checked ? "checked" : ""}
+    >
+  </td>
+  `;
+
+}
+
+function renderSiswa(){
+
+  if(!SISWA_DATA.length){
+
+    tbodySiswa.innerHTML =
+      `
+      <tr>
+        <td colspan="8">
+          Tidak ada siswa
+        </td>
+      </tr>
+      `;
+
+    return;
+
+  }
+
+  tbodySiswa.innerHTML =
+    SISWA_DATA
+    .map((siswa,index)=>{
+
+      return `
+
+      <tr data-nisn="${siswa.nisn}">
+
+        <td>${index + 1}</td>
+
+        <td>${siswa.nisn}</td>
+
+        <td class="nama">
+          ${siswa.nama_siswa}
+        </td>
+
+        ${renderRadio(siswa.nisn,"H",true)}
+        ${renderRadio(siswa.nisn,"S")}
+        ${renderRadio(siswa.nisn,"I")}
+        ${renderRadio(siswa.nisn,"A")}
+        ${renderRadio(siswa.nisn,"C")}
+
+      </tr>
+
+      `;
+
+    })
+    .join("");
+
+}
+
+// ======================================
+// KAMERA
+// ======================================
+
+async function bukaKamera(){
+
+  try{
+
+    const stream =
+      await navigator
+      .mediaDevices
+      .getUserMedia({
+
+        video:{
+          facingMode:"environment"
+        },
+
+        audio:false
+
+      });
+
+    video.srcObject =
+      stream;
+
+  }catch(err){
+
+    alert(
+      "Kamera gagal dibuka"
+    );
+
+  }
+
+}
+
+function ambilFoto(){
+
+  if(!video.srcObject){
+
+    alert(
+      "Buka kamera dulu"
+    );
+
+    return;
+
+  }
+
+  const ctx =
+    canvas.getContext("2d");
+
+  canvas.width =
+    video.videoWidth;
+
+  canvas.height =
+    video.videoHeight;
+
+  ctx.drawImage(
+    video,
+    0,
+    0
+  );
+
+  FOTO_BASE64 =
+    canvas.toDataURL(
+      "image/jpeg",
+      0.8
+    );
+
+  previewFoto.src =
+    FOTO_BASE64;
+
+  previewFoto.style.display =
+    "block";
+
+  if(video.srcObject){
+
+    video.srcObject
+      .getTracks()
+      .forEach(track=>track.stop());
+
+  }
+
+}
+
+// ======================================
+// UPLOAD FOTO
+// ======================================
+
+async function uploadFotoKelas(){
+
+  try{
+
+    if(!FOTO_BASE64){
+
+      throw new Error(
+        "Ambil foto dulu"
+      );
+
+    }
+
+    btnUploadFoto.disabled =
+      true;
+
+    btnUploadFoto.innerText =
+      "Uploading...";
+
+    const result =
+      await fetchJSON(
+
+        API_URL,
+
+        {
+
+          method:"POST",
+
+          body:JSON.stringify({
+
+            action:"uploadFoto",
+
+            data:{
+
+              base64:
+                FOTO_BASE64
+
+            }
+
+          })
+
+        }
+
+      );
+
+    if(!result.success){
+
+      throw new Error(
+        result.error ||
+        "Upload gagal"
+      );
+
+    }
+
+    FOTO_URL =
+      result.downloadUrl ||
+      result.url ||
+      "";
+
+    alert(
+      "Foto berhasil upload"
+    );
+
+  }catch(err){
+
+    alert(err.message);
+
+  }finally{
+
+    btnUploadFoto.disabled =
+      false;
+
+    btnUploadFoto.innerText =
+      "Upload Foto";
+
+  }
+
+}
+
+// ======================================
+// SIMPAN
+// ======================================
+
+async function simpanAbsensi(){
+
+  try{
+
+    if(IS_SAVING){
+
+      return;
+
+    }
+
+    IS_SAVING = true;
+
+    validateForm();
+
+    if(
+      FOTO_BASE64 &&
+      !FOTO_URL
+    ){
+
+      throw new Error(
+        "Upload foto dulu"
+      );
+
+    }
+
+    btnSimpan.disabled =
+      true;
+
+    btnSimpan.innerText =
+      "Menyimpan...";
+
+    const rows =
+      Array.from(
+
+        tbodySiswa.querySelectorAll(
+          "tr[data-nisn]"
+        )
+
+      );
+
+    if(!rows.length){
+
+      throw new Error(
+        "Data siswa kosong"
+      );
+
+    }
+
+    const detail = [];
+
+    rows.forEach(row=>{
+
+      const nisn =
+        row.dataset.nisn;
+
+      const checked =
+        row.querySelector(
+          'input[type="radio"]:checked'
+        );
+
+      const siswa =
+        SISWA_DATA.find(
+          s=>String(s.nisn) ===
+          String(nisn)
+        ) || {};
+
+      detail.push({
+
+        nisn:
+          nisn,
+
+        nama_siswa:
+          siswa.nama_siswa || "",
+
+        status:
+          checked
+          ? checked.value
+          : "H"
+
+      });
+
+    });
+
+    const payload = {
+
+      tanggal:
+        today,
+
+      kelas:
+        elKelas.value,
+
+      mapel:
+        elMapel.value,
+
+      guru:
+        elGuru.value,
+
+      jam_mulai:
+        Number(
+          elJamMulai.value
+        ),
+
+      jam_selesai:
+        Number(
+          elJamSelesai.value
+        ),
+
+      foto:
+        FOTO_URL,
+
+      detail:
+        detail
+
+    };
+
+    const result =
+      await fetchJSON(
+
+        API_URL,
+
+        {
+
+          method:"POST",
+
+          body:JSON.stringify({
+
+            action:
+              "simpanAbsensi",
+
+            data:
+              payload
+
+          })
+
+        }
+
+      );
+
+    if(!result.success){
+
+      throw new Error(
+        result.error ||
+        "Gagal simpan"
+      );
+
+    }
+
+    alert(
+      "Absensi berhasil disimpan"
+    );
+
+    FOTO_BASE64 = "";
+    FOTO_URL = "";
+
+    previewFoto.style.display =
+      "none";
+
+    elJamMulai.value = "";
+    elJamSelesai.value = "";
+
+    tbodySiswa.innerHTML = `
+    <tr>
+      <td colspan="8">
+        Belum ada data
+      </td>
+    </tr>
+    `;
+
+    await loadJamTerisi();
+
+  }catch(err){
+
+    alert(
+      "ERROR:\n\n" +
+      err.message
+    );
+
+  }finally{
+
+    IS_SAVING = false;
+
+    btnSimpan.disabled =
+      false;
+
+    btnSimpan.innerText =
+      "Simpan Absensi";
+
+  }
+
+}
+
+// ======================================
+// EVENT
+// ======================================
+
+btnBukaKamera.addEventListener(
+  "click",
+  bukaKamera
+);
+
+btnAmbilFoto.addEventListener(
+  "click",
+  ambilFoto
+);
+
+btnUploadFoto.addEventListener(
+  "click",
+  uploadFotoKelas
+);
+
+elJamMulai.addEventListener(
+  "change",
+  updateJamSelesai
+);
+
+elKelas.addEventListener(
+  "change",
+  async ()=>{
+
+    await loadJamTerisi();
+
+    elJamMulai.value = "";
+    elJamSelesai.value = "";
+
+    updateJamSelesai();
+
+  }
+);
+
+btnTampilkan.addEventListener(
+  "click",
+  async ()=>{
+
+    try{
+
+      validateTampilSiswa();
+
+      btnTampilkan.disabled =
+        true;
+
+      btnTampilkan.innerText =
+        "Loading...";
+
+      await loadSiswa();
+
+    }catch(err){
+
+      alert(err.message);
+
+    }finally{
+
+      btnTampilkan.disabled =
+        false;
+
+      btnTampilkan.innerText =
+        "Tampilkan Siswa";
+
+    }
+
+  }
+);
+
+btnSimpan.addEventListener(
+  "click",
+  simpanAbsensi
+);
+
+// ======================================
+// INIT
+// ======================================
+
+loadConfig();
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,2112 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+<title>Dashboard Kepala Sekolah</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+:root{
+
+  --primary:#1e3a8a;
+  --primary2:#2563eb;
+
+  --success:#16a34a;
+  --danger:#dc2626;
+  --warning:#f59e0b;
+  --info:#0ea5e9;
+
+  --bg:#f1f5f9;
+  --card:#ffffff;
+
+  --text:#0f172a;
+  --muted:#64748b;
+
+  --border:#dbe4ee;
+
+}
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+body{
+
+  font-family:'Inter',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+
+}
+
+.container{
+
+  max-width:1800px;
+  margin:auto;
+  padding:24px;
+
+}
+
+/* =========================
+HEADER
+========================= */
+
+
+
+.header{
+
+  position:relative;
+  overflow:hidden;
+  background:
+  linear-gradient(
+    135deg,
+    var(--primary),
+    var(--primary2)
+  );
+
+  color:#fff;
+
+  border-radius:32px;
+
+  padding:40px;
+
+  margin-bottom:24px;
+
+  box-shadow:
+  0 15px 40px
+  rgba(37,99,235,.25);
+
+}
+
+.header::before{
+
+  content:"";
+
+  position:absolute;
+
+  width:400px;
+  height:400px;
+
+  background:
+    radial-gradient(
+      rgba(255,255,255,.18),
+      transparent 70%
+    );
+
+  top:-120px;
+  right:-120px;
+
+}
+
+.header-top{
+
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:20px;
+
+}
+
+.header h1{
+
+  font-size:42px;
+  font-weight:800;
+  margin-bottom:10px;
+
+}
+
+.header p{
+
+  opacity:.9;
+  font-size:16px;
+
+}
+
+.header-info{
+
+  text-align:right;
+  line-height:1.8;
+  font-size:14px;
+
+}
+
+/* =========================
+FILTER
+========================= */
+
+.filter-card{
+
+  background:#fff;
+
+  border-radius:28px;
+
+  padding:24px;
+
+  border:1px solid var(--border);
+
+  margin-bottom:24px;
+
+   position:sticky;
+
+  top:14px;
+
+  z-index:50;
+
+  backdrop-filter:blur(16px);
+
+}
+
+.filter-grid{
+
+  display:grid;
+
+  grid-template-columns:
+  repeat(
+    auto-fit,
+    minmax(220px,1fr)
+  );
+
+  gap:20px;
+
+}
+
+.form-group{
+
+  display:flex;
+  flex-direction:column;
+
+}
+
+.form-group label{
+
+  font-size:14px;
+  font-weight:700;
+
+  margin-bottom:10px;
+
+}
+
+.form-group input,
+.form-group select{
+
+  padding:14px 16px;
+
+  border-radius:16px;
+
+  border:1px solid var(--border);
+
+  font-size:15px;
+
+}
+
+.form-group input:focus,
+.form-group select:focus{
+
+  outline:none;
+
+  border-color:var(--primary2);
+
+  box-shadow:
+  0 0 0 4px
+  rgba(37,99,235,.12);
+
+}
+
+.school-status{
+
+  padding:22px;
+
+  border-radius:24px;
+
+  font-size:22px;
+
+  font-weight:800;
+
+  margin-bottom:24px;
+
+}
+
+.school-status.good{
+
+  background:#dcfce7;
+  color:#166534;
+
+}
+
+.school-status.warning{
+
+  background:#fef3c7;
+  color:#92400e;
+
+}
+
+.school-status.danger{
+
+  background:#fee2e2;
+  color:#991b1b;
+
+}
+
+/* =========================
+KPI
+========================= */
+
+.kpi-grid{
+
+  display:grid;
+
+  grid-template-columns:
+  repeat(
+    auto-fit,
+    minmax(250px,1fr)
+  );
+
+  gap:20px;
+
+  margin-bottom:24px;
+
+}
+
+.kpi-card{
+
+  background:#fff;
+
+  border-radius:28px;
+
+  padding:28px;
+
+  border:1px solid var(--border);
+
+  position:relative;
+
+  overflow:hidden;
+
+}
+
+.kpi-card::before{
+
+  content:"";
+
+  position:absolute;
+
+  left:0;
+  top:0;
+
+  width:8px;
+  height:100%;
+
+}
+
+.kpi-success{
+  background:linear-gradient(135deg,#f0fdf4,#dcfce7);
+}
+
+.kpi-danger{
+  background:linear-gradient(135deg,#fef2f2,#fee2e2);
+}
+
+.kpi-warning{
+  background:linear-gradient(135deg,#fffbeb,#fef3c7);
+}
+
+.kpi-info{
+  background:linear-gradient(135deg,#eff6ff,#dbeafe);
+}
+
+.kpi-card span{
+
+  display:block;
+
+  color:var(--muted);
+
+  font-size:14px;
+  font-weight:700;
+
+  margin-bottom:12px;
+
+}
+
+.kpi-card h2{
+  font-size:64px;
+  line-height:1;
+  letter-spacing:-2px;
+}
+
+.kpi-card{
+
+  min-height:220px;
+
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+
+}
+
+.kpi-card p{
+
+  color:#475569;
+  font-size:15px;
+
+}
+
+/* =========================
+CARD
+========================= */
+
+.card{
+
+  background:#fff;
+
+  border-radius:28px;
+
+  padding:28px;
+
+  border:1px solid var(--border);
+
+  margin-bottom:24px;
+
+}
+
+.card{
+
+  box-shadow:
+    0 10px 30px rgba(15,23,42,.05);
+
+  transition:.25s;
+
+}
+
+.card:hover{
+
+  transform:translateY(-4px);
+
+  box-shadow:
+    0 18px 40px rgba(15,23,42,.08);
+
+}
+
+.card-title{
+
+  font-size:22px;
+  font-weight:800;
+
+  margin-bottom:20px;
+
+}
+
+/* =========================
+GRID
+========================= */
+
+.dashboard-grid{
+
+  display:grid;
+
+  grid-template-columns:
+  2fr 1fr;
+
+  gap:24px;
+
+}
+
+.trend-grid{
+
+  display:grid;
+
+  grid-template-columns:
+  repeat(2,1fr);
+
+  gap:24px;
+
+  margin-bottom:24px;
+
+}
+
+/* =========================
+CHART
+========================= */
+
+.chart-box{
+
+  position:relative;
+  width:100%;
+  height:360px;
+
+}
+
+.chart-small{
+
+  height:320px;
+
+}
+
+/* =========================
+ALERT
+========================= */
+
+.alert-box{
+
+  background:
+    linear-gradient(
+      135deg,
+      #eff6ff,
+      #dbeafe
+    );
+
+  border:none;
+
+  border-left:8px solid #2563eb;
+
+  padding:24px;
+
+  border-radius:24px;
+
+  font-size:16px;
+
+  box-shadow:
+    0 10px 24px rgba(37,99,235,.08);
+
+}
+
+/* =========================
+TABLE
+========================= */
+
+.table-wrap{
+
+  overflow:auto;
+
+}
+
+.table{
+
+  width:100%;
+  border-collapse:collapse;
+
+}
+
+.table tr:nth-child(1){
+
+  background:#fff7ed;
+
+}
+
+.table th{
+
+  background:#eff6ff;
+
+  color:#1e3a8a;
+
+  padding:14px;
+
+  font-size:13px;
+
+  border:1px solid #dbeafe;
+
+}
+
+.table td{
+
+  padding:14px;
+
+  border:1px solid #e2e8f0;
+
+  font-size:14px;
+
+}
+
+.table tr:hover{
+
+  background:#f8fafc;
+
+}
+
+.badge{
+
+  display:inline-block;
+
+  padding:6px 12px;
+
+  border-radius:999px;
+
+  font-size:12px;
+  font-weight:700;
+
+}
+
+.badge-success{
+
+  background:#dcfce7;
+  color:#166534;
+
+}
+
+.badge-warning{
+
+  background:#fef3c7;
+  color:#92400e;
+
+}
+
+.badge-danger{
+
+  background:#fee2e2;
+  color:#991b1b;
+   animation:pulse 1.8s infinite;
+
+}
+
+@keyframes pulse{
+
+  0%{
+    transform:scale(1);
+  }
+
+  50%{
+    transform:scale(1.06);
+  }
+
+  100%{
+    transform:scale(1);
+  }
+
+}
+
+/* =========================
+BUTTON
+========================= */
+
+.btn-wrap{
+
+  display:flex;
+  gap:14px;
+  flex-wrap:wrap;
+
+}
+
+.btn{
+
+  border:none;
+
+  padding:14px 22px;
+
+  border-radius:16px;
+
+  font-weight:700;
+
+  cursor:pointer;
+
+  transition:.2s;
+
+}
+
+.btn:hover{
+
+  transform:translateY(-2px);
+
+}
+
+.btn-primary{
+
+  background:
+  linear-gradient(
+    135deg,
+    var(--primary),
+    var(--primary2)
+  );
+
+  color:#fff;
+
+}
+
+.btn-success{
+
+  background:
+  linear-gradient(
+    135deg,
+    #16a34a,
+    #15803d
+  );
+
+  color:#fff;
+
+}
+
+/* =========================
+RESPONSIVE
+========================= */
+
+@media(max-width:1100px){
+
+  .dashboard-grid{
+
+    grid-template-columns:1fr;
+
+  }
+
+  .trend-grid{
+
+    grid-template-columns:1fr;
+
+  }
+
+}
+
+@media(max-width:768px){
+
+  .header h1{
+
+    font-size:30px;
+
+  }
+
+  .container{
+
+    padding:14px;
+
+  }
+
+}
+
+.insight-card{
+
+  background:
+    linear-gradient(
+      135deg,
+      #1e293b,
+      #0f172a
+    );
+
+  color:#fff;
+
+  padding:28px;
+
+  border-radius:28px;
+
+  margin-bottom:24px;
+
+  line-height:2;
+
+  box-shadow:
+    0 20px 40px rgba(15,23,42,.2);
+
+}
+
+.insight-card{
+
+  background:
+    linear-gradient(
+      135deg,
+      #1e293b,
+      #0f172a
+    );
+
+  color:#fff;
+
+  padding:28px;
+
+  border-radius:32px;
+
+  margin-bottom:24px;
+
+  line-height:2;
+
+  font-size:18px;
+
+  font-weight:700;
+
+  box-shadow:
+    0 20px 40px rgba(15,23,42,.18);
+
+}
+
+/* =========================
+LOGOUT BUTTON
+========================= */
+
+.btn-logout{
+
+  margin-top:14px;
+
+  border:none;
+
+  background:
+  rgba(255,255,255,.16);
+
+  color:#fff;
+
+  padding:12px 18px;
+
+  border-radius:16px;
+
+  font-size:14px;
+
+  font-weight:800;
+
+  cursor:pointer;
+
+  backdrop-filter:blur(10px);
+
+  border:
+  1px solid rgba(255,255,255,.2);
+
+  transition:.2s;
+
+}
+
+.btn-logout:hover{
+
+  background:
+  rgba(255,255,255,.24);
+
+  transform:
+  translateY(-2px);
+
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<!-- =========================
+HEADER
+========================= -->
+
+<div class="header">
+
+  <div class="header-top">
+
+    <div>
+
+      <h1>
+        DASHBOARD KEPALA SEKOLAH
+      </h1>
+
+      <p>
+        Sistem Monitoring Kehadiran & Disiplin Sekolah
+      </p>
+
+    </div>
+
+    <div class="header-info">
+
+      <div>
+        <strong>Tahun Ajaran:</strong>
+        2025/2026
+      </div>
+
+      <div>
+        <strong>Semester:</strong>
+        Genap
+      </div>
+
+      <div>
+        <strong>Tanggal:</strong>
+        <span id="tanggalNow"></span>
+      </div>
+
+      <div class="header-info">
+
+  <div>
+    <strong>Tahun Ajaran:</strong>
+    2025/2026
+  </div>
+
+  <div>
+    <strong>Semester:</strong>
+    Genap
+  </div>
+
+  <div>
+    <strong>Tanggal:</strong>
+    <span id="tanggalNow"></span>
+  </div>
+
+  <!-- BUTTON -->
+
+  <button
+        class="btn-logout"
+        onclick="logoutKepsek()"
+      >
+        Logout
+      </button>
+
+    </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<div class="insight-card"
+
+id="insightCard">
+
+</div>
+
+<!-- FILTER -->
+
+<div class="filter-card">
+
+  <div class="filter-grid">
+
+    <div class="form-group">
+      <label>Mode Dashboard</label>
+
+      <select id="filterMode">
+        <option value="harian">
+          Harian
+        </option>
+
+        <option value="mingguan">
+            Mingguan
+        </option>
+
+        <option value="bulanan">
+          Bulanan
+        </option>
+
+        <option value="semester">
+          Semester
+        </option>
+      </select>
+    </div>
+
+    <div class="form-group" id="wrapTanggal">
+      <label>Tanggal</label>
+      <input type="date" id="tanggal">
+    </div>
+
+    <div class="form-group" id="wrapBulan">
+      <label>Bulan</label>
+      <input type="month" id="bulan">
+    </div>
+
+    <div class="form-group">
+      <label>Kelas</label>
+
+      <select id="filterKelas">
+        <option value="SEMUA">
+          Semua Kelas
+        </option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+    <label>Jurusan</label>
+
+    <select id="filterJurusan">
+
+        <option value="SEMUA">
+        Semua Jurusan
+        </option>
+
+    </select>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- =========================
+ALERT
+========================= -->
+
+<div
+class="alert-box"
+id="alertBox">
+
+Memuat dashboard...
+
+</div>
+
+<!-- =========================
+KPI
+========================= -->
+
+<div class="kpi-grid">
+
+  <div class="kpi-card kpi-success">
+
+    <span>
+      Kehadiran
+    </span>
+
+    <h2 id="kpiHadir">
+      0%
+    </h2>
+
+    <p>
+      Persentase kehadiran siswa
+    </p>
+
+  </div>
+
+  <div class="kpi-card kpi-danger">
+
+    <span>
+      Alpha
+    </span>
+
+    <h2 id="kpiAlpha">
+      0
+    </h2>
+
+    <p>
+      Siswa tanpa keterangan
+    </p>
+
+  </div>
+
+  <div class="kpi-card kpi-warning">
+
+    <span>
+      Cabut
+    </span>
+
+    <h2 id="kpiCabut">
+      0
+    </h2>
+
+    <p>
+      Keluar saat jam pelajaran
+    </p>
+
+  </div>
+
+  <div class="kpi-card kpi-info">
+
+    <span>
+      Kelas Terbaik
+    </span>
+
+    <h2 id="kpiKelasTerbaik">
+      -
+    </h2>
+
+    <p>
+      Kehadiran terbaik
+    </p>
+
+  </div>
+
+</div>
+
+<!-- =========================
+TREND
+========================= -->
+
+<div class="trend-grid">
+
+  <div class="card">
+
+    <div class="card-title">
+      Trend Kehadiran Bulanan
+    </div>
+
+    <div class="chart-box">
+
+      <canvas id="chartTrendBulanan"></canvas>
+
+    </div>
+
+  </div>
+
+  <div class="card">
+
+    <div class="card-title">
+      Trend Semester
+    </div>
+
+    <div class="chart-box">
+
+      <canvas id="chartSemester"></canvas>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- =========================
+CHART
+========================= -->
+
+<div class="dashboard-grid">
+
+  <div class="card">
+
+    <div class="card-title">
+      Grafik Kehadiran Harian
+    </div>
+
+    <div class="chart-box">
+
+      <canvas id="chartKehadiran"></canvas>
+
+    </div>
+
+  </div>
+
+  <div class="card">
+
+    <div class="card-title">
+      Distribusi Absensi
+    </div>
+
+    <div class="chart-box chart-small">
+
+      <canvas id="chartDistribusi"></canvas>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- =========================
+TABLE
+========================= -->
+
+<div class="card">
+
+  <div class="card-title">
+    Siswa Rawan Disiplin
+  </div>
+
+  <div class="table-wrap">
+
+    <table class="table">
+
+      <thead>
+
+        <tr>
+
+          <th>No</th>
+          <th>Nama</th>
+          <th>Kelas</th>
+          <th>Keterangan</th>
+          <th>Total</th>
+          <th>Status</th>
+
+        </tr>
+
+      </thead>
+
+      <tbody id="tableSiswaRawan"></tbody>
+
+    </table>
+
+  </div>
+
+</div>
+
+<!-- =========================
+BUTTON
+========================= -->
+
+<div class="btn-wrap">
+
+  <button
+  class="btn btn-primary"
+  onclick="loadDashboard()">
+
+    Refresh Dashboard
+
+  </button>
+
+  <button
+  class="btn btn-success">
+
+    Export PDF
+
+  </button>
+
+</div>
+
+</div>
+
+<script>
+
+const API_URL =
+"https://script.google.com/macros/s/AKfycbw_6HNjl9sS8PqlDvOwnlUCEc5ZOgBbEXjOT2KgGlMsoAWcUqOMSS6U5rrD6-CSmvs/exec";
+
+// ========================
+// TANGGAL
+// ========================
+
+const now = new Date();
+
+document
+.getElementById(
+'tanggalNow'
+)
+.innerText =
+now.toLocaleDateString(
+'id-ID',
+{
+  day:'numeric',
+  month:'long',
+  year:'numeric'
+}
+);
+
+const localDate =
+
+now.getFullYear() + '-' +
+
+String(
+now.getMonth()+1
+).padStart(2,'0') + '-' +
+
+String(
+now.getDate()
+).padStart(2,'0');
+
+const localMonth =
+
+now.getFullYear() + '-' +
+
+String(
+now.getMonth()+1
+).padStart(2,'0');
+
+document
+.getElementById(
+'tanggal'
+)
+.value = localDate;
+
+document
+.getElementById(
+'bulan'
+)
+.value = localMonth;
+
+// ========================
+// LOAD AWAL
+// ========================
+
+loadKelas();
+loadJurusan();
+loadDashboard();
+
+// ========================
+// EVENT
+// ========================
+
+document
+.getElementById(
+'tanggal'
+)
+.addEventListener(
+'change',
+loadDashboard
+);
+
+document
+.getElementById(
+'bulan'
+)
+.addEventListener(
+'change',
+loadDashboard
+);
+
+document
+.getElementById(
+'filterKelas'
+)
+.addEventListener(
+'change',
+loadDashboard
+);
+
+document
+.getElementById(
+'filterJurusan'
+)
+.addEventListener(
+'change',
+loadDashboard
+);
+
+// ========================
+// LOAD KELAS
+// ========================
+
+async function loadKelas(){
+
+  try{
+
+    const res =
+      await fetch(
+        API_URL +
+        '?action=getKelas'
+      );
+
+    const json =
+      await res.json();
+
+    const select =
+      document
+      .getElementById(
+        'filterKelas'
+      );
+
+    select.innerHTML = `
+      <option value="SEMUA">
+        Semua Kelas
+      </option>
+    `;
+
+    let kelasList = [];
+
+    if(
+      Array.isArray(json.data)
+    ){
+
+      kelasList = json.data;
+
+    }else if(
+      Array.isArray(json.kelas)
+    ){
+
+      kelasList = json.kelas;
+
+    }
+
+    kelasList.forEach(kls=>{
+
+      select.innerHTML += `
+        <option value="${kls}">
+          ${kls}
+        </option>
+      `;
+
+    });
+
+  }catch(err){
+
+    console.log(err);
+
+  }
+
+}
+
+// ========================
+// LOAD JURUSAN
+// ========================
+
+async function loadJurusan(){
+
+  try{
+
+    const res =
+      await fetch(
+        API_URL +
+        '?action=getJurusan'
+      );
+
+    const json =
+      await res.json();
+
+    const select =
+      document
+      .getElementById(
+        'filterJurusan'
+      );
+
+    select.innerHTML = `
+      <option value="SEMUA">
+        Semua Jurusan
+      </option>
+    `;
+
+    let jurusanList = [];
+
+    if(
+      Array.isArray(json.data)
+    ){
+
+      jurusanList = json.data;
+
+    }
+
+    jurusanList.forEach(j=>{
+
+      select.innerHTML += `
+        <option value="${j}">
+          ${j}
+        </option>
+      `;
+
+    });
+
+  }catch(err){
+
+    console.log(err);
+
+  }
+
+}
+
+// ========================
+// LOAD DASHBOARD
+// ========================
+
+async function loadDashboard(){
+
+  try{
+
+    const mode =
+      document
+      .getElementById(
+        'filterMode'
+      )
+      .value;
+
+    const tanggal =
+      document
+      .getElementById(
+        'tanggal'
+      )
+      .value;
+
+    const bulan =
+      document
+      .getElementById(
+        'bulan'
+      )
+      .value;
+
+    const kelas =
+      document
+      .getElementById(
+        'filterKelas'
+      )
+      .value;
+    
+    const jurusan =
+    document
+    .getElementById(
+        'filterJurusan'
+    )
+    .value;
+
+    let url =
+      API_URL +
+      '?action=getDashboardKepsek' +
+      '&mode=' + mode +
+      '&kelas=' + kelas +
+      '&jurusan=' + jurusan;
+
+    if(
+        mode === 'harian' ||
+        mode === 'mingguan'
+        ){
+
+        url +=
+            '&tanggal=' + tanggal;
+
+    }
+
+    if(mode === 'bulanan'){
+
+      url +=
+        '&bulan=' + bulan;
+
+    }
+
+    const res =
+      await fetch(url);
+
+    const json =
+      await res.json();
+
+    console.log(json);
+
+    if(!json.success){
+
+      alert(json.error);
+      return;
+
+    }
+
+    renderDashboard(json);
+
+  }catch(err){
+
+    console.log(err);
+
+    alert(
+      'Gagal memuat dashboard'
+    );
+
+  }
+
+}
+
+// ========================
+// RENDER
+// ========================
+
+function renderDashboard(data){
+
+    renderInsight(data);
+  // KPI
+
+  document
+  .getElementById(
+    'kpiHadir'
+  )
+  .innerText =
+    (data.kpi.hadir || 0)
+    + '%';
+
+  document
+  .getElementById(
+    'kpiAlpha'
+  )
+  .innerText =
+    data.kpi.alpha || 0;
+
+  document
+  .getElementById(
+    'kpiCabut'
+  )
+  .innerText =
+    data.kpi.cabut || 0;
+
+  // kelas terbaik
+
+  let terbaik = '-';
+
+  if(
+
+    data.rankingKelas &&
+
+    data.rankingKelas.length > 0
+
+  ){
+
+    terbaik =
+      data.rankingKelas[0]
+      .kelas;
+
+  }
+
+  document
+  .getElementById(
+    'kpiKelasTerbaik'
+  )
+  .innerText =
+    terbaik;
+
+    // ========================
+    // ALERT INFO
+    // ========================
+
+    const mode =
+    document
+    .getElementById(
+    'filterMode'
+    )
+    .value;
+
+    document
+    .getElementById(
+    'alertBox'
+    )
+    .innerHTML =
+
+    `
+    Mode:
+    <b>${mode.toUpperCase()}</b>
+
+    |
+
+    Hadir:
+    <b>${data.kpi.hadir}%</b>
+
+    |
+
+    Alpha:
+    <b>${data.kpi.alpha}</b>
+
+    |
+
+    Cabut:
+    <b>${data.kpi.cabut}</b>
+    `;
+
+  // table
+
+  renderTableSiswa(
+    data.siswaCabut || []
+  );
+
+  // charts
+
+  renderChartKehadiran(
+    data.grafikJurusan || []
+    );
+
+  renderChartDistribusi(
+    data.kpi || {}
+  );
+
+  renderChartTrendBulanan(
+    data.trendBulanan || []
+  );
+
+  renderChartSemester(
+    data.trendSemester || []
+  );
+
+}
+
+// ========================
+// TABLE
+// ========================
+
+function renderTableSiswa(rows){
+
+  const tbody =
+    document
+    .getElementById(
+      'tableSiswaRawan'
+    );
+
+  if(rows.length === 0){
+
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6">
+          Tidak ada data
+        </td>
+      </tr>
+    `;
+
+    return;
+
+  }
+
+  tbody.innerHTML = '';
+
+  rows.forEach(
+  (item,index)=>{
+
+    let badge = `
+      <span class="badge badge-success">
+        AMAN
+      </span>
+    `;
+
+    if(item.total >= 5){
+
+      badge = `
+      <span class="badge badge-danger">
+        KRITIS
+      </span>
+      `;
+
+    }else if(item.total >= 2){
+
+      badge = `
+      <span class="badge badge-warning">
+        PERHATIAN
+      </span>
+      `;
+
+    }
+
+    tbody.innerHTML += `
+
+      <tr>
+
+        <td>
+          ${index+1}
+        </td>
+
+        <td>
+          ${item.nama}
+        </td>
+
+        <td>
+          ${item.kelas}
+        </td>
+
+        <td>
+          ${item.status}
+        </td>
+
+        <td>
+          ${item.total}
+        </td>
+
+        <td>
+          ${badge}
+        </td>
+
+      </tr>
+
+    `;
+
+  });
+
+}
+
+// ========================
+// CHART KEHADIRAN
+// ========================
+
+let chart1;
+
+function renderChartKehadiran(data){
+
+  const ctx =
+    document
+    .getElementById(
+      'chartKehadiran'
+    );
+
+  const labels =
+    data.map(v=>v.jurusan);
+
+  const values =
+    data.map(v=>v.hadir);
+
+  if(chart1){
+    chart1.destroy();
+  }
+
+  chart1 =
+    new Chart(ctx,{
+
+      type:'bar',
+
+      data:{
+
+        labels:labels,
+
+        datasets:[{
+
+          label:'% Kehadiran',
+
+          data:values,
+
+          borderWidth:1
+
+        }]
+
+      },
+
+      options:{
+
+        responsive:true,
+
+        scales:{
+          y:{
+            beginAtZero:true,
+            max:100
+          }
+        }
+
+      }
+
+    });
+
+}
+
+// ========================
+// PIE
+// ========================
+
+let chart2;
+
+function renderChartDistribusi(data){
+
+  const ctx =
+    document
+    .getElementById(
+      'chartDistribusi'
+    );
+
+  if(chart2){
+
+    chart2.destroy();
+
+  }
+
+  chart2 =
+    new Chart(ctx,{
+
+      type:'doughnut',
+
+      data:{
+
+        labels:[
+
+          'Hadir',
+          'Sakit',
+          'Izin',
+          'Alpha',
+          'Cabut'
+
+        ],
+
+        datasets:[{
+
+          data:[
+
+            Number(data.hadir || 0),
+            Number(data.sakit || 0),
+            Number(data.izin || 0),
+            Number(data.alpha || 0),
+            Number(data.cabut || 0)
+
+          ]
+
+        }]
+
+      },
+
+      options:{
+
+        responsive:true
+
+      }
+
+    });
+
+}
+
+// ========================
+// TREND BULANAN
+// ========================
+
+let chartTrend;
+
+function renderChartTrendBulanan(data){
+
+  const ctx =
+    document
+    .getElementById(
+      'chartTrendBulanan'
+    );
+
+  if(chartTrend){
+
+    chartTrend.destroy();
+
+  }
+
+  chartTrend =
+    new Chart(ctx,{
+
+      type:'bar',
+
+      data:{
+
+        labels:
+        data.map(v=>
+          v.bulan
+        ),
+
+        datasets:[{
+
+          label:'% Kehadiran',
+
+          data:
+          data.map(v=>
+            v.persen
+          )
+
+        }]
+
+      },
+
+      options:{
+
+        responsive:true
+
+      }
+
+    });
+
+}
+
+// ========================
+// SEMESTER
+// ========================
+
+let chartSemester;
+
+function renderChartSemester(data){
+
+  const ctx =
+    document
+    .getElementById(
+      'chartSemester'
+    );
+
+  if(chartSemester){
+
+    chartSemester.destroy();
+
+  }
+
+  chartSemester =
+    new Chart(ctx,{
+
+      type:'line',
+
+      data:{
+
+        labels:
+        data.map(v=>
+          v.semester
+        ),
+
+        datasets:[{
+
+          label:'Semester',
+
+          data:
+          data.map(v=>
+            v.hadir
+          ),
+
+          tension:.4
+
+        }]
+
+      },
+
+      options:{
+
+        responsive:true
+
+      }
+
+    });
+
+}
+
+// =====================================
+// FILTER MODE
+// =====================================
+
+document
+.getElementById('filterMode')
+.addEventListener(
+'change',
+toggleModeDashboard
+);
+
+
+function toggleModeDashboard(){
+
+  const mode =
+    document
+    .getElementById(
+      'filterMode'
+    )
+    .value;
+
+  const wrapTanggal =
+    document.getElementById(
+      'wrapTanggal'
+    );
+
+  const wrapBulan =
+    document.getElementById(
+      'wrapBulan'
+    );
+
+  if(mode === 'harian'){
+
+    wrapTanggal.style.display =
+      'flex';
+
+    wrapBulan.style.display =
+      'none';
+
+  }
+
+  else if(mode === 'bulanan'){
+
+    wrapTanggal.style.display =
+      'none';
+
+    wrapBulan.style.display =
+      'flex';
+
+  }
+
+  else{
+
+    wrapTanggal.style.display =
+      'none';
+
+    wrapBulan.style.display =
+      'none';
+
+  }
+
+  loadDashboard();
+
+}
+
+// jalankan awal
+toggleModeDashboard();
+
+function renderInsight(data){
+
+  let insight = [];
+
+  // =====================================
+  // JURUSAN TERBURUK
+  // =====================================
+
+  if(
+    data.grafikJurusan &&
+    data.grafikJurusan.length > 0
+  ){
+
+    const sortedJurusan =
+
+    [...data.grafikJurusan]
+
+    .sort(
+      (a,b)=>
+
+      (a.alpha || 0) -
+      (b.alpha || 0)
+
+    );
+
+    const worst =
+    sortedJurusan[0];
+
+    if(worst){
+
+      insight.push(
+
+      `⚠ Jurusan <b>${worst.jurusan}</b> memiliki alpha tertinggi.`
+
+      );
+
+    }
+
+  }
+
+  // =====================================
+  // KEHADIRAN
+  // =====================================
+
+  if(
+    Number(data.kpi?.hadir || 0) >= 90
+  ){
+
+    insight.push(
+
+    `📈 Kehadiran sekolah sangat baik hari ini.`
+
+    );
+
+  }else{
+
+    insight.push(
+
+    `📉 Kehadiran sekolah mengalami penurunan.`
+
+    );
+
+  }
+
+  // =====================================
+  // SISWA RAWAN
+  // =====================================
+
+  const rawan =
+
+  (data.siswaCabut || [])
+  .filter(x=>x.total >= 2);
+
+  insight.push(
+
+  `🚨 ${rawan.length} siswa masuk kategori rawan disiplin.`
+
+  );
+
+  // =====================================
+  // KELAS TERBAIK
+  // =====================================
+
+  if(
+    data.rankingKelas &&
+    data.rankingKelas.length > 0
+  ){
+
+    insight.push(
+
+    `🏆 Kelas terbaik hari ini: <b>${data.rankingKelas[0].kelas}</b>.`
+
+    );
+
+  }
+
+  document
+  .getElementById(
+    "insightCard"
+  )
+  .innerHTML =
+
+  insight.join("<br>");
+
+  
+
+}
+
+// ========================
+// LOGOUT
+// ========================
+
+function logoutKepsek(){
+
+  const yakin =
+  confirm(
+    "Yakin ingin logout?"
+  );
+
+  if(!yakin) return;
+
+  // hapus session lokal
+  localStorage.removeItem(
+    "LOGIN_KEPSEK"
+  );
+
+  // redirect
+  window.location.href =
+  "index.html";
+
+}
+
+</script>
+
+</body>
+</html>

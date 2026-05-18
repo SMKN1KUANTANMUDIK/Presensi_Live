@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+
+<meta charset="UTF-8"/>
+
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1.0"/>
+
+<title>ABSENSI PREMIUM</title>
+
+<link
+href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+rel="stylesheet"
+/>
+
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<style>
+
+:root{
+
+  --primary:#2563eb;
+  --primary-hover:#1d4ed8;
+
+  --text:#0f172a;
+  --text-soft:#64748b;
+
+  --border:#e2e8f0;
+
+  --bg:#f8fafc;
+  --white:#ffffff;
+
+}
+
+/* ===================================== */
+/* RESET */
+/* ===================================== */
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+body{
+
+  font-family:
+  'Plus Jakarta Sans',
+  sans-serif;
+
+  background:
+  var(--bg);
+
+  min-height:100vh;
+
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+
+  padding:50px 20px;
+
+  position:relative;
+
+  overflow-x:hidden;
+
+}
+
+/* ===================================== */
+/* BACKGROUND */
+/* ===================================== */
+
+.bg-circle{
+
+  position:absolute;
+
+  border-radius:999px;
+
+  filter:blur(90px);
+
+  opacity:.55;
+
+  z-index:1;
+
+}
+
+.bg1{
+
+  width:320px;
+  height:320px;
+
+  background:#bfdbfe;
+
+  top:-120px;
+  left:-120px;
+
+}
+
+.bg2{
+
+  width:360px;
+  height:360px;
+
+  background:#c7d2fe;
+
+  bottom:-140px;
+  right:-140px;
+
+}
+
+/* ===================================== */
+/* WRAPPER */
+/* ===================================== */
+
+.login-wrapper{
+
+  width:100%;
+  max-width:440px;
+
+  position:relative;
+  z-index:10;
+
+}
+
+/* ===================================== */
+/* CARD */
+/* ===================================== */
+
+.login-card{
+
+  background:var(--white);
+
+  border-radius:32px;
+
+  padding:42px;
+
+  border:1px solid var(--border);
+
+  box-shadow:
+  0 10px 25px rgba(15,23,42,.05),
+  0 20px 60px rgba(15,23,42,.08);
+
+}
+
+/* ===================================== */
+/* LOGO */
+/* ===================================== */
+
+.logo{
+
+  width:84px;
+  height:84px;
+
+  border-radius:26px;
+
+  margin:auto;
+  margin-bottom:24px;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  background:
+  linear-gradient(
+    135deg,
+    #2563eb,
+    #3b82f6
+  );
+
+  color:white;
+
+  box-shadow:
+  0 16px 40px rgba(37,99,235,.25);
+
+}
+
+.logo i{
+
+  width:40px;
+  height:40px;
+
+}
+
+/* ===================================== */
+/* TITLE */
+/* ===================================== */
+
+.title{
+
+  text-align:center;
+
+  margin-bottom:34px;
+
+}
+
+.title h1{
+
+  font-size:34px;
+  font-weight:800;
+
+  color:var(--text);
+
+  margin-bottom:10px;
+
+  letter-spacing:-1px;
+
+}
+
+.title p{
+
+  font-size:15px;
+
+  color:var(--text-soft);
+
+  line-height:1.7;
+
+}
+
+/* ===================================== */
+/* FORM */
+/* ===================================== */
+
+.form-group{
+
+  margin-bottom:22px;
+
+}
+
+.form-group label{
+
+  display:block;
+
+  margin-bottom:10px;
+
+  font-size:14px;
+  font-weight:700;
+
+  color:var(--text);
+
+}
+
+.input-box{
+
+  position:relative;
+
+}
+
+.input-box i{
+
+  position:absolute;
+
+  top:17px;
+  left:18px;
+
+  width:20px;
+  height:20px;
+
+  color:#94a3b8;
+
+}
+
+.input-box input{
+
+  width:100%;
+  height:56px;
+
+  border-radius:18px;
+
+  border:1px solid var(--border);
+
+  background:#f8fafc;
+
+  padding:
+  0 18px 0 52px;
+
+  font-size:15px;
+
+  font-family:inherit;
+
+  color:var(--text);
+
+  transition:.25s;
+
+}
+
+.input-box input:focus{
+
+  outline:none;
+
+  border-color:var(--primary);
+
+  background:white;
+
+  box-shadow:
+  0 0 0 4px rgba(37,99,235,.12);
+
+}
+
+.input-box input::placeholder{
+
+  color:#94a3b8;
+
+}
+
+/* ===================================== */
+/* BUTTON */
+/* ===================================== */
+
+.btn-login{
+
+  width:100%;
+  height:56px;
+
+  border:none;
+
+  border-radius:18px;
+
+  cursor:pointer;
+
+  background:
+  linear-gradient(
+    135deg,
+    #2563eb,
+    #3b82f6
+  );
+
+  color:white;
+
+  font-size:15px;
+  font-weight:700;
+
+  font-family:inherit;
+
+  transition:.25s;
+
+  box-shadow:
+  0 14px 35px rgba(37,99,235,.25);
+
+}
+
+.btn-login:hover{
+
+  transform:translateY(-2px);
+
+  background:
+  linear-gradient(
+    135deg,
+    #1d4ed8,
+    #2563eb
+  );
+
+}
+
+/* ===================================== */
+/* ERROR */
+/* ===================================== */
+
+.error-box{
+
+  display:none;
+
+  margin-bottom:20px;
+
+  padding:14px 16px;
+
+  border-radius:16px;
+
+  background:#fef2f2;
+
+  border:1px solid #fecaca;
+
+  color:#dc2626;
+
+  font-size:14px;
+  font-weight:600;
+
+}
+
+/* ===================================== */
+/* LOADING */
+/* ===================================== */
+
+.loading{
+
+  display:none;
+
+  margin-top:18px;
+
+  text-align:center;
+
+  font-size:14px;
+
+  color:var(--text-soft);
+
+}
+
+/* ===================================== */
+/* FOOTER */
+/* ===================================== */
+
+.footer{
+
+  margin-top:26px;
+
+  text-align:center;
+
+  font-size:13px;
+
+  color:#94a3b8;
+
+}
+
+/* ===================================== */
+/* MOBILE */
+/* ===================================== */
+
+@media(max-width:768px){
+
+  body{
+
+    padding:24px 16px;
+
+  }
+
+  .login-card{
+
+    padding:30px 24px;
+
+    border-radius:28px;
+
+  }
+
+  .title h1{
+
+    font-size:28px;
+
+  }
+
+}
+
+.logo-wrap{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  margin-bottom:24px;
+}
+
+.logo-sekolah{
+  width:120px;
+  height:120px;
+  object-fit:contain;
+
+  border-radius:24px;
+
+  background:#fff;
+
+  padding:10px;
+
+  box-shadow:
+    0 10px 30px
+    rgba(37,99,235,.15);
+}
+
+</style>
+
+</head>
+<body>
+
+<!-- BACKGROUND -->
+<div class="bg-circle bg1"></div>
+<div class="bg-circle bg2"></div>
+
+<!-- LOGIN -->
+<div class="login-wrapper">
+
+  <div class="logo-wrap">
+
+  <img
+    src="./assets/logo_sekolah.png"
+    alt="Logo Sekolah"
+    class="logo-sekolah"
+  >
+
+</div>
+
+    <!-- TITLE -->
+    <div class="title">
+
+      <h1>
+        SMKN 1 KUANTAN MUDIK
+      </h1>
+
+      <p>
+        Sistem monitoring presensi siswa.
+      </p>
+
+    </div>
+
+    <!-- ERROR -->
+    <div
+    class="error-box"
+    id="errorBox"></div>
+
+    <!-- USERNAME -->
+    <div class="form-group">
+
+      <label>
+        Username
+      </label>
+
+      <div class="input-box">
+
+        <i data-lucide="user"></i>
+
+        <input
+        type="text"
+        id="username"
+        placeholder="Masukkan username"
+        />
+
+      </div>
+
+    </div>
+
+    <!-- PASSWORD -->
+    <div class="form-group">
+
+      <label>
+        Password
+      </label>
+
+      <div class="input-box">
+
+        <i data-lucide="lock"></i>
+
+        <input
+        type="password"
+        id="password"
+        placeholder="Masukkan password"
+        />
+
+      </div>
+
+    </div>
+
+    <!-- BUTTON -->
+    <button
+    class="btn-login"
+    onclick="login()">
+      Login Dashboard
+    </button>
+
+    <!-- LOADING -->
+    <div
+    class="loading"
+    id="loading">
+
+      Memproses login...
+
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+
+      © 2026 SMKN 1 KUANTAN MUDIK
+        
+    </div>
+    <div div class="footer">by Waldo Guntala, S.Kom</div>
+  </div>
+
+</div>
+
+<!-- LOGIN JS -->
+<script src="assets/js/login.js"></script>
+
+<script>
+
+lucide.createIcons();
+
+</script>
+
+</body>
+</html>

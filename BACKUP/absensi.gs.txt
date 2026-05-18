@@ -1,0 +1,984 @@
+// ======================================
+// GET SPREADSHEET
+// ======================================
+
+function getSS(){
+
+  return SpreadsheetApp.openById(
+    SPREADSHEET_ID
+  );
+
+}
+
+// ======================================
+// OUTPUT JSON
+// ======================================
+
+function outputJSON(data){
+
+  return ContentService
+    .createTextOutput(
+      JSON.stringify(data)
+    )
+    .setMimeType(
+      ContentService.MimeType.JSON
+    );
+
+}
+
+// ======================================
+// FORMAT DATE
+// ======================================
+
+function formatDate(date){
+
+  return Utilities.formatDate(
+
+    new Date(date),
+
+    Session.getScriptTimeZone(),
+
+    "yyyy-MM-dd"
+
+  );
+
+}
+
+// ======================================
+// TIMESTAMP
+// ======================================
+
+function nowTimestamp(){
+
+  return Utilities.formatDate(
+
+    new Date(),
+
+    Session.getScriptTimeZone(),
+
+    "yyyy-MM-dd HH:mm:ss"
+
+  );
+
+}
+
+// ======================================
+// DO GET
+// ======================================
+
+function doGet(e){
+
+  try{
+
+    const action =
+      String(
+        e.parameter.action || ""
+      ).trim();
+
+    let result = {};
+
+    switch(action){
+
+      // ==========================
+      // CONFIG
+      // ==========================
+
+      case "getConfig":
+
+        result =
+          getConfig();
+
+      break;
+
+      // ==========================
+      // SISWA
+      // ==========================
+
+      case "getSiswa":
+
+        result =
+          getSiswa(
+            e.parameter.kelas
+          );
+
+      break;
+
+      // ==========================
+      // JAM TERISI
+      // ==========================
+
+      case "getJamTerisi":
+
+        result =
+          getJamTerisi(
+
+            e.parameter.tanggal,
+
+            e.parameter.kelas
+
+          );
+
+      break;
+
+      default:
+
+        result = {
+
+          success:false,
+
+          error:
+            "Action tidak ditemukan"
+
+        };
+
+    }
+
+    return outputJSON(result);
+
+  }catch(err){
+
+    return outputJSON({
+
+      success:false,
+
+      error:
+        err.toString()
+
+    });
+
+  }
+
+}
+
+// ======================================
+// DO POST
+// ======================================
+
+function doPost(e){
+  
+  try{
+
+    const body =
+      JSON.parse(
+        e.postData.contents
+      );
+
+    const action =
+      String(
+        body.action || ""
+      ).trim();
+
+    let result = {};
+
+    switch(action){
+
+      // ==================================
+      // SIMPAN ABSENSI
+      // ==================================
+
+      case "simpanAbsensi":
+
+        result =
+          simpanAbsensi(
+            body.data
+          );
+
+      break;
+
+      // ==================================
+      // UPLOAD FOTO
+      // ==================================
+
+      case "uploadFoto":
+
+        result =
+          uploadFoto(
+            body.data
+          );
+
+      break;
+
+      default:
+
+        result = {
+
+          success:false,
+
+          error:
+            "Action tidak ditemukan"
+
+        };
+
+    }
+
+    return outputJSON(result);
+
+  }catch(err){
+
+    return outputJSON({
+
+      success:false,
+
+      error:
+        err.toString()
+
+    });
+
+  }
+
+}
+
+// ======================================
+// GET CONFIG
+// ======================================
+
+function getConfig(){
+
+  try{
+
+    const ss =
+      getSS();
+
+    // ==========================
+    // KELAS
+    // ==========================
+
+    const kelas =
+      ss.getSheetByName(
+        SHEET_KELAS
+      )
+      .getRange(
+        2,
+        1,
+        ss.getSheetByName(
+          SHEET_KELAS
+        ).getLastRow() - 1,
+        1
+      )
+      .getValues()
+      .flat()
+      .filter(String);
+
+    // ==========================
+    // GURU
+    // ==========================
+
+    const guruRaw =
+      ss.getSheetByName(
+        SHEET_GURU
+      )
+      .getDataRange()
+      .getValues();
+
+    const guru =
+      guruRaw
+      .slice(1)
+      .map(r=>r[1])
+      .filter(String);
+
+    // ==========================
+    // MAPEL
+    // ==========================
+
+    const mapelRaw =
+      ss.getSheetByName(
+        SHEET_MAPEL
+      )
+      .getDataRange()
+      .getValues();
+
+    const mapel =
+      mapelRaw
+      .slice(1)
+      .map(r=>({
+
+        kode:r[0],
+
+        nama:r[1]
+
+      }));
+
+    // ==========================
+    // JAM
+    // ==========================
+
+    const jamRaw =
+      ss.getSheetByName(
+        SHEET_JAM
+      )
+      .getDataRange()
+      .getValues();
+
+    const jamTersedia =
+      jamRaw
+      .slice(1)
+      .map(r=>({
+
+        no_jam:Number(r[0]),
+
+        mulai:Utilities.formatDate(
+
+          new Date(r[1]),
+
+          Session.getScriptTimeZone(),
+
+          "HH:mm"
+
+        ),
+
+        selesai:Utilities.formatDate(
+
+          new Date(r[2]),
+
+          Session.getScriptTimeZone(),
+
+          "HH:mm"
+
+        )
+
+      }));
+
+    return {
+
+      success:true,
+
+      kelas,
+
+      guru,
+
+      mapel,
+
+      jamTersedia
+
+    };
+
+  }catch(err){
+
+    return {
+
+      success:false,
+
+      error:
+        err.toString()
+
+    };
+
+  }
+
+}
+
+// ======================================
+// GET SISWA
+// ======================================
+
+function getSiswa(kelas){
+
+  try{
+
+    const ss =
+      getSS();
+
+    const rows =
+      ss.getSheetByName(
+        SHEET_SISWA
+      )
+      .getDataRange()
+      .getValues();
+
+    const data =
+      rows
+      .slice(1)
+      .filter(r=>{
+
+        return String(r[2]).trim() ===
+        String(kelas).trim();
+
+      })
+      .map(r=>({
+
+        nisn:r[0],
+
+        nama_siswa:r[1],
+
+        kelas:r[2],
+
+        jk:r[3]
+
+      }));
+
+    return {
+
+      success:true,
+
+      data
+
+    };
+
+  }catch(err){
+
+    return {
+
+      success:false,
+
+      error:
+        err.toString()
+
+    };
+
+  }
+
+}
+
+// ======================================
+// GET JAM TERISI
+// ======================================
+
+function getJamTerisi(
+  tanggal,
+  kelas
+){
+
+  try{
+
+    const ss =
+      getSS();
+
+    const sh =
+      ss.getSheetByName(
+        SHEET_ABSENSI
+      );
+
+    const values =
+      sh.getDataRange()
+      .getValues();
+
+    if(values.length <= 1){
+
+      return {
+
+        success:true,
+
+        jamTerisi:[]
+
+      };
+
+    }
+
+    const jamSet =
+      new Set();
+
+    values
+    .slice(1)
+    .forEach(r=>{
+
+      const tgl =
+        formatDate(r[1]);
+
+      const jam =
+        Number(r[2]);
+
+      const kls =
+        String(r[3]).trim();
+
+      if(
+
+        tgl ===
+        String(tanggal).trim()
+
+        &&
+
+        kls ===
+        String(kelas).trim()
+
+      ){
+
+        jamSet.add(jam);
+
+      }
+
+    });
+
+    return {
+
+      success:true,
+
+      jamTerisi:
+        [...jamSet]
+        .sort((a,b)=>a-b)
+
+    };
+
+  }catch(err){
+
+    return {
+
+      success:false,
+
+      error:
+        err.toString()
+
+    };
+
+  }
+
+}
+
+// ======================================
+// SIMPAN ABSENSI
+// ======================================
+
+function simpanAbsensi(data){
+
+  let lock = null;
+
+  try{
+
+    // ==================================
+    // LOCK
+    // ==================================
+
+    lock =
+      LockService.getScriptLock();
+
+    lock.waitLock(30000);
+
+    // ==================================
+    // SHEET
+    // ==================================
+
+    const ss =
+      getSS();
+
+    const sh =
+      ss.getSheetByName(
+        SHEET_ABSENSI
+      );
+
+    const values =
+      sh.getDataRange()
+      .getValues();
+
+    // ==================================
+    // DATA
+    // ==================================
+
+    const tanggal =
+      String(
+        data.tanggal || ""
+      ).trim();
+
+    const kelas =
+      String(
+        data.kelas || ""
+      ).trim();
+
+    const jamMulai =
+      Number(
+        data.jam_mulai
+      );
+
+    const jamSelesai =
+      Number(
+        data.jam_selesai
+      );
+
+    // ==================================
+    // VALIDASI DUPLIKAT
+    // ==================================
+
+    for(
+
+      let jam = jamMulai;
+      jam <= jamSelesai;
+      jam++
+
+    ){
+
+      const bentrok =
+        values.some((row,index)=>{
+
+          // HEADER
+          if(index === 0){
+
+            return false;
+
+          }
+
+          const tgl =
+            formatDate(
+              row[1]
+            );
+
+          const jamDb =
+            Number(
+              row[2]
+            );
+
+          const kelasDb =
+            String(
+              row[3] || ""
+            ).trim();
+          
+          const mapelDb =
+            String(
+              row[4] || ""
+            ).trim();
+
+          const mapel =
+            String(
+              data.mapel || ""
+            ).trim();
+
+          return (
+
+            tgl === tanggal &&
+
+            jamDb === jam &&
+
+            kelasDb === kelas &&
+
+            mapelDb === mapel
+
+          );
+
+        });
+
+      // ================================
+      // DUPLIKAT
+      // ================================
+
+      if(bentrok){
+
+        return {
+
+          success:false,
+
+          error:
+            `Jam ke-${jam} sudah terisi`
+
+        };
+
+      }
+
+    }
+
+    // ==================================
+    // BUILD ROWS
+    // ==================================
+
+    const rows = [];
+
+    for(
+
+      let jam = jamMulai;
+      jam <= jamSelesai;
+      jam++
+
+    ){
+
+      data.detail.forEach(siswa=>{
+
+        rows.push([
+
+          Utilities.getUuid(),
+
+          tanggal,
+
+          jam,
+
+          kelas,
+
+          String(
+            data.mapel || ""
+          ),
+
+          String(
+            data.guru || ""
+          ),
+
+          String(
+            siswa.nisn || ""
+          ),
+
+          String(
+            siswa.nama_siswa || ""
+          ),
+
+          String(
+            siswa.status || "H"
+          ),
+
+          String(
+            data.foto || ""
+          ),
+
+          nowTimestamp()
+
+        ]);
+
+      });
+
+    }
+
+    // ==================================
+    // VALIDASI ROW KOSONG
+    // ==================================
+
+    if(rows.length <= 0){
+
+      return {
+
+        success:false,
+
+        error:
+          "Data absensi kosong"
+
+      };
+
+    }
+
+    // ==================================
+    // SIMPAN
+    // ==================================
+
+    sh.getRange(
+
+      sh.getLastRow() + 1,
+
+      1,
+
+      rows.length,
+
+      rows[0].length
+
+    ).setValues(rows);
+
+    // ==================================
+    // RESULT
+    // ==================================
+
+    return {
+
+      success:true,
+
+      total:
+        rows.length
+
+    };
+
+  }catch(err){
+
+    return {
+
+      success:false,
+
+      error:
+        err.toString()
+
+    };
+
+  }finally{
+
+    // ==================================
+    // RELEASE LOCK
+    // ==================================
+
+    if(lock){
+
+      try{
+
+        lock.releaseLock();
+
+      }catch(e){}
+
+    }
+
+  }
+
+}
+
+// ======================================
+// UPLOAD FOTO
+// ======================================
+
+function uploadFoto(data){
+
+  try{
+
+    if(!data){
+
+      return {
+
+        success:false,
+
+        error:"Data kosong"
+
+      };
+
+    }
+
+    if(!data.base64){
+
+      return {
+
+        success:false,
+
+        error:"Foto tidak ditemukan"
+
+      };
+
+    }
+
+// ==================================
+// VALIDASI FORMAT FOTO
+// ==================================
+
+  if(
+
+    !data.base64.startsWith(
+      "data:image/"
+    )
+
+  ){
+
+    return {
+
+      success:false,
+
+      error:
+        "Format foto tidak valid"
+
+    };
+
+  }
+
+// ==================================
+// GOOGLE DRIVE FOLDER
+// ==================================
+
+const folder =
+  DriveApp.getFolderById(
+    FOLDER_FOTO_ID
+  );
+
+    // ==================================
+    // HAPUS PREFIX BASE64
+    // ==================================
+
+        const cleanBase64 =
+      data.base64.replace(
+
+        /^data:image\/\w+;base64,/,
+
+        ""
+
+      );
+
+    // ==================================
+    // FILE NAME
+    // ==================================
+
+    const fileName =
+
+      "foto_kelas_" +
+
+      Date.now() +
+
+      ".jpg";
+
+    // ==================================
+    // BLOB
+    // ==================================
+
+    const blob =
+      Utilities.newBlob(
+
+        Utilities.base64Decode(
+          cleanBase64
+        ),
+
+        "image/jpeg",
+
+        fileName
+
+      );
+
+    // ==================================
+    // CREATE FILE
+    // ==================================
+
+    const file =
+      folder.createFile(blob);
+
+    // ==================================
+    // SHARE
+    // ==================================
+
+    file.setSharing(
+
+      DriveApp.Access.ANYONE_WITH_LINK,
+
+      DriveApp.Permission.VIEW
+
+    );
+
+    // ==================================
+    // RESULT
+    // ==================================
+
+    return {
+
+      success:true,
+
+      fileId:
+        file.getId(),
+
+      fileName:
+        file.getName(),
+
+      url:
+        file.getUrl(),
+
+      downloadUrl:
+        "https://drive.google.com/uc?id=" +
+        file.getId()
+
+    };
+
+  }catch(err){
+
+    return {
+
+      success:false,
+
+      error:
+        err.toString()
+
+    };
+
+  }
+
+}
+
+function testCreateFile(){
+
+  const folder =
+    DriveApp.getFolderById(
+      FOLDER_FOTO_ID
+    );
+
+  const blob =
+    Utilities.newBlob(
+      "TEST OK",
+      "text/plain",
+      "test.txt"
+    );
+
+  const file =
+    folder.createFile(blob);
+
+  Logger.log(
+    file.getName()
+  );
+
+}

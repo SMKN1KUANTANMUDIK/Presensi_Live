@@ -1,0 +1,2973 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+
+<meta charset="UTF-8"/>
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0"
+/>
+
+<title>Portal Report Absensi</title>
+
+<link
+href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+rel="stylesheet"
+/>
+
+<style>
+
+/* =========================================================
+ROOT
+========================================================= */
+
+:root{
+
+  --primary:#2563eb;
+  --primary-dark:#1d4ed8;
+
+  --success:#16a34a;
+  --danger:#ef4444;
+  --warning:#f59e0b;
+  --info:#06b6d4;
+  --purple:#7c3aed;
+
+  --bg:#f3f7fd;
+  --card:#ffffff;
+  --border:#dbe4f0;
+
+  --text:#0f172a;
+  --muted:#64748b;
+
+  --radius:28px;
+
+  --shadow:
+  0 12px 35px rgba(15,23,42,.08);
+
+}
+
+/* =========================================================
+RESET
+========================================================= */
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+html{
+  scroll-behavior:smooth;
+}
+
+body{
+
+  font-family:
+  "Plus Jakarta Sans",
+  sans-serif;
+
+  background:
+  linear-gradient(
+    180deg,
+    #edf4ff 0%,
+    #f8fbff 100%
+  );
+
+  color:var(--text);
+
+  min-height:100vh;
+
+  padding:22px;
+
+}
+
+/* =========================================================
+SCROLLBAR
+========================================================= */
+
+::-webkit-scrollbar{
+  width:10px;
+  height:10px;
+}
+
+::-webkit-scrollbar-thumb{
+  background:#cbd5e1;
+  border-radius:999px;
+}
+
+/* =========================================================
+CONTAINER
+========================================================= */
+
+.container{
+
+  max-width:1800px;
+
+  margin:auto;
+
+}
+
+/* =========================================================
+TOP MENU
+========================================================= */
+
+.top-menu{
+
+  display:flex;
+
+  align-items:center;
+
+  justify-content:space-between;
+
+  gap:14px;
+
+  margin-bottom:22px;
+
+  flex-wrap:wrap;
+
+}
+
+.top-menu-left,
+.top-menu-right{
+
+  display:flex;
+
+  align-items:center;
+
+  gap:14px;
+
+}
+
+/* =========================================================
+MENU BUTTON
+========================================================= */
+
+.menu-btn{
+
+  text-decoration:none;
+
+  padding:14px 26px;
+
+  border-radius:20px;
+
+  background:
+  rgba(255,255,255,.75);
+
+  border:1px solid rgba(255,255,255,.9);
+
+  color:#475569;
+
+  font-weight:800;
+
+  font-size:15px;
+
+  box-shadow:
+  0 8px 25px rgba(15,23,42,.06);
+
+  transition:.25s;
+
+  backdrop-filter:blur(12px);
+
+}
+
+.menu-btn:hover{
+
+  transform:translateY(-2px);
+
+  background:#ffffff;
+
+  color:#2563eb;
+
+}
+
+.menu-btn.active{
+
+  background:
+  linear-gradient(
+    135deg,
+    #2563eb,
+    #1d4ed8
+  );
+
+  color:#fff;
+
+  border-color:transparent;
+
+  box-shadow:
+  0 10px 28px rgba(37,99,235,.28);
+
+}
+
+/* =========================================================
+LOGOUT BUTTON
+========================================================= */
+
+.logout-btn{
+
+  border:none;
+
+  padding:14px 24px;
+
+  border-radius:20px;
+
+  background:
+  linear-gradient(
+    135deg,
+    #ef4444,
+    #dc2626
+  );
+
+  color:#fff;
+
+  font-size:14px;
+
+  font-weight:800;
+
+  cursor:pointer;
+
+  transition:.25s;
+
+  box-shadow:
+  0 10px 25px rgba(239,68,68,.22);
+
+}
+
+.logout-btn:hover{
+
+  transform:translateY(-2px);
+
+  opacity:.95;
+
+}
+
+/* =========================================================
+HEADER
+========================================================= */
+
+.header{
+
+  position:relative;
+
+  overflow:hidden;
+
+  background:
+  linear-gradient(
+    135deg,
+    #2563eb,
+    #1d4ed8
+  );
+
+  border-radius:34px;
+
+  padding:42px;
+
+  margin-bottom:24px;
+
+  color:#fff;
+
+  box-shadow:
+  0 18px 50px rgba(37,99,235,.28);
+
+}
+
+.header::before{
+
+  content:"";
+
+  position:absolute;
+
+  width:260px;
+  height:260px;
+
+  border-radius:50%;
+
+  background:
+  rgba(255,255,255,.08);
+
+  top:-90px;
+  right:-90px;
+
+}
+
+.header::after{
+
+  content:"";
+
+  position:absolute;
+
+  width:180px;
+  height:180px;
+
+  border-radius:50%;
+
+  background:
+  rgba(255,255,255,.05);
+
+  bottom:-70px;
+  left:-60px;
+
+}
+
+.header h1{
+
+  position:relative;
+
+  z-index:2;
+
+  font-size:42px;
+
+  font-weight:800;
+
+  margin-bottom:12px;
+
+}
+
+.header p{
+
+  position:relative;
+
+  z-index:2;
+
+  font-size:16px;
+
+  line-height:1.7;
+
+  max-width:760px;
+
+  opacity:.95;
+
+}
+
+/* =========================================================
+CARD
+========================================================= */
+
+.card{
+
+  background:
+  rgba(255,255,255,.9);
+
+  backdrop-filter:blur(14px);
+
+  border-radius:30px;
+
+  border:1px solid rgba(255,255,255,.9);
+
+  padding:28px;
+
+  margin-bottom:24px;
+
+  box-shadow:var(--shadow);
+
+}
+
+/* =========================================================
+FORM
+========================================================= */
+
+.form-grid{
+
+  display:grid;
+
+  grid-template-columns:
+  repeat(auto-fit,minmax(220px,1fr));
+
+  gap:18px;
+
+}
+
+.form-group{
+
+  display:flex;
+
+  flex-direction:column;
+
+}
+
+.form-group label{
+
+  margin-bottom:10px;
+
+  font-size:14px;
+
+  font-weight:800;
+
+  color:#334155;
+
+}
+
+.form-group input,
+.form-group select{
+
+  width:100%;
+
+  height:56px;
+
+  border-radius:18px;
+
+  border:1px solid var(--border);
+
+  background:#fff;
+
+  padding:0 18px;
+
+  font-size:14px;
+
+  font-family:inherit;
+
+  font-weight:600;
+
+  color:#0f172a;
+
+  transition:.25s;
+
+}
+
+.form-group input:focus,
+.form-group select:focus{
+
+  outline:none;
+
+  border-color:#3b82f6;
+
+  box-shadow:
+  0 0 0 5px rgba(59,130,246,.12);
+
+}
+
+/* =========================================================
+BUTTON
+========================================================= */
+
+.button-wrap{
+
+  display:flex;
+
+  gap:14px;
+
+  flex-wrap:wrap;
+
+  margin-top:26px;
+
+}
+
+.btn{
+
+  border:none;
+
+  border-radius:18px;
+
+  padding:15px 24px;
+
+  font-size:14px;
+
+  font-weight:800;
+
+  font-family:inherit;
+
+  cursor:pointer;
+
+  transition:.25s;
+
+}
+
+.btn:hover{
+
+  transform:translateY(-2px);
+
+}
+
+.btn-primary{
+
+  background:
+  linear-gradient(
+    135deg,
+    var(--primary),
+    var(--primary-dark)
+  );
+
+  color:#fff;
+
+  box-shadow:
+  0 10px 28px rgba(37,99,235,.22);
+
+}
+
+.btn-success{
+
+  background:
+  linear-gradient(
+    135deg,
+    #16a34a,
+    #15803d
+  );
+
+  color:#fff;
+
+  box-shadow:
+  0 10px 28px rgba(22,163,74,.22);
+
+}
+
+/* =========================================================
+INFO BOX
+========================================================= */
+
+.info-box{
+
+  display:grid;
+
+  grid-template-columns:
+  repeat(auto-fit,minmax(220px,1fr));
+
+  gap:18px;
+
+}
+
+.info-item{
+
+  position:relative;
+
+  overflow:hidden;
+
+  background:
+  linear-gradient(
+    180deg,
+    #ffffff,
+    #f8fbff
+  );
+
+  border-radius:24px;
+
+  padding:24px;
+
+  border:1px solid #e2e8f0;
+
+}
+
+.info-item::before{
+
+  content:"";
+
+  position:absolute;
+
+  top:0;
+  left:0;
+
+  width:100%;
+  height:4px;
+
+  background:
+  linear-gradient(
+    90deg,
+    var(--primary),
+    #60a5fa
+  );
+
+}
+
+.info-item span{
+
+  display:block;
+
+  margin-bottom:10px;
+
+  font-size:13px;
+
+  font-weight:700;
+
+  color:#64748b;
+
+}
+
+.info-item strong{
+
+  font-size:24px;
+
+  font-weight:800;
+
+  color:#0f172a;
+
+}
+
+/* =========================================================
+PREVIEW AREA
+========================================================= */
+
+#previewArea{
+
+  width:100%;
+
+  overflow:auto;
+
+}
+
+/* =========================================================
+PREVIEW CARD
+========================================================= */
+
+.preview-card{
+
+  background:#fff;
+
+  width:297mm;
+
+  min-height:190mm;
+
+  margin:0 auto;
+
+  padding:8mm;
+
+  border-radius:18px;
+
+  box-shadow:
+  0 10px 30px rgba(0,0,0,.08);
+
+  overflow:visible !important;
+
+}
+
+/* =========================================================
+KOP SURAT
+========================================================= */
+
+.kop-surat{
+
+  display:flex;
+
+  align-items:center;
+
+  justify-content:space-between;
+
+  gap:16px;
+
+  margin-bottom:12px;
+
+}
+
+.kop-left,
+.kop-right{
+
+  width:78px;
+
+  flex-shrink:0;
+
+}
+
+.kop-left img,
+.kop-right img{
+
+  width:78px;
+  height:78px;
+
+  object-fit:contain;
+
+}
+
+.kop-center{
+
+  flex:1;
+
+  text-align:center;
+
+}
+
+.kop-line{
+
+  line-height:1.35;
+
+}
+
+.kop-line.big{
+
+  font-size:15px;
+
+  font-weight:800;
+
+}
+
+.kop-line.sekolah{
+
+  font-size:24px;
+
+  font-weight:800;
+
+}
+
+.kop-line.alamat{
+
+  font-size:11px;
+
+  margin-top:4px;
+
+}
+
+.kop-divider{
+
+  border-top:3px solid #0f172a;
+
+  margin-top:10px;
+
+  margin-bottom:18px;
+
+}
+
+/* =========================================================
+TITLE
+========================================================= */
+
+.preview-title{
+
+  text-align:center;
+
+  font-size:24px;
+
+  font-weight:800;
+
+  margin-bottom:8px;
+
+}
+
+.preview-sub{
+
+  text-align:center;
+
+  font-size:14px;
+
+  color:#475569;
+
+  margin-bottom:8px;
+
+}
+
+.preview-date,
+.periode-wrap{
+
+  text-align:center;
+
+  font-size:13px;
+
+  font-weight:700;
+
+  color:#334155;
+
+  margin-bottom:18px;
+
+}
+
+/* =========================================================
+TABLE WRAP
+========================================================= */
+
+.table-wrap{
+
+  width:100%;
+
+  overflow:visible !important;
+
+}
+
+/* =========================================================
+TABLE
+========================================================= */
+
+.preview-table{
+
+  width:100%;
+
+  border-collapse:collapse;
+
+  table-layout:fixed;
+
+  vertical-align:middle;
+
+}
+
+.preview-table th{
+
+  background:#eff6ff;
+
+  color:#1d4ed8;
+
+  border:1px solid #cbd5e1;
+
+  font-size:8px;
+
+  padding:4px;
+
+  white-space:nowrap;
+
+  vertical-align:middle;
+
+  font-weight:800;
+
+}
+
+.preview-table td{
+
+  border:1px solid #e2e8f0;
+
+  text-align:center;
+
+  font-size:7px;
+
+  padding:3px;
+
+  white-space:nowrap;
+
+  vertical-align:middle;
+
+}
+
+.preview-table td:nth-child(2){
+
+  text-align:left;
+
+  font-weight:700;
+
+}
+
+/* =========================================================
+BULANAN
+========================================================= */
+
+.bulanan-table th,
+.bulanan-table td{
+
+  font-size:6px !important;
+
+  padding:2px !important;
+
+}
+
+/* =========================================================
+BADGE
+========================================================= */
+
+.badge-h{
+  color:var(--success);
+  font-weight:800;
+}
+
+.badge-s{
+  color:var(--warning);
+  font-weight:800;
+}
+
+.badge-i{
+  color:var(--info);
+  font-weight:800;
+}
+
+.badge-a{
+  color:var(--danger);
+  font-weight:800;
+}
+
+.badge-c{
+  color:var(--purple);
+  font-weight:800;
+}
+
+/* =========================================================
+TTD
+========================================================= */
+
+.ttd-wrap{
+
+  display:flex;
+
+  justify-content:flex-end;
+
+  margin-top:26px;
+
+}
+
+.ttd-box{
+
+  width:240px;
+
+  font-size:11px;
+
+  line-height:1.8;
+
+}
+
+.ttd-name{
+
+  margin-top:60px;
+
+  font-weight:800;
+
+  text-decoration:underline;
+
+}
+
+/* =========================================================
+REPORT GURU
+========================================================= */
+
+.report-guru-card{
+
+  width:100% !important;
+
+  overflow:visible !important;
+
+}
+
+.report-guru-wrap{
+
+  overflow:auto;
+
+}
+
+.guru-table{
+
+  width:max-content;
+
+  min-width:100%;
+
+  border-collapse:collapse;
+
+  table-layout:auto;
+
+}
+
+.guru-table th{
+
+  background:#eff6ff;
+
+  color:#1d4ed8;
+
+  border:1px solid #cbd5e1;
+
+  font-size:8px;
+
+  font-weight:800;
+
+  padding:4px;
+
+  text-align:center;
+
+  white-space:nowrap;
+
+}
+
+.guru-table td{
+
+  border:1px solid #e2e8f0;
+
+  font-size:8px;
+
+  padding:3px;
+
+  text-align:center;
+
+  white-space:nowrap;
+
+}
+
+.guru-table .nama-siswa{
+
+  text-align:left;
+
+  min-width:220px;
+
+  font-weight:700;
+
+}
+
+.guru-table .col-pertemuan{
+
+  min-width:32px;
+
+}
+
+/* =========================================================
+LOADING
+========================================================= */
+
+.loading-overlay{
+
+  position:fixed;
+
+  inset:0;
+
+  background:rgba(15,23,42,.5);
+
+  display:none;
+
+  align-items:center;
+
+  justify-content:center;
+
+  z-index:9999;
+
+  backdrop-filter:blur(6px);
+
+}
+
+.loading-box{
+
+  background:#fff;
+
+  padding:24px 34px;
+
+  border-radius:22px;
+
+  font-weight:800;
+
+  font-size:18px;
+
+  box-shadow:
+  0 20px 50px rgba(0,0,0,.15);
+
+}
+
+/* =========================================================
+RESPONSIVE
+========================================================= */
+
+@media(max-width:900px){
+
+  body{
+    padding:12px;
+  }
+
+  .header{
+    padding:28px;
+  }
+
+  .header h1{
+    font-size:30px;
+  }
+
+  .card{
+    padding:20px;
+  }
+
+  .button-wrap{
+    flex-direction:column;
+  }
+
+  .btn{
+    width:100%;
+  }
+
+  .preview-card{
+
+    width:100%;
+
+    min-width:1100px;
+
+    overflow:visible !important;
+
+  }
+
+  .kop-surat{
+    flex-direction:column;
+  }
+
+  .kop-left,
+  .kop-right{
+    display:none;
+  }
+
+}
+
+@media(max-width:600px){
+
+  .header h1{
+    font-size:26px;
+  }
+
+  .header p{
+    font-size:14px;
+  }
+
+  .form-grid{
+    grid-template-columns:1fr;
+  }
+
+}
+
+/* =========================================================
+PRINT
+========================================================= */
+
+@media print{
+
+  body{
+
+    background:#fff;
+
+    padding:0;
+
+    margin:0;
+
+  }
+
+  .top-menu,
+  .header,
+  .card:not(.preview-card){
+
+    display:none !important;
+
+  }
+
+  .preview-card{
+
+    width:100%;
+
+    min-height:auto;
+
+    margin:0;
+
+    padding:5mm;
+
+    border-radius:0;
+
+    box-shadow:none;
+
+    overflow:visible !important;
+
+  }
+
+  .table-wrap,
+  .report-guru-wrap{
+
+    overflow:visible !important;
+
+  }
+
+}
+
+/* =========================================================
+PAGE
+========================================================= */
+
+@page{
+
+  size:A4 landscape;
+
+  margin:5mm;
+
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+
+  <div class="loading-box">
+    Loading Data...
+  </div>
+
+</div>
+
+<div class="container">
+
+  <!-- MENU -->
+
+  <div class="top-menu">
+
+  <!-- LEFT MENU -->
+
+  <div class="top-menu-left">
+
+      <a
+        href="input.html"
+        class="menu-btn active"
+      >
+        Input Absensi
+      </a>
+
+      <a
+        href="report.html"
+        class="menu-btn"
+      >
+        Report
+      </a>
+
+    </div>
+
+    <!-- RIGHT MENU -->
+
+    <div class="top-menu-right">
+
+      <button
+        class="logout-btn"
+        onclick="logoutApp()"
+      >
+        Logout
+      </button>
+
+    </div>
+
+  </div>
+
+  <!-- HEADER -->
+
+  <div class="header">
+
+    <h1>PORTAL REPORT ABSENSI</h1>
+
+    <p>
+      Rekap absensi harian,
+      bulanan, dan report guru
+      dengan tampilan modern,
+      premium, responsif,
+      dan siap print.
+    </p>
+
+  </div>
+
+  <!-- FILTER -->
+
+  <div class="card">
+
+    <div class="form-grid">
+
+      <div class="form-group">
+
+        <label>Mode Report</label>
+
+        <select id="modeReport">
+
+          <option value="wali">
+            Wali Kelas
+          </option>
+
+          <option value="guru">
+            Guru Mapel
+          </option>
+
+        </select>
+
+      </div>
+
+      <div class="form-group">
+
+        <label>Pilih Kelas</label>
+
+        <select id="kelas">
+
+          <option value="">
+            Loading...
+          </option>
+
+        </select>
+
+      </div>
+
+      <div class="form-group">
+
+        <label>Tanggal Harian</label>
+
+        <input
+          type="date"
+          id="tanggal"
+        />
+
+      </div>
+
+      <div class="form-group">
+
+        <label>Bulan</label>
+
+        <input
+          type="month"
+          id="bulan"
+        />
+
+      </div>
+
+    </div>
+
+    <!-- GURU FORM -->
+
+    <div
+      id="guruForm"
+      style="
+        display:none;
+        margin-top:18px;
+      "
+    >
+
+      <div class="form-grid">
+
+        <div class="form-group">
+
+          <label>Nama Guru</label>
+
+          <select id="namaGuru">
+
+            <option value="">
+              Pilih Guru
+            </option>
+
+          </select>
+
+        </div>
+
+        <div class="form-group">
+
+          <label>Mata Pelajaran</label>
+
+          <input
+            type="text"
+            id="mapel"
+            placeholder="Mata Pelajaran"
+            readonly
+          />
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- BUTTON -->
+
+    <div class="button-wrap">
+
+      <button
+        class="btn btn-primary"
+        onclick="tampilkanHarian()"
+      >
+        Tampilkan Harian
+      </button>
+
+      <button
+        class="btn btn-primary"
+        onclick="tampilkanBulanan()"
+      >
+        Tampilkan Bulanan
+      </button>
+
+      <button
+        class="btn btn-primary"
+        onclick="tampilkanReportGuru()"
+      >
+        Report Guru
+      </button>
+
+      <button
+        class="btn btn-success"
+        onclick="printHarian()"
+      >
+        Print Harian
+      </button>
+
+      <button
+        class="btn btn-success"
+        onclick="printBulanan()"
+      >
+        Print Bulanan
+      </button>
+
+      <button
+        class="btn btn-success"
+        onclick="printGuru()"
+      >
+        Print Report Guru
+      </button>
+
+    </div>
+
+  </div>
+
+  <!-- INFO -->
+
+  <div class="card">
+
+    <div class="info-box">
+
+      <div class="info-item">
+
+        <span>Wali Kelas</span>
+
+        <strong id="waliNama">
+          -
+        </strong>
+
+      </div>
+
+      <div class="info-item">
+
+        <span>NIP</span>
+
+        <strong id="waliNip">
+          -
+        </strong>
+
+      </div>
+
+      <div class="info-item">
+
+        <span>Status</span>
+
+        <strong id="statusText">
+          Siap
+        </strong>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- PREVIEW -->
+
+  <div id="previewArea"></div>
+
+</div>
+
+<!-- =========================================================
+SEMUA SCRIPT ASLI KAMU
+TIDAK DIUBAH
+TINGGAL TEMPEL SCRIPT LAMA DI SINI
+========================================================= -->
+
+<script>
+
+const WEB_APP_URL =
+"https://script.google.com/macros/s/AKfycbw_6HNjl9sS8PqlDvOwnlUCEc5ZOgBbEXjOT2KgGlMsoAWcUqOMSS6U5rrD6-CSmvs/exec";
+
+
+/* =========================================
+USER LOGIN
+========================================= */
+
+const userData =
+JSON.parse(
+  localStorage.getItem("userData")
+);
+
+console.log(userData);
+
+/* =========================================
+INIT
+========================================= */
+
+function escapeHTML(str){
+
+  if(str === null || str === undefined){
+    return "";
+  }
+
+  return String(str)
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+
+}
+
+window.onload = async ()=>{
+
+  document.addEventListener(
+    "DOMContentLoaded",
+    ()=>{
+
+      if(userData){
+
+        // AUTO NAMA GURU
+        const namaGuru =
+        document.getElementById("namaGuru");
+
+        if(namaGuru){
+
+          namaGuru.value =
+          userData.nama || "";
+
+          // READONLY
+          namaGuru.disabled = true;
+
+        }
+
+        // AUTO MAPEL
+        const mapel =
+        document.getElementById("mapel");
+
+        if(mapel){
+
+          mapel.value =
+          userData.mapel || "";
+
+          // READONLY
+          mapel.readOnly = true;
+
+        }
+
+      }
+
+    }
+  );
+
+  const now = new Date();
+
+  const localDate =
+  now.getFullYear() + "-" +
+  String(now.getMonth()+1).padStart(2,"0") + "-" +
+  String(now.getDate()).padStart(2,"0");
+
+  const localMonth =
+  now.getFullYear() + "-" +
+  String(now.getMonth()+1).padStart(2,"0");
+
+  document.getElementById("tanggal").value = localDate;
+  document.getElementById("bulan").value = localMonth;
+
+  await loadKelas();
+  await loadGuru();
+
+};
+
+function parseTanggal(str){
+
+  const [y,m,d] = str.split("-");
+
+  return new Date(y,m-1,d);
+
+}
+
+/* =========================================
+LOADING
+========================================= */
+
+function showLoading(){
+  document.getElementById("loadingOverlay").style.display = "flex";
+}
+
+function hideLoading(){
+  document.getElementById("loadingOverlay").style.display = "none";
+}
+
+/* =========================================
+MODE
+========================================= */
+
+document
+.getElementById("modeReport")
+.addEventListener("change",function(){
+
+  const guruForm =
+  document.getElementById("guruForm");
+
+  guruForm.style.display =
+  this.value === "guru"
+  ? "block"
+  : "none";
+
+});
+
+/* =========================================
+FORMAT
+========================================= */
+
+function formatTanggalIndonesia(date){
+
+  return new Date(date)
+  .toLocaleDateString(
+    "id-ID",
+    {
+      day:"numeric",
+      month:"long",
+      year:"numeric"
+    }
+  );
+
+}
+
+function formatBulanIndonesia(value){
+
+  const bulan = [
+    "Januari","Februari","Maret",
+    "April","Mei","Juni",
+    "Juli","Agustus","September",
+    "Oktober","November","Desember"
+  ];
+
+  const split = value.split("-");
+
+  return bulan[Number(split[1])-1]
+  + " " +
+  split[0];
+
+}
+
+/* =========================================
+LOAD GURU
+========================================= */
+
+async function loadGuru(){
+
+  try{
+
+    const res =
+    await fetch(
+      WEB_APP_URL + "?action=getGuru"
+    );
+
+    const json =
+    await res.json();
+
+    const select =
+    document.getElementById("namaGuru");
+
+    select.innerHTML = `
+      <option value="">
+        Pilih Guru
+      </option>
+    `;
+
+    const guruList =
+    json.data || [];
+
+    guruList.forEach(guru=>{
+
+      select.innerHTML += `
+
+      <option
+        value="${escapeHTML(guru.nama)}"
+        data-mapel="${escapeHTML(guru.mapel || "")}"
+        data-nip="${escapeHTML(guru.nip || "")}"
+      >
+        ${escapeHTML(guru.nama)}
+      </option>
+
+      `;
+
+    });
+
+  }catch(err){
+
+    console.log(err);
+
+    alert("Gagal load guru");
+
+  }
+
+}
+
+/* =========================================
+LOAD KELAS
+========================================= */
+
+async function loadKelas(){
+
+  try{
+
+    const res =
+    await fetch(
+      WEB_APP_URL +
+      "?action=getKelas"
+    );
+
+    const json =
+    await res.json();
+
+    const select =
+    document.getElementById("kelas");
+
+    select.innerHTML =
+    `<option value="">Pilih Kelas</option>`;
+
+    const kelasList =
+    json.data || json.kelas || [];
+
+    kelasList.forEach(kls=>{
+
+      select.innerHTML += `
+      <option value="${kls}">
+        ${kls}
+      </option>
+      `;
+
+    });
+
+  }catch(err){
+
+    console.log(err);
+
+    alert("Gagal load kelas");
+
+  }
+
+}
+
+/* =========================================
+LOAD WALI
+========================================= */
+
+async function loadWaliKelas(kelas){
+
+  try{
+
+    const res =
+    await fetch(
+      WEB_APP_URL +
+      "?action=getWaliKelas" +
+      "&kelas=" +
+      encodeURIComponent(kelas)
+    );
+
+    const json =
+    await res.json();
+
+    if(!json.success || !json.data){
+      return;
+    }
+
+    document.getElementById("waliNama").innerText =
+    json.data.nama || "-";
+
+    document.getElementById("waliNip").innerText =
+    json.data.nip || "-";
+
+  }catch(err){
+
+    console.log(err);
+
+  }
+
+}
+
+document
+.getElementById("kelas")
+.addEventListener("change",async function(){
+
+  if(this.value){
+
+    await loadWaliKelas(this.value);
+
+  }
+
+});
+
+document
+.getElementById("namaGuru")
+.addEventListener("change",function(){
+
+  const selected =
+  this.options[this.selectedIndex];
+
+  document.getElementById("mapel").value =
+  selected.getAttribute("data-mapel") || "";
+
+  // FIX NIP
+  window.guruNip =
+  selected.getAttribute("data-nip") || "-";
+
+});
+
+/* =========================================
+KOP SURAT
+========================================= */
+
+function getKopSurat(){
+
+  return `
+
+  <div class="kop-surat">
+
+    <div class="kop-left">
+      <img
+      src="./assets/logo_riau.png"
+      alt="Logo"
+      />
+    </div>
+
+    <div class="kop-center">
+
+      <div class="kop-line big">
+        PEMERINTAH PROVINSI RIAU
+      </div>
+
+      <div class="kop-line big">
+        DINAS PENDIDIKAN
+      </div>
+
+      <div class="kop-line sekolah">
+        SMKN 1 KUANTAN MUDIK
+      </div>
+
+      <div class="kop-line alamat">
+        Jalan Air Panas Alam Pulau Desa Pulau Binjai Telp :        Kode Pos : 29564   email:smknkuantanmudik@gmail.com
+      </div>
+
+    </div>
+
+    <div class="kop-right">
+      <img
+      src="./assets/logo_sekolah.png"
+      alt="Logo"
+      />
+    </div>
+
+  </div>
+
+  <div class="kop-divider"></div>
+
+  `;
+
+}
+
+/* =========================================
+HARIAN
+========================================= */
+
+async function tampilkanHarian(){
+
+  try{
+
+    showLoading();
+
+    const kelas =
+    document.getElementById("kelas").value;
+
+    const tanggal =
+    document.getElementById("tanggal").value;
+
+    if(!kelas){
+
+      alert("Pilih kelas");
+      hideLoading();
+      return;
+
+    }
+
+    document.getElementById("statusText").innerText =
+    "Loading Harian...";
+
+    const res =
+    await fetch(
+
+      WEB_APP_URL +
+      "?action=getDashboardPiket" +
+      "&kelas=" + encodeURIComponent(kelas) +
+      "&tanggal=" + encodeURIComponent(tanggal)
+
+    );
+
+    const json =
+    await res.json();
+
+    if(
+      !json.success ||
+      !json.data ||
+      !json.data.length
+    ){
+
+      alert("Data tidak ditemukan");
+      hideLoading();
+      return;
+
+    }
+
+    renderTabelHarian(json.data[0]);
+
+    document.getElementById("statusText").innerText =
+    "Data Harian Tampil";
+
+    hideLoading();
+
+  }catch(err){
+
+    console.log(err);
+
+    document.getElementById("statusText").innerText =
+    "Gagal Load";
+
+    hideLoading();
+
+    alert("Gagal load data");
+
+  }
+
+}
+
+/* =========================================
+RENDER HARIAN
+========================================= */
+
+function renderTabelHarian(data){
+
+  const siswa =
+  data.siswaList || [];
+
+  let html = `
+
+  <div class="preview-card">
+
+    ${getKopSurat()}
+
+    <div class="preview-title">
+      REKAP ABSENSI HARIAN
+    </div>
+
+    <div class="preview-sub">
+      Kelas ${data.kelas}
+    </div>
+
+    <div class="preview-date">
+      ${formatTanggalIndonesia(
+        document.getElementById("tanggal").value
+      )}
+    </div>
+
+    <div class="table-wrap">
+
+      <table class="preview-table">
+
+        <thead>
+
+          <tr>
+
+            <th>No</th>
+
+            <th>Nama Siswa</th>
+
+  `;
+
+  for(let j=1;j<=11;j++){
+
+    html += `<th>${j}</th>`;
+
+  }
+
+  html += `
+
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+  `;
+
+  siswa.forEach((s,index)=>{
+
+    html += `
+
+    <tr>
+
+      <td>${index+1}</td>
+
+      <td>
+        ${escapeHTML(s.nama)}
+      </td>
+
+    `;
+
+    for(let j=1;j<=11;j++){
+
+      const st =
+      s.jam?.[j] || "-";
+
+      let isi = st;
+      let cls = "";
+
+      if(st === "H"){
+        isi = "✓";
+        cls = "badge-h";
+      }
+
+      if(st === "S") cls = "badge-s";
+      if(st === "I") cls = "badge-i";
+      if(st === "A") cls = "badge-a";
+      if(st === "C") cls = "badge-c";
+
+      html += `
+      <td class="${cls}">
+        ${isi}
+      </td>
+      `;
+
+    }
+
+    html += `</tr>`;
+
+  });
+
+  html += `
+
+        </tbody>
+
+      </table>
+
+    </div>
+    <div class="ttd-wrap">
+
+  <div class="ttd-box">
+
+    <div>
+      Lubuk Jambi,
+      ${formatTanggalIndonesia(new Date())}
+    </div>
+
+    <div>Mengetahui,</div>
+
+    <div>Wali Kelas</div>
+
+    <div class="ttd-name">
+      ${document.getElementById("waliNama").innerText}
+    </div>
+
+    <div>
+      NIP.
+      ${document.getElementById("waliNip").innerText}
+    </div>
+
+  </div>
+
+    </div>
+  </div>
+
+  `;
+
+  document.getElementById("previewArea").innerHTML =
+  html;
+
+}
+
+/* =========================================
+REPORT GURU MAPEL
+========================================= */
+
+async function tampilkanReportGuru(){
+
+  try{
+
+    showLoading();
+
+    const kelas =
+    document.getElementById("kelas").value;
+
+    const guru =
+    document.getElementById("namaGuru").value;
+
+    const mapel =
+    document.getElementById("mapel").value;
+
+    const bulan =
+    document.getElementById("bulan").value;
+
+    if(!kelas){
+      alert("Pilih kelas");
+      hideLoading();
+      return;
+    }
+
+    if(!guru){
+      alert("Pilih guru");
+      hideLoading();
+      return;
+    }
+
+    document.getElementById("statusText").innerText =
+    "Loading Report Guru...";
+
+    const res =
+    await fetch(
+
+      WEB_APP_URL +
+      "?action=getAbsensiGuru" +
+      "&kelas=" + encodeURIComponent(kelas) +
+      "&guru=" + encodeURIComponent(guru) +
+      "&bulan=" + encodeURIComponent(bulan)
+
+    );
+
+    const json =
+    await res.json();
+
+    console.log(json);
+
+    if(
+      !json.success ||
+      !json.data ||
+      !json.data.length
+    ){
+
+      alert("Data guru tidak ditemukan");
+
+      hideLoading();
+
+      return;
+
+    }
+
+    // =====================================
+    // AMBIL TANGGAL UNIK
+    // =====================================
+
+    const tanggalMap = {};
+
+    json.data.forEach(item=>{
+
+      const tgl =
+      item.tanggal;
+
+      if(!tanggalMap[tgl]){
+
+        tanggalMap[tgl] = true;
+
+      }
+
+    });
+
+    const tanggalList =
+    Object.keys(tanggalMap)
+    .sort();
+
+    // =====================================
+    // SISWA UNIK
+    // =====================================
+
+    const siswaMap = {};
+
+    json.data.forEach(item=>{
+
+      if(!siswaMap[item.nisn]){
+
+        siswaMap[item.nisn] = {
+
+          nisn:item.nisn,
+          nama:item.nama_siswa
+
+        };
+
+      }
+
+    });
+
+    const siswaList =
+    Object.values(siswaMap);
+
+    renderReportGuru({
+
+      kelas,
+      guru,
+      mapel,
+      bulan,
+      tanggalList,
+      siswaList,
+      allData: json.data
+
+    });
+
+    document.getElementById("statusText").innerText =
+    "Report Guru Tampil";
+
+    hideLoading();
+
+  }catch(err){
+
+    console.log(err);
+
+    alert("Gagal load report guru");
+
+    document.getElementById("statusText").innerText =
+    "Gagal Load";
+
+    hideLoading();
+
+  }
+
+}
+
+
+/* =========================================
+RENDER REPORT GURU FINAL FIX
+========================================= */
+
+function renderReportGuru(payload){
+
+  const {
+    kelas,
+    guru,
+    mapel,
+    bulan,
+    siswaList,
+    tanggalList,
+    allData
+  } = payload;
+
+  // =====================================
+  // SEMESTER
+  // =====================================
+
+  const bulanAngka =
+  Number(bulan.split("-")[1]);
+
+  let semester = "Ganjil";
+
+  if(
+    bulanAngka >= 1 &&
+    bulanAngka <= 6
+  ){
+    semester = "Genap";
+  }
+
+  // =====================================
+  // FORMAT TANGGAL
+  // =====================================
+
+  const tanggalFix = tanggalList.map(tgl=>{
+
+    const d = new Date(tgl);
+
+    if(isNaN(d.getTime())){
+      return tgl;
+    }
+
+    return `${String(d.getDate()).padStart(2,"0")}-${String(d.getMonth()+1).padStart(2,"0")}`;
+
+  });
+
+  // =====================================
+  // HTML
+  // =====================================
+
+  let html = `
+
+  <div class="preview-card report-guru-card">
+
+    ${getKopSurat()}
+
+    <div class="preview-title">
+      REKAP ABSENSI GURU MAPEL
+    </div>
+
+    <div class="preview-sub">
+      ${mapel}
+    </div>
+
+    <div class="preview-sub">
+      Kelas ${kelas}
+    </div>
+
+    <div class="preview-sub" style="
+      font-weight:800;
+      margin-bottom:20px;
+    ">
+      Semester ${semester}
+    </div>
+
+    <div class="report-guru-wrap">
+
+      <table class="preview-table guru-table">
+
+        <thead>
+
+          <!-- BARIS 1 -->
+
+          <tr>
+
+            <th rowspan="3">
+              No
+            </th>
+
+            <th rowspan="3">
+              NAMA SISWA
+            </th>
+
+            <th colspan="${tanggalList.length}">
+              Pertemuan Ke / Tanggal
+            </th>
+
+          </tr>
+
+          <!-- BARIS 2 -->
+
+          <tr>
+
+  `;
+
+  // NOMOR PERTEMUAN
+
+  tanggalList.forEach((tgl,index)=>{
+
+    html += `
+      <th class="col-pertemuan">
+        ${index + 1}
+      </th>
+    `;
+
+  });
+
+  html += `
+
+          </tr>
+
+          <!-- BARIS 3 -->
+
+          <tr>
+
+  `;
+
+  // TANGGAL
+
+  tanggalFix.forEach(label=>{
+
+    html += `
+      <th class="col-pertemuan">
+        ${label}
+      </th>
+    `;
+
+  });
+
+  html += `
+
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+  `;
+
+  // =====================================
+  // DATA SISWA
+  // =====================================
+
+  siswaList.forEach((siswa,index)=>{
+
+    html += `
+
+    <tr>
+
+      <td>
+        ${index + 1}
+      </td>
+
+      <td class="nama-siswa">
+        ${siswa.nama}
+      </td>
+
+    `;
+
+    // LOOP PERTEMUAN
+
+    tanggalList.forEach(tgl=>{
+
+      const dataSiswa =
+      allData.filter(item =>
+
+        item.nisn === siswa.nisn &&
+        item.tanggal === tgl
+
+      );
+
+      let status = "-";
+
+      if(dataSiswa.length){
+
+        const allStatus =
+        dataSiswa.map(x=>x.status);
+
+        if(allStatus.includes("C")){
+          status = "C";
+        }
+        else if(allStatus.includes("A")){
+          status = "A";
+        }
+        else if(allStatus.includes("S")){
+          status = "S";
+        }
+        else if(allStatus.includes("I")){
+          status = "I";
+        }
+        else if(allStatus.includes("H")){
+          status = "✓";
+        }
+
+      }
+
+      let cls = "";
+
+      if(status === "✓"){
+        cls = "badge-h";
+      }
+
+      if(status === "S"){
+        cls = "badge-s";
+      }
+
+      if(status === "I"){
+        cls = "badge-i";
+      }
+
+      if(status === "A"){
+        cls = "badge-a";
+      }
+
+      if(status === "C"){
+        cls = "badge-c";
+      }
+
+      html += `
+        <td class="${cls}">
+          ${status}
+        </td>
+      `;
+
+    });
+
+    html += `
+      </tr>
+    `;
+
+  });
+
+  html += `
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+    <!-- KETERANGAN -->
+
+    <div style="
+      margin-top:18px;
+      font-size:12px;
+      display:flex;
+      gap:26px;
+      flex-wrap:wrap;
+      font-weight:700;
+    ">
+
+      <div>
+        <span class="badge-h">✓</span>
+        = Hadir
+      </div>
+
+      <div>
+        <span class="badge-s">S</span>
+        = Sakit
+      </div>
+
+      <div>
+        <span class="badge-i">I</span>
+        = Izin
+      </div>
+
+      <div>
+        <span class="badge-a">A</span>
+        = Alpha
+      </div>
+
+      <div>
+        <span class="badge-c">C</span>
+        = Cuti
+      </div>
+
+    </div>
+
+    <!-- TTD -->
+
+    <div class="ttd-wrap">
+
+      <div class="ttd-box">
+
+        <div>
+          Lubuk Jambi,
+          ${formatTanggalIndonesia(new Date())}
+        </div>
+
+        <div>
+          Guru Mata Pelajaran
+        </div>
+
+        <div class="ttd-name">
+          ${guru}
+        </div>
+
+        <div>
+          NIP. ${window.guruNip || "-"}
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  `;
+
+  document.getElementById("previewArea").innerHTML =
+  html;
+
+}
+
+/* =========================================
+BULANAN
+========================================= */
+
+async function tampilkanBulanan(){
+
+  try{
+
+    showLoading();
+
+    const kelas =
+    document.getElementById("kelas").value;
+
+    const bulan =
+    document.getElementById("bulan").value;
+
+    if(!kelas){
+
+      alert("Pilih kelas");
+      hideLoading();
+      return;
+
+    }
+
+    document.getElementById("statusText").innerText =
+    "Loading Bulanan...";
+
+    const split =
+    bulan.split("-");
+
+    const tahun =
+    Number(split[0]);
+
+    const bulanAngka =
+    Number(split[1]);
+
+    const totalHari =
+    new Date(
+      tahun,
+      bulanAngka,
+      0
+    ).getDate();
+
+    const requests = [];
+
+    for(let t=1;t<=totalHari;t++){
+
+      const tanggal =
+      `${tahun}-${String(bulanAngka).padStart(2,"0")}-${String(t).padStart(2,"0")}`;
+
+      requests.push(
+
+        fetch(
+
+          WEB_APP_URL +
+          "?action=getDashboardPiket" +
+          "&kelas=" + encodeURIComponent(kelas) +
+          "&tanggal=" + encodeURIComponent(tanggal)
+
+        )
+        .then(r=>r.json())
+        .then(json=>({
+
+          tanggal,
+          json
+
+        }))
+
+      );
+
+    }
+
+    const results = [];
+
+    for(const req of requests){
+
+      const result = await req;
+
+      results.push(result);
+
+    }
+
+    let siswaMaster = [];
+
+    const allData = [];
+
+    results.forEach(item=>{
+
+      if(
+        item.json &&
+        item.json.success &&
+        item.json.data &&
+        item.json.data.length
+      ){
+
+        const data =
+        item.json.data[0];
+
+        allData.push({
+
+          tanggal:item.tanggal,
+          data
+
+        });
+
+        if(
+          siswaMaster.length === 0
+        ){
+
+          siswaMaster =
+          data.siswaList || [];
+
+        }
+
+      }
+
+    });
+
+    if(
+      siswaMaster.length === 0
+    ){
+
+      alert("Data tidak ditemukan");
+      hideLoading();
+      return;
+
+    }
+
+    renderTabelBulanan({
+
+      kelas,
+      bulan,
+      siswaList:siswaMaster,
+      allData
+
+    });
+
+    document.getElementById("statusText").innerText =
+    "Data Bulanan Tampil";
+
+    hideLoading();
+
+  }catch(err){
+
+    console.log(err);
+
+    document.getElementById("statusText").innerText =
+    "Gagal Load";
+
+    hideLoading();
+
+    alert("Gagal load data bulanan");
+
+  }
+
+}
+
+/* =========================================
+RENDER BULANAN
+========================================= */
+
+function renderTabelBulanan(payload){
+
+  const {
+    kelas,
+    bulan,
+    siswaList,
+    allData
+  } = payload;
+
+  const split =
+  bulan.split("-");
+
+  const tahun =
+  Number(split[0]);
+
+  const bulanAngka =
+  Number(split[1]);
+
+  const totalHari =
+  new Date(
+    tahun,
+    bulanAngka,
+    0
+  ).getDate();
+
+  let html = `
+
+  <div class="preview-card">
+
+    ${getKopSurat()}
+
+    <div class="periode-wrap">
+      PERIODE :
+      ${formatBulanIndonesia(bulan)}
+    </div>
+
+    <div class="preview-title">
+      REKAP ABSENSI BULANAN
+    </div>
+
+    <div class="preview-sub">
+      Kelas ${kelas}
+    </div>
+
+    <div class="table-wrap">
+
+      <table class="preview-table bulanan-table">
+
+        <thead>
+
+          <tr>
+            <th>No</th>
+            <th>Nama Siswa</th>
+
+  `;
+
+  for(let t=1;t<=totalHari;t++){
+
+    html += `
+      <th>${t}</th>
+    `;
+
+  }
+
+  html += `
+
+            <th>H</th>
+            <th>S</th>
+            <th>I</th>
+            <th>A</th>
+            <th>C</th>
+
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+  `;
+
+  siswaList.forEach((siswa,index)=>{
+
+    let rekap = {
+      H:0,
+      S:0,
+      I:0,
+      A:0,
+      C:0
+    };
+
+    html += `
+    <tr>
+
+        <td>${index + 1}</td>
+
+        <td>
+          ${escapeHTML(siswa.nama)}
+        </td>
+    `;
+
+    for(let t=1;t<=totalHari;t++){
+
+      const tanggal =
+      `${tahun}-${String(bulanAngka).padStart(2,"0")}-${String(t).padStart(2,"0")}`;
+
+      const dayData =
+      allData.find(
+        d => d.tanggal === tanggal
+      );
+
+      let status = "-";
+
+      if(dayData){
+
+        const siswaHari =
+        (dayData.data.siswaList || []).find(
+          x => x.nisn === siswa.nisn
+        );
+
+        if(siswaHari){
+
+          const jamData =
+          Object.values(
+            siswaHari.jam || {}
+          );
+
+          if(jamData.includes("C")){
+            status = "C";
+          }
+          else if(jamData.includes("A")){
+            status = "A";
+          }
+          else if(jamData.includes("S")){
+            status = "S";
+          }
+          else if(jamData.includes("I")){
+            status = "I";
+          }
+          else if(jamData.includes("H")){
+            status = "H";
+          }
+
+        }
+
+      }
+
+      if(status !== "-"){
+        rekap[status]++;
+      }
+
+      let isi = status;
+      let cls = "";
+
+      if(status === "H"){
+        isi = "✓";
+        cls = "badge-h";
+      }
+
+      if(status === "S") cls = "badge-s";
+      if(status === "I") cls = "badge-i";
+      if(status === "A") cls = "badge-a";
+      if(status === "C") cls = "badge-c";
+
+      html += `
+        <td class="${cls}">
+          ${isi}
+        </td>
+      `;
+
+    }
+
+    html += `
+
+      <td class="badge-h">
+        ${rekap.H}
+      </td>
+
+      <td class="badge-s">
+        ${rekap.S}
+      </td>
+
+      <td class="badge-i">
+        ${rekap.I}
+      </td>
+
+      <td class="badge-a">
+        ${rekap.A}
+      </td>
+
+      <td class="badge-c">
+        ${rekap.C}
+      </td>
+
+      </tr>
+
+    `;
+
+  });
+
+  html += `
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+    <div class="ttd-wrap">
+
+  <div class="ttd-box">
+
+    <div>
+      Lubuk Jambi,
+      ${formatTanggalIndonesia(new Date())}
+    </div>
+
+    <div>Mengetahui,</div>
+
+    <div>Wali Kelas</div>
+
+    <div class="ttd-name">
+      ${document.getElementById("waliNama").innerText}
+    </div>
+
+    <div>
+      NIP.
+      ${document.getElementById("waliNip").innerText}
+    </div>
+
+  </div>
+
+</div>
+
+  </div>
+
+  `;
+
+  document.getElementById("previewArea").innerHTML =
+  html;
+
+}
+
+function printHarian(){
+
+  document.body.classList.remove("print-bulanan");
+  document.body.classList.add("print-harian");
+
+  window.print();
+
+}
+
+function printBulanan(){
+
+  document.body.classList.remove("print-harian");
+  document.body.classList.add("print-bulanan");
+
+  window.print();
+
+}
+
+function printGuru(){
+
+  document.body.classList.remove("print-harian");
+  document.body.classList.remove("print-bulanan");
+
+  document.body.classList.add("print-guru");
+
+  window.print();
+
+}
+
+/* =========================================
+PRINT LANGSUNG
+========================================= */
+
+function printPreview(){
+
+  window.print();
+
+}
+
+function logoutApp(){
+
+  const confirmLogout =
+  confirm("Yakin ingin logout?");
+
+  if(!confirmLogout){
+    return;
+  }
+
+  // HAPUS SESSION
+  localStorage.removeItem("isLogin");
+
+  // PINDAH LOGIN
+  window.location.href = "index.html";
+
+}
+
+</script>
+
+</body>
+</html>
