@@ -9,10 +9,13 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     body { font-family: 'Inter', sans-serif; }
+    .level-wali { border-left: 4px solid #3b82f6; }
+    .level-bk { border-left: 4px solid #f59e0b; }
+    .level-kepsek { border-left: 4px solid #dc2626; }
     .status-open { background: #fef3c7; color: #92400e; }
     .status-closed { background: #d1fae5; color: #065f46; }
-    .jenis-alpha { border-left: 4px solid #ef4444; }
-    .jenis-cabut { border-left: 4px solid #f59e0b; }
+    .warning-badge { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+    .escalate-badge { background: #dbeafe; color: #1e3a8a; border: 1px solid #bfdbfe; }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
@@ -23,7 +26,7 @@
       <img src="./logo_sekolah.png" alt="Logo" class="h-10 w-10 object-contain">
       <div>
         <div class="font-bold text-lg">Presensi SMKN 1 Kuantan Mudik</div>
-        <div class="text-xs text-slate-400">Kasus Pembinaan Siswa</div>
+        <div class="text-xs text-slate-400" id="navbarSubtitle">Kasus Pembinaan Siswa</div>
       </div>
     </div>
     <div class="flex items-center gap-4">
@@ -34,31 +37,57 @@
 
   <div class="max-w-7xl mx-auto py-6 px-4">
 
-    <!-- Header / Filter -->
-    <div class="bg-white rounded-xl shadow border border-slate-200 p-6 mb-6">
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+    <!-- Role Header / Warning -->
+    <div id="roleHeader" class="bg-white rounded-xl shadow border border-slate-200 p-6 mb-6 hidden">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 class="text-xl font-bold text-slate-900">Kasus Pembinaan</h1>
-          <p class="text-sm text-slate-500">Kelola kasus pembinaan siswa dan tandai kasus yang telah ditutup dengan alasan.</p>
+          <h1 class="text-xl font-bold text-slate-900" id="roleTitle">Kasus Pembinaan</h1>
+          <p class="text-sm text-slate-500" id="roleDesc">Kelola kasus pembinaan siswa</p>
         </div>
-        <button onclick="openModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition shadow-md">
-          <i class="fas fa-plus"></i> Tambah Kasus
-        </button>
+        <div class="flex gap-2">
+          <button onclick="openTambahModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition shadow-md">
+            <i class="fas fa-plus"></i> Tambah Kasus
+          </button>
+        </div>
       </div>
+    </div>
 
-      <!-- Filters -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+    <!-- Warning for Wali Kelas -->
+    <div id="warningPanel" class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 hidden">
+      <div class="flex items-start gap-3">
+        <div class="bg-amber-100 text-amber-700 rounded-full p-2">
+          <i class="fas fa-exclamation-triangle text-xl"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-amber-800 text-sm">Peringatan Indisiplin</h3>
+          <p class="text-amber-700 text-xs mt-1" id="warningText">Terdapat siswa dengan indisiplin yang perlu pembinaan segera.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white rounded-xl shadow border border-slate-200 p-6 mb-6">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
         <div>
           <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">Status</label>
-          <select id="filterStatus" onchange="loadKasus()" class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none bg-white">
+          <select id="filterStatus" onchange="loadKasus()" class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
             <option value="">Semua Status</option>
             <option value="Open">Open (Belum Ditutup)</option>
             <option value="Ditutup">Ditutup</option>
           </select>
         </div>
         <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">Level</label>
+          <select id="filterLevel" onchange="loadKasus()" class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
+            <option value="">Semua Level</option>
+            <option value="wali_kelas">Wali Kelas</option>
+            <option value="bk">BK</option>
+            <option value="kepsek">Kepsek</option>
+          </select>
+        </div>
+        <div>
           <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">Kelas</label>
-          <select id="filterKelas" onchange="loadKasus()" class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none bg-white">
+          <select id="filterKelas" onchange="loadKasus()" class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
             <option value="">Semua Kelas</option>
           </select>
         </div>
@@ -81,7 +110,7 @@
               <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Nama Siswa</th>
               <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Kelas</th>
               <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Jenis</th>
-              <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Keterangan</th>
+              <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Level</th>
               <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Status</th>
               <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Aksi</th>
             </tr>
@@ -99,42 +128,44 @@
 
   </div>
 
-  <!-- Modal Tambah Kasus -->
-  <div id="kasusModal" class="fixed inset-0 z-50 hidden">
-    <div class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm" onclick="closeModal()"></div>
+  <!-- ============================================================
+       MODAL 1: Tambah Kasus (Wali Kelas, BK, Kepsek)
+       ============================================================ -->
+  <div id="tambahModal" class="fixed inset-0 z-50 hidden">
+    <div class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm" onclick="closeTambahModal()"></div>
     <div class="fixed inset-0 z-10 overflow-y-auto">
       <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
         <div class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
-          <div class="bg-slate-900 px-4 py-5 sm:px-6">
+          <div class="bg-blue-900 px-4 py-5 sm:px-6">
             <h3 class="text-base font-semibold leading-6 text-white">Tambah Kasus Pembinaan</h3>
           </div>
           <div class="p-6 sm:p-6">
-            <form id="kasusForm" class="space-y-4" onsubmit="saveKasus(event)">
-              <input type="hidden" id="kasusId">
+            <form id="tambahForm" class="space-y-4" onsubmit="simpanKasus(event)">
+              <input type="hidden" id="tambahRole">
               
               <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">Tanggal</label>
-                <input type="date" id="kasusTanggal" required class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none">
+                <input type="date" id="tambahTanggal" required class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
               </div>
 
               <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">NISN</label>
-                <input type="text" id="kasusNisn" required placeholder="Masukkan NISN siswa" class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none">
+                <input type="text" id="tambahNisn" required placeholder="Masukkan NISN siswa" class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
               </div>
 
               <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">Nama Siswa</label>
-                <input type="text" id="kasusNama" required placeholder="Nama lengkap siswa" class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none">
+                <input type="text" id="tambahNama" required placeholder="Nama lengkap siswa" class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
               </div>
 
               <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">Kelas</label>
-                <input type="text" id="kasusKelas" required placeholder="Contoh: X TKJ 1" class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none">
+                <input type="text" id="tambahKelas" required placeholder="Contoh: X TKJ 1" class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
               </div>
 
               <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">Jenis Kasus</label>
-                <select id="kasusJenis" class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none bg-white">
+                <select id="tambahJenis" class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
                   <option value="Alpha">Alpha</option>
                   <option value="Cabut">Cabut</option>
                   <option value="Lainnya">Lainnya</option>
@@ -143,12 +174,12 @@
 
               <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">Keterangan</label>
-                <textarea id="kasusKeterangan" rows="3" placeholder="Deskripsi singkat kasus..." class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"></textarea>
+                <textarea id="tambahKeterangan" rows="3" placeholder="Deskripsi singkat kasus indisiplin..." class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"></textarea>
               </div>
 
               <div class="flex justify-end gap-3 pt-4">
-                <button type="button" onclick="closeModal()" class="px-4 py-2 text-slate-600 hover:text-slate-900 font-medium">Batal</button>
-                <button type="submit" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-lg transition">Simpan</button>
+                <button type="button" onclick="closeTambahModal()" class="px-4 py-2 text-slate-600 hover:text-slate-900 font-medium">Batal</button>
+                <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition">Simpan Kasus</button>
               </div>
             </form>
           </div>
@@ -157,13 +188,95 @@
     </div>
   </div>
 
-  <!-- Modal Tutup Kasus -->
+  <!-- ============================================================
+       MODAL 2: Catat Tindakan (Wali Kelas, BK)
+       ============================================================ -->
+  <div id="tindakanModal" class="fixed inset-0 z-50 hidden">
+    <div class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm" onclick="closeTindakanModal()"></div>
+    <div class="fixed inset-0 z-10 overflow-y-auto">
+      <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+        <div class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+          <div class="bg-indigo-900 px-4 py-5 sm:px-6">
+            <h3 class="text-base font-semibold leading-6 text-white">Catat Tindakan Pembinaan</h3>
+          </div>
+          <div class="p-6 sm:p-6">
+            <form id="tindakanForm" class="space-y-4" onsubmit="catatTindakan(event)">
+              <input type="hidden" id="tindakanKasusId">
+              <input type="hidden" id="tindakanLevel">
+              
+              <div class="bg-indigo-50 p-3 rounded-lg mb-4">
+                <p class="text-sm text-indigo-800 font-medium mb-1">Siswa: <span id="tindakanNama" class="font-bold"></span></p>
+                <p class="text-xs text-indigo-700">Kelas: <span id="tindakanKelas" class="font-bold"></span> | Jenis: <span id="tindakanJenis" class="font-bold"></span></p>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Tindakan yang Dilakukan</label>
+                <textarea id="tindakanTindakan" rows="3" required placeholder="Contoh: Bimbingan individu, panggilan orang tua, surat peringatan..." class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"></textarea>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Catatan Tambahan</label>
+                <textarea id="tindakanCatatan" rows="2" placeholder="Catatan tambahan (opsional)..." class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"></textarea>
+              </div>
+
+              <div class="flex justify-end gap-3 pt-4">
+                <button type="button" onclick="closeTindakanModal()" class="px-4 py-2 text-slate-600 hover:text-slate-900 font-medium">Batal</button>
+                <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition">Simpan Tindakan</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       MODAL 3: Escalate (Wali Kelas → BK, BK → Kepsek)
+       ============================================================ -->
+  <div id="escalateModal" class="fixed inset-0 z-50 hidden">
+    <div class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm" onclick="closeEscalateModal()"></div>
+    <div class="fixed inset-0 z-10 overflow-y-auto">
+      <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+        <div class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+          <div class="bg-red-900 px-4 py-5 sm:px-6">
+            <h3 class="text-base font-semibold leading-6 text-white">Escalate Kasus</h3>
+          </div>
+          <div class="p-6 sm:p-6">
+            <form id="escalateForm" class="space-y-4" onsubmit="escalateKasus(event)">
+              <input type="hidden" id="escalateKasusId">
+              <input type="hidden" id="escalateDariLevel">
+              <input type="hidden" id="escalateKeLevel">
+              
+              <div class="bg-red-50 p-3 rounded-lg mb-4">
+                <p class="text-sm text-red-800 font-medium mb-1">Siswa: <span id="escalateNama" class="font-bold"></span></p>
+                <p class="text-xs text-red-700">Dari: <span id="escalateDari" class="font-bold"></span> → Ke: <span id="escalateKe" class="font-bold"></span></p>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Alasan Escalasi</label>
+                <textarea id="escalateCatatan" rows="3" required placeholder="Mengapa kasus ini perlu ditangani level lebih atas..." class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"></textarea>
+              </div>
+
+              <div class="flex justify-end gap-3 pt-4">
+                <button type="button" onclick="closeEscalateModal()" class="px-4 py-2 text-slate-600 hover:text-slate-900 font-medium">Batal</button>
+                <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition">Kirim Escalasi</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       MODAL 4: Tutup Kasus (Kepsek)
+       ============================================================ -->
   <div id="tutupModal" class="fixed inset-0 z-50 hidden">
     <div class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm" onclick="closeTutupModal()"></div>
     <div class="fixed inset-0 z-10 overflow-y-auto">
       <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
         <div class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-md">
-          <div class="bg-slate-900 px-4 py-5 sm:px-6">
+          <div class="bg-green-900 px-4 py-5 sm:px-6">
             <h3 class="text-base font-semibold leading-6 text-white">Tutup Kasus</h3>
           </div>
           <div class="p-6 sm:p-6">
@@ -172,13 +285,13 @@
               
               <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">Alasan Penutupan</label>
-                <p class="text-sm text-slate-500 mb-2">Contoh: telah tamat, dikeluarkan, pindah sekolah, dsb.</p>
-                <textarea id="tutupAlasan" rows="3" required placeholder="Masukkan alasan penutupan kasus..." class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"></textarea>
+                <p class="text-sm text-slate-500 mb-2">Contoh: telah tamat, dikeluarkan, pindah sekolah, sudah cukup bimbingan.</p>
+                <textarea id="tutupAlasan" rows="3" required placeholder="Masukkan alasan penutupan kasus..." class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"></textarea>
               </div>
 
               <div class="flex justify-end gap-3 pt-4">
                 <button type="button" onclick="closeTutupModal()" class="px-4 py-2 text-slate-600 hover:text-slate-900 font-medium">Batal</button>
-                <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition">Tutup Kasus</button>
+                <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition">Tutup Kasus</button>
               </div>
             </form>
           </div>
@@ -188,19 +301,65 @@
   </div>
 
   <script>
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbxQ7y5axYChzmGp-jTpEDHjWRgjcKoBC7uH8r_Aqe3281QXoE5pFkc5vLUG-XPTv8s/exec';
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbwdS4zz2lTod64Lw4XV8P5wXBg6HKll80YPxp1OifCj29SidKbNLYstFhqOrqaT3nc/exec';
+
+    // Parse role from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const ROLE = urlParams.get('role') || 'wali_kelas';
+    const KELAS_WALI = urlParams.get('kelas') || '';
 
     let kasusData = [];
-    let currentEditId = null;
+    let peringatanCount = 0;
 
-    // Initialize
+    // Role labels
+    const ROLE_LABELS = {
+      'wali_kelas': 'Wali Kelas',
+      'bk': 'BK (Bimbingan Konseling)',
+      'kepsek': 'Kepala Sekolah'
+    };
+    const ROLE_COLORS = {
+      'wali_kelas': 'blue',
+      'bk': 'amber',
+      'kepsek': 'red'
+    };
+
     document.addEventListener('DOMContentLoaded', function() {
-      // Set default date to today
+      // Set role header
+      document.getElementById('roleHeader').classList.remove('hidden');
+      document.getElementById('roleTitle').textContent = 'Kasus Pembinaan - ' + ROLE_LABELS[ROLE];
+      document.getElementById('navbarSubtitle').textContent = ROLE_LABELS[ROLE] + ' - Pembinaan Siswa';
+      document.getElementById('tambahRole').value = ROLE;
+
+      // Set default date
       const today = new Date().toISOString().split('T')[0];
-      document.getElementById('kasusTanggal').value = today;
+      document.getElementById('tambahTanggal').value = today;
+
+      // Load peringatan if wali_kelas
+      if (ROLE === 'wali_kelas') {
+        loadPeringatan();
+      }
+
       loadKelas();
       loadKasus();
     });
+
+    async function loadPeringatan() {
+      try {
+        const res = await fetch(GAS_URL + '?action=getPeringatanWaliKelas&kelas=' + encodeURIComponent(KELAS_WALI));
+        const data = await res.json();
+        if (data.success) {
+          peringatanCount = data.peringatan || 0;
+          const warningPanel = document.getElementById('warningPanel');
+          const warningText = document.getElementById('warningText');
+          if (peringatanCount > 0) {
+            warningPanel.classList.remove('hidden');
+            warningText.textContent = 'Terdapat ' + peringatanCount + ' kasus pembinaan yang masih Open di kelas ' + KELAS_WALI + ' dan perlu ditindaklanjuti segera.';
+          } else {
+            warningPanel.classList.add('hidden');
+          }
+        }
+      } catch(e) { console.error('loadPeringatan error', e); }
+    }
 
     async function loadKelas() {
       try {
@@ -214,12 +373,17 @@
             o.textContent = k.kelas || k;
             sel.appendChild(o);
           });
+          // If wali_kelas, preset kelas
+          if (ROLE === 'wali_kelas' && KELAS_WALI) {
+            sel.value = KELAS_WALI;
+          }
         }
       } catch(e) { console.error('loadKelas error', e); }
     }
 
     async function loadKasus() {
       const status = document.getElementById('filterStatus').value;
+      const level = document.getElementById('filterLevel').value;
       const kelas = document.getElementById('filterKelas').value;
       const tbody = document.getElementById('kasusTableBody');
       const empty = document.getElementById('emptyState');
@@ -227,8 +391,10 @@
       empty.classList.add('hidden');
 
       try {
-        let url = GAS_URL + '?action=getKasusPembinaan';
+        let url = GAS_URL + '?action=getKasusPembinaan&role=' + encodeURIComponent(ROLE);
+        if (KELAS_WALI) url += '&kelas_wali=' + encodeURIComponent(KELAS_WALI);
         if (status) url += '&status=' + encodeURIComponent(status);
+        if (level) url += '&level=' + encodeURIComponent(level);
         if (kelas) url += '&kelas=' + encodeURIComponent(kelas);
 
         const res = await fetch(url);
@@ -238,6 +404,11 @@
 
         kasusData = data.data || [];
         renderKasus(kasusData);
+
+        // Refresh peringatan
+        if (ROLE === 'wali_kelas') {
+          loadPeringatan();
+        }
       } catch(e) {
         tbody.innerHTML = '<tr><td colspan="8" class="p-4 text-center text-red-500">Gagal memuat: ' + e.message + '</td></tr>';
         console.error(e);
@@ -257,33 +428,92 @@
 
       list.forEach(k => {
         const isOpen = k.status === 'Open';
+        const levelClass = 'level-' + (k.level || 'wali_kelas');
         const row = document.createElement('tr');
-        row.className = isOpen ? 'jenis-alpha' : '';
+        row.className = levelClass + ' hover:bg-slate-50 transition';
+
+        // Build action buttons based on role and status
+        let actionHtml = '';
+
+        if (isOpen) {
+          if (ROLE === 'wali_kelas' && k.level === 'wali_kelas') {
+            actionHtml += `
+              <button onclick="openTindakanModal('${k.id}', '${k.nama_siswa}', '${k.kelas}', '${k.jenis}', 'wali_kelas')" class="text-indigo-600 hover:text-indigo-800 text-xs font-medium flex items-center gap-1">
+                <i class="fas fa-edit"></i> Catat Tindakan
+              </button>
+              <button onclick="openEscalateModal('${k.id}', '${k.nama_siswa}', 'wali_kelas', 'bk')" class="text-red-600 hover:text-red-800 text-xs font-medium flex items-center gap-1">
+                <i class="fas fa-arrow-up"></i> Escalate ke BK
+              </button>
+            `;
+          } else if (ROLE === 'bk' && k.level === 'bk') {
+            actionHtml += `
+              <button onclick="openTindakanModal('${k.id}', '${k.nama_siswa}', '${k.kelas}', '${k.jenis}', 'bk')" class="text-indigo-600 hover:text-indigo-800 text-xs font-medium flex items-center gap-1">
+                <i class="fas fa-edit"></i> Catat Tindakan BK
+              </button>
+              <button onclick="openEscalateModal('${k.id}', '${k.nama_siswa}', 'bk', 'kepsek')" class="text-red-600 hover:text-red-800 text-xs font-medium flex items-center gap-1">
+                <i class="fas fa-arrow-up"></i> Escalate ke Kepsek
+              </button>
+            `;
+          } else if (ROLE === 'kepsek' && k.level === 'kepsek') {
+            actionHtml += `
+              <button onclick="openTindakanModal('${k.id}', '${k.nama_siswa}', '${k.kelas}', '${k.jenis}', 'kepsek')" class="text-indigo-600 hover:text-indigo-800 text-xs font-medium flex items-center gap-1">
+                <i class="fas fa-edit"></i> Tindakan Kepsek
+              </button>
+              <button onclick="openTutupModal('${k.id}')" class="text-green-600 hover:text-green-800 text-xs font-medium flex items-center gap-1">
+                <i class="fas fa-check"></i> Tutup Kasus
+              </button>
+            `;
+          } else {
+            actionHtml += `<span class="text-xs text-slate-400">-</span>`;
+          }
+        } else {
+          actionHtml = `<span class="text-xs text-slate-400">Ditutup</span>`;
+          if (k.alasan_penutupan) {
+            actionHtml += `<div class="text-xs text-slate-500 mt-1">Alasan: ${k.alasan_penutupan}</div>`;
+          }
+        }
+
         row.innerHTML = `
           <td class="px-4 py-3 text-sm">${k.tanggal || '-'}</td>
           <td class="px-4 py-3 text-sm font-mono">${k.nisn || '-'}</td>
           <td class="px-4 py-3 text-sm">${k.nama_siswa || '-'}</td>
           <td class="px-4 py-3 text-sm">${k.kelas || '-'}</td>
           <td class="px-4 py-3 text-sm capitalize">${k.jenis || '-'}</td>
-          <td class="px-4 py-3 text-sm">${k.keterangan || '-'}</td>
+          <td class="px-4 py-3 text-sm">
+            <span class="px-2 py-1 rounded-full text-xs font-bold ${k.level === 'wali_kelas' ? 'bg-blue-100 text-blue-700' : k.level === 'bk' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}">
+              ${k.level === 'wali_kelas' ? 'Wali Kelas' : k.level === 'bk' ? 'BK' : 'Kepsek'}
+            </span>
+          </td>
           <td class="px-4 py-3 text-sm">
             <span class="px-2 py-1 rounded-full text-xs font-bold ${isOpen ? 'status-open' : 'status-closed'}">
               ${isOpen ? 'Open' : 'Ditutup'}
             </span>
           </td>
           <td class="px-4 py-3 text-sm">
-            ${isOpen ?
-              `<button onclick="openTutupModal('${k.id}')" class="text-red-600 hover:text-red-800 text-xs font-medium"><i class="fas fa-lock-open"></i> Tutup</button>` :
-              `<span class="text-xs text-slate-400">Ditutup</span>`
-            }
-            ${k.alasan_penutupan ? `<div class="text-xs text-slate-500 mt-1">Alasan: ${k.alasan_penutupan}</div>` : ''}
+            ${actionHtml}
+            ${k.catatan_wali ? `<div class="text-xs text-slate-500 mt-1">Wali: ${k.catatan_wali}</div>` : ''}
+            ${k.catatan_bk ? `<div class="text-xs text-slate-500 mt-1">BK: ${k.catatan_bk}</div>` : ''}
           </td>
         `;
         tbody.appendChild(row);
       });
     }
 
-    async function saveKasus(e) {
+    // ============================================================
+    // ACTIONS
+    // ============================================================
+
+    function openTambahModal() {
+      document.getElementById('tambahForm').reset();
+      document.getElementById('tambahTanggal').value = new Date().toISOString().split('T')[0];
+      document.getElementById('tambahModal').classList.remove('hidden');
+    }
+
+    function closeTambahModal() {
+      document.getElementById('tambahModal').classList.add('hidden');
+    }
+
+    async function simpanKasus(e) {
       e.preventDefault();
       const btn = e.target.querySelector('button[type="submit"]');
       const original = btn.textContent;
@@ -291,25 +521,25 @@
       btn.disabled = true;
 
       const data = {
-        tanggal: document.getElementById('kasusTanggal').value,
-        nisn: document.getElementById('kasusNisn').value,
-        nama_siswa: document.getElementById('kasusNama').value,
-        kelas: document.getElementById('kasusKelas').value,
-        jenis: document.getElementById('kasusJenis').value,
-        keterangan: document.getElementById('kasusKeterangan').value
+        tanggal: document.getElementById('tambahTanggal').value,
+        nisn: document.getElementById('tambahNisn').value,
+        nama_siswa: document.getElementById('tambahNama').value,
+        kelas: document.getElementById('tambahKelas').value,
+        jenis: document.getElementById('tambahJenis').value,
+        keterangan: document.getElementById('tambahKeterangan').value
       };
 
       try {
         const res = await fetch(GAS_URL, {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({action: 'simpanKasusPembinaan', data: data})
+          body: JSON.stringify({action: 'simpanKasusPembinaan', data: data, role: ROLE, kelas_wali: KELAS_WALI})
         });
         const result = await res.json();
         if (!result.success) throw new Error(result.error);
-        closeModal();
+        closeTambahModal();
         e.target.reset();
-        document.getElementById('kasusTanggal').value = new Date().toISOString().split('T')[0];
+        document.getElementById('tambahTanggal').value = new Date().toISOString().split('T')[0];
         loadKasus();
       } catch(err) {
         alert('Gagal menyimpan: ' + err.message);
@@ -319,10 +549,103 @@
       }
     }
 
+    function openTindakanModal(id, nama, kelas, jenis, level) {
+      document.getElementById('tindakanKasusId').value = id;
+      document.getElementById('tindakanLevel').value = level;
+      document.getElementById('tindakanNama').textContent = nama;
+      document.getElementById('tindakanKelas').textContent = kelas;
+      document.getElementById('tindakanJenis').textContent = jenis;
+      document.getElementById('tindakanForm').reset();
+      document.getElementById('tindakanModal').classList.remove('hidden');
+    }
+
+    function closeTindakanModal() {
+      document.getElementById('tindakanModal').classList.add('hidden');
+    }
+
+    async function catatTindakan(e) {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      const original = btn.textContent;
+      btn.textContent = 'Menyimpan...';
+      btn.disabled = true;
+
+      const id = document.getElementById('tindakanKasusId').value;
+      const level = document.getElementById('tindakanLevel').value;
+      const tindakan = document.getElementById('tindakanTindakan').value;
+      const catatan = document.getElementById('tindakanCatatan').value;
+
+      try {
+        const res = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({action: 'catatTindakanKasus', id: id, level: level, tindakan: tindakan, catatan: catatan})
+        });
+        const result = await res.json();
+        if (!result.success) throw new Error(result.error);
+        closeTindakanModal();
+        loadKasus();
+      } catch(err) {
+        alert('Gagal menyimpan tindakan: ' + err.message);
+      } finally {
+        btn.textContent = original;
+        btn.disabled = false;
+      }
+    }
+
+    function openEscalateModal(id, nama, dariLevel, keLevel) {
+      document.getElementById('escalateKasusId').value = id;
+      document.getElementById('escalateDariLevel').value = dariLevel;
+      document.getElementById('escalateKeLevel').value = keLevel;
+      document.getElementById('escalateNama').textContent = nama;
+      document.getElementById('escalateDari').textContent = dariLevel === 'wali_kelas' ? 'Wali Kelas' : 'BK';
+      document.getElementById('escalateKe').textContent = keLevel === 'bk' ? 'BK' : 'Kepsek';
+      document.getElementById('escalateForm').reset();
+      document.getElementById('escalateModal').classList.remove('hidden');
+    }
+
+    function closeEscalateModal() {
+      document.getElementById('escalateModal').classList.add('hidden');
+    }
+
+    async function escalateKasus(e) {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      const original = btn.textContent;
+      btn.textContent = 'Mengirim...';
+      btn.disabled = true;
+
+      const id = document.getElementById('escalateKasusId').value;
+      const dariLevel = document.getElementById('escalateDariLevel').value;
+      const keLevel = document.getElementById('escalateKeLevel').value;
+      const catatan = document.getElementById('escalateCatatan').value;
+
+      try {
+        const res = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({action: 'escalateKasus', id: id, dariLevel: dariLevel, keLevel: keLevel, catatan: catatan})
+        });
+        const result = await res.json();
+        if (!result.success) throw new Error(result.error);
+        closeEscalateModal();
+        loadKasus();
+      } catch(err) {
+        alert('Gagal escalate: ' + err.message);
+      } finally {
+        btn.textContent = original;
+        btn.disabled = false;
+      }
+    }
+
     function openTutupModal(id) {
       document.getElementById('tutupKasusId').value = id;
-      document.getElementById('tutupAlasan').value = '';
+      document.getElementById('tutupForm').reset();
       document.getElementById('tutupModal').classList.remove('hidden');
+    }
+
+    function closeTutupModal() {
+      document.getElementById('tutupModal').classList.add('hidden');
     }
 
     async function tutupKasus(e) {
@@ -339,7 +662,7 @@
         const res = await fetch(GAS_URL, {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({action: 'tutupKasusPembinaan', id: id, alasan: alasan})
+          body: JSON.stringify({action: 'tutupKasusPembinaan', id: id, alasan: alasan, role: ROLE})
         });
         const result = await res.json();
         if (!result.success) throw new Error(result.error);
@@ -353,24 +676,12 @@
       }
     }
 
-    function openModal() {
-      document.getElementById('kasusForm').reset();
-      document.getElementById('kasusTanggal').value = new Date().toISOString().split('T')[0];
-      document.getElementById('kasusModal').classList.remove('hidden');
-    }
-
-    function closeModal() {
-      document.getElementById('kasusModal').classList.add('hidden');
-    }
-
-    function closeTutupModal() {
-      document.getElementById('tutupModal').classList.add('hidden');
-    }
-
     // Close modals on Escape
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') {
-        closeModal();
+        closeTambahModal();
+        closeTindakanModal();
+        closeEscalateModal();
         closeTutupModal();
       }
     });
