@@ -16,9 +16,13 @@
     .status-closed { background: #d1fae5; color: #065f46; }
     .warning-badge { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
     .escalate-badge { background: #dbeafe; color: #1e3a8a; border: 1px solid #bfdbfe; }
+    #autoToast { transition: opacity .2s ease; }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
+
+  <!-- Notifikasi sinkron otomatis dari absensi -->
+  <div id="autoToast" class="hidden fixed top-4 right-4 z-50 max-w-xs rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 shadow-lg"></div>
 
   <!-- Navbar -->
   <nav class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center shadow-md">
@@ -87,7 +91,7 @@
         </div>
         <div>
           <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">Kelas</label>
-          <select id="filterKelas" onchange="loadKasus()" class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
+          <select id="filterKelas" onchange="gantiKelas()" class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
             <option value="">Semua Kelas</option>
           </select>
         </div>
@@ -339,9 +343,49 @@
         loadPeringatan();
       }
 
-      loadKelas();
-      loadKasus();
+      loadKelas().then(function () {
+        return sinkronOtomatis();
+      }).then(function () {
+        loadKasus();
+      });
     });
+
+    /* Sinkronkan kasus otomatis dari absensi (Alpha/Cabut >= 3). */
+    async function sinkronOtomatis() {
+      const notif = document.getElementById('autoToast');
+      const kelas = ROLE === 'wali_kelas'
+        ? (KELAS_WALI || document.getElementById('filterKelas').value || '')
+        : (document.getElementById('filterKelas').value || '');
+
+      // Tanpa kelas: jangan pindai seluruh sekolah (bisa lambat).
+      if (!kelas) { notif.classList.add('hidden'); return; }
+
+      notif.textContent = 'Memeriksa absensi (Alpha/Cabut ≥ 3)…';
+      notif.classList.remove('hidden');
+
+      try {
+        let url = GAS_URL + '?action=sinkronKasusDariAbsensi&role=' + encodeURIComponent(ROLE);
+        if (KELAS_WALI) url += '&kelas_wali=' + encodeURIComponent(KELAS_WALI);
+        url += '&kelas=' + encodeURIComponent(kelas);
+
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.success && data.dibuat > 0) {
+          notif.textContent = '⚠ ' + data.dibuat + ' kasus baru dibuat otomatis dari absensi (Alpha/Cabut ≥ 3).';
+          window.setTimeout(function () { notif.classList.add('hidden'); }, 9000);
+        } else {
+          notif.classList.add('hidden');
+        }
+      } catch (e) {
+        console.error('sinkronKasus error', e);
+        notif.classList.add('hidden');
+      }
+    }
+
+    function gantiKelas() {
+      if (ROLE === 'wali_kelas') { loadKasus(); return; }
+      sinkronOtomatis().then(function () { loadKasus(); });
+    }
 
     async function loadPeringatan() {
       try {
@@ -415,6 +459,11 @@
       }
     }
 
+    function esc(v) {
+      return String(v == null ? '' : v)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
     function renderKasus(list) {
       const tbody = document.getElementById('kasusTableBody');
       const empty = document.getElementById('emptyState');
@@ -478,7 +527,9 @@
           <td class="px-4 py-3 text-sm font-mono">${k.nisn || '-'}</td>
           <td class="px-4 py-3 text-sm">${k.nama_siswa || '-'}</td>
           <td class="px-4 py-3 text-sm">${k.kelas || '-'}</td>
-          <td class="px-4 py-3 text-sm capitalize">${k.jenis || '-'}</td>
+          <td class="px-4 py-3 text-sm capitalize">${k.jenis || '-'}
+            ${k.keterangan ? `<div class="mt-0.5 max-w-[18rem] truncate text-[11px] normal-case text-slate-500" title="${esc(k.keterangan)}">${esc(k.keterangan)}</div>` : ''}
+          </td>
           <td class="px-4 py-3 text-sm">
             <span class="px-2 py-1 rounded-full text-xs font-bold ${k.level === 'wali_kelas' ? 'bg-blue-100 text-blue-700' : k.level === 'bk' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}">
               ${k.level === 'wali_kelas' ? 'Wali Kelas' : k.level === 'bk' ? 'BK' : 'Kepsek'}
