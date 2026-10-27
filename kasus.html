@@ -305,7 +305,7 @@
   </div>
 
   <script>
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbwdS4zz2lTod64Lw4XV8P5wXBg6HKll80YPxp1OifCj29SidKbNLYstFhqOrqaT3nc/exec';
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbyQ2zcEWonrxEzfG0v844_7Oj5wN_qHRVUwULEO5NG7gjR_wTTjK4j0C435TcG5Hsk/exec';
 
     // Parse role from URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -330,9 +330,16 @@
     document.addEventListener('DOMContentLoaded', function() {
       // Set role header
       document.getElementById('roleHeader').classList.remove('hidden');
-      document.getElementById('roleTitle').textContent = 'Kasus Pembinaan - ' + ROLE_LABELS[ROLE];
-      document.getElementById('navbarSubtitle').textContent = ROLE_LABELS[ROLE] + ' - Pembinaan Siswa';
+      const roleLabel = ROLE_LABELS[ROLE] || 'Tamu';
+      document.getElementById('roleTitle').textContent = 'Kasus Pembinaan - ' + roleLabel;
+      document.getElementById('navbarSubtitle').textContent = roleLabel + ' - Pembinaan Siswa';
       document.getElementById('tambahRole').value = ROLE;
+
+      // Wali kelas: filter kelas dikunci ke kelasnya sendiri (readonly)
+      if (ROLE === 'wali_kelas' && KELAS_WALI) {
+        const selKelas = document.getElementById('filterKelas');
+        selKelas.disabled = true;
+      }
 
       // Set default date
       const today = new Date().toISOString().split('T')[0];
@@ -444,7 +451,7 @@
         const res = await fetch(url);
         const data = await res.json();
 
-        if (!data.success) throw new Error(data.error);
+        if (!data.success) throw new Error(data.error || 'Gagal memuat data');
 
         kasusData = data.data || [];
         renderKasus(kasusData);
@@ -454,7 +461,7 @@
           loadPeringatan();
         }
       } catch(e) {
-        tbody.innerHTML = '<tr><td colspan="8" class="p-4 text-center text-red-500">Gagal memuat: ' + e.message + '</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="p-4 text-center text-red-500">Gagal memuat: ' + esc(e && e.message ? e.message : 'tidak diketahui') + '</td></tr>';
         console.error(e);
       }
     }
@@ -475,40 +482,42 @@
       }
       empty.classList.add('hidden');
 
-      list.forEach(k => {
+      list.forEach((k, idx) => {
         const isOpen = k.status === 'Open';
         const levelClass = 'level-' + (k.level || 'wali_kelas');
         const row = document.createElement('tr');
         row.className = levelClass + ' hover:bg-slate-50 transition';
 
-        // Build action buttons based on role and status
+        // Build action buttons based on role and status.
+        // Lookup by index (kasusData[idx]) — nama/kelas tidak disisipkan
+        // langsung ke atribut onclick (aman dari kutip/quote siswa).
         let actionHtml = '';
 
         if (isOpen) {
           if (ROLE === 'wali_kelas' && k.level === 'wali_kelas') {
             actionHtml += `
-              <button onclick="openTindakanModal('${k.id}', '${k.nama_siswa}', '${k.kelas}', '${k.jenis}', 'wali_kelas')" class="text-indigo-600 hover:text-indigo-800 text-xs font-medium flex items-center gap-1">
+              <button onclick="openTindakanModal(kasusData[${idx}], 'wali_kelas')" class="text-indigo-600 hover:text-indigo-800 text-xs font-medium flex items-center gap-1">
                 <i class="fas fa-edit"></i> Catat Tindakan
               </button>
-              <button onclick="openEscalateModal('${k.id}', '${k.nama_siswa}', 'wali_kelas', 'bk')" class="text-red-600 hover:text-red-800 text-xs font-medium flex items-center gap-1">
+              <button onclick="openEscalateModal(kasusData[${idx}], 'wali_kelas', 'bk')" class="text-red-600 hover:text-red-800 text-xs font-medium flex items-center gap-1">
                 <i class="fas fa-arrow-up"></i> Escalate ke BK
               </button>
             `;
           } else if (ROLE === 'bk' && k.level === 'bk') {
             actionHtml += `
-              <button onclick="openTindakanModal('${k.id}', '${k.nama_siswa}', '${k.kelas}', '${k.jenis}', 'bk')" class="text-indigo-600 hover:text-indigo-800 text-xs font-medium flex items-center gap-1">
+              <button onclick="openTindakanModal(kasusData[${idx}], 'bk')" class="text-indigo-600 hover:text-indigo-800 text-xs font-medium flex items-center gap-1">
                 <i class="fas fa-edit"></i> Catat Tindakan BK
               </button>
-              <button onclick="openEscalateModal('${k.id}', '${k.nama_siswa}', 'bk', 'kepsek')" class="text-red-600 hover:text-red-800 text-xs font-medium flex items-center gap-1">
+              <button onclick="openEscalateModal(kasusData[${idx}], 'bk', 'kepsek')" class="text-red-600 hover:text-red-800 text-xs font-medium flex items-center gap-1">
                 <i class="fas fa-arrow-up"></i> Escalate ke Kepsek
               </button>
             `;
           } else if (ROLE === 'kepsek' && k.level === 'kepsek') {
             actionHtml += `
-              <button onclick="openTindakanModal('${k.id}', '${k.nama_siswa}', '${k.kelas}', '${k.jenis}', 'kepsek')" class="text-indigo-600 hover:text-indigo-800 text-xs font-medium flex items-center gap-1">
+              <button onclick="openTindakanModal(kasusData[${idx}], 'kepsek')" class="text-indigo-600 hover:text-indigo-800 text-xs font-medium flex items-center gap-1">
                 <i class="fas fa-edit"></i> Tindakan Kepsek
               </button>
-              <button onclick="openTutupModal('${k.id}')" class="text-green-600 hover:text-green-800 text-xs font-medium flex items-center gap-1">
+              <button onclick="openTutupModal(kasusData[${idx}].id)" class="text-green-600 hover:text-green-800 text-xs font-medium flex items-center gap-1">
                 <i class="fas fa-check"></i> Tutup Kasus
               </button>
             `;
@@ -518,16 +527,16 @@
         } else {
           actionHtml = `<span class="text-xs text-slate-400">Ditutup</span>`;
           if (k.alasan_penutupan) {
-            actionHtml += `<div class="text-xs text-slate-500 mt-1">Alasan: ${k.alasan_penutupan}</div>`;
+            actionHtml += `<div class="text-xs text-slate-500 mt-1">Alasan: ${esc(k.alasan_penutupan)}</div>`;
           }
         }
 
         row.innerHTML = `
-          <td class="px-4 py-3 text-sm">${k.tanggal || '-'}</td>
-          <td class="px-4 py-3 text-sm font-mono">${k.nisn || '-'}</td>
-          <td class="px-4 py-3 text-sm">${k.nama_siswa || '-'}</td>
-          <td class="px-4 py-3 text-sm">${k.kelas || '-'}</td>
-          <td class="px-4 py-3 text-sm capitalize">${k.jenis || '-'}
+          <td class="px-4 py-3 text-sm">${esc(k.tanggal) || '-'}</td>
+          <td class="px-4 py-3 text-sm font-mono">${esc(k.nisn) || '-'}</td>
+          <td class="px-4 py-3 text-sm">${esc(k.nama_siswa) || '-'}</td>
+          <td class="px-4 py-3 text-sm">${esc(k.kelas) || '-'}</td>
+          <td class="px-4 py-3 text-sm capitalize">${esc(k.jenis) || '-'}
             ${k.keterangan ? `<div class="mt-0.5 max-w-[18rem] truncate text-[11px] normal-case text-slate-500" title="${esc(k.keterangan)}">${esc(k.keterangan)}</div>` : ''}
           </td>
           <td class="px-4 py-3 text-sm">
@@ -542,8 +551,8 @@
           </td>
           <td class="px-4 py-3 text-sm">
             ${actionHtml}
-            ${k.catatan_wali ? `<div class="text-xs text-slate-500 mt-1">Wali: ${k.catatan_wali}</div>` : ''}
-            ${k.catatan_bk ? `<div class="text-xs text-slate-500 mt-1">BK: ${k.catatan_bk}</div>` : ''}
+            ${k.catatan_wali ? `<div class="text-xs text-slate-500 mt-1">Wali: ${esc(k.catatan_wali)}</div>` : ''}
+            ${k.catatan_bk ? `<div class="text-xs text-slate-500 mt-1">BK: ${esc(k.catatan_bk)}</div>` : ''}
           </td>
         `;
         tbody.appendChild(row);
@@ -583,11 +592,11 @@
       try {
         const res = await fetch(GAS_URL, {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: {'Content-Type': 'text/plain;charset=utf-8'},
           body: JSON.stringify({action: 'simpanKasusPembinaan', data: data, role: ROLE, kelas_wali: KELAS_WALI})
         });
         const result = await res.json();
-        if (!result.success) throw new Error(result.error);
+        if (!result.success) throw new Error(result.error || 'Gagal menyimpan data');
         closeTambahModal();
         e.target.reset();
         document.getElementById('tambahTanggal').value = new Date().toISOString().split('T')[0];
@@ -600,12 +609,12 @@
       }
     }
 
-    function openTindakanModal(id, nama, kelas, jenis, level) {
-      document.getElementById('tindakanKasusId').value = id;
+    function openTindakanModal(k, level) {
+      document.getElementById('tindakanKasusId').value = k.id;
       document.getElementById('tindakanLevel').value = level;
-      document.getElementById('tindakanNama').textContent = nama;
-      document.getElementById('tindakanKelas').textContent = kelas;
-      document.getElementById('tindakanJenis').textContent = jenis;
+      document.getElementById('tindakanNama').textContent = k.nama_siswa || '-';
+      document.getElementById('tindakanKelas').textContent = k.kelas || '-';
+      document.getElementById('tindakanJenis').textContent = k.jenis || '-';
       document.getElementById('tindakanForm').reset();
       document.getElementById('tindakanModal').classList.remove('hidden');
     }
@@ -629,11 +638,11 @@
       try {
         const res = await fetch(GAS_URL, {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: {'Content-Type': 'text/plain;charset=utf-8'},
           body: JSON.stringify({action: 'catatTindakanKasus', id: id, level: level, tindakan: tindakan, catatan: catatan})
         });
         const result = await res.json();
-        if (!result.success) throw new Error(result.error);
+        if (!result.success) throw new Error(result.error || 'Gagal menyimpan data');
         closeTindakanModal();
         loadKasus();
       } catch(err) {
@@ -644,11 +653,11 @@
       }
     }
 
-    function openEscalateModal(id, nama, dariLevel, keLevel) {
-      document.getElementById('escalateKasusId').value = id;
+    function openEscalateModal(k, dariLevel, keLevel) {
+      document.getElementById('escalateKasusId').value = k.id;
       document.getElementById('escalateDariLevel').value = dariLevel;
       document.getElementById('escalateKeLevel').value = keLevel;
-      document.getElementById('escalateNama').textContent = nama;
+      document.getElementById('escalateNama').textContent = k.nama_siswa || '-';
       document.getElementById('escalateDari').textContent = dariLevel === 'wali_kelas' ? 'Wali Kelas' : 'BK';
       document.getElementById('escalateKe').textContent = keLevel === 'bk' ? 'BK' : 'Kepsek';
       document.getElementById('escalateForm').reset();
@@ -674,11 +683,11 @@
       try {
         const res = await fetch(GAS_URL, {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: {'Content-Type': 'text/plain;charset=utf-8'},
           body: JSON.stringify({action: 'escalateKasus', id: id, dariLevel: dariLevel, keLevel: keLevel, catatan: catatan})
         });
         const result = await res.json();
-        if (!result.success) throw new Error(result.error);
+        if (!result.success) throw new Error(result.error || 'Gagal menyimpan data');
         closeEscalateModal();
         loadKasus();
       } catch(err) {
@@ -712,11 +721,11 @@
       try {
         const res = await fetch(GAS_URL, {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: {'Content-Type': 'text/plain;charset=utf-8'},
           body: JSON.stringify({action: 'tutupKasusPembinaan', id: id, alasan: alasan, role: ROLE})
         });
         const result = await res.json();
-        if (!result.success) throw new Error(result.error);
+        if (!result.success) throw new Error(result.error || 'Gagal menyimpan data');
         closeTutupModal();
         loadKasus();
       } catch(err) {
