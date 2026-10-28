@@ -299,6 +299,11 @@ Dashboard Piket & portal juga diuji di browser dengan mock API (tanpa error kons
   (belum mengembalikan `bulan`), kartu menampilkan keterangan “belum tersedia”
   alih-alih data yang salah.
 - Portal memakai filter `nisn` di backend sehingga data siswa lain tidak dikirim.
+- **Ramah backend lama (v4):** kartu Keterlambatan menampilkan badge *Belum tersedia*
+  (bukan "0 kali") beserta keterangan singkat, sehingga tidak ada angka menyesatkan.
+- **Ramah backend lama di Dashboard Piket:** bila action apel belum ada, kartu Apel Pagi
+  menampilkan keterangan tenang di dalam kartu + tombol *Catat siswa* dinonaktifkan.
+  Tidak ada lagi toast merah saat halaman dibuka.
 
 ---
 
