@@ -1,6 +1,6 @@
 # Laporan Debug & Optimasi — Presensi SMKN 1 Kuantan Mudik
 
-**File hasil:** `kode.gs` (versi v5)
+**File hasil:** `kode.gs` (versi v6)
 **File lama:** `kode.gs.txt` (tidak diubah, disimpan sebagai pembanding)
 
 Semua perbaikan backend tetap memakai nama action, bentuk request, dan bentuk respons
@@ -14,6 +14,11 @@ Versi **v5** menambah tiga action apel pagi (`getApelPagi`, `simpanApelPagi`,
 agar rekap mapel dan kasus otomatis tidak terpengaruh. Frontend juga menambah portal
 orang tua dengan login **NISN atau nama anak**, penanda **Sabtu/Minggu + libur
 nasional 2026**, dan kartu **apel pagi** di Dashboard Piket.
+
+Versi **v6** memperluas `getApelPagi` agar bisa difilter per **bulan** dan **NISN**
+(tanpa mengubah pemanggilan lama `tanggal + kelas`), lalu memakainya untuk **laporan
+keterlambatan di dashboard orang tua**. Tombol/CTA install juga dihapus dari seluruh
+antarmuka; pemasangan PWA hanya lewat pop-up pertama dan menu browser.
 
 ---
 
@@ -98,7 +103,7 @@ nasional 2026**, dan kartu **apel pagi** di Dashboard Piket.
 5. **Deploy → Manage deployments → pilih deployment yang dipakai → ikon pensil (Edit) → Version: New version → Deploy**
    - Execute as: **Me**
    - Who has access: **Anyone**
-6. Buka URL `/exec` hasil deploy, tambahkan `?action=getVersion`. Harus muncul `"version":"v5"` dan `fitur` memuat `"apel-pagi"`.
+6. Buka URL `/exec` hasil deploy, tambahkan `?action=getVersion`. Harus muncul `"version":"v6"` dan `fitur` memuat `"apel-pagi"` dan `"apel-bulanan"`.
 7. Uji cepat: login, input absensi 1 kelas, buka Dashboard/Piket/Riwayat, edit & hapus 1 sesi, catat 1 siswa terlambat di kartu **Apel Pagi**, lalu cek halaman kasus (jika dipakai).
 
 > **URL deployment (sudah diseragamkan):**
@@ -109,7 +114,7 @@ nasional 2026**, dan kartu **apel pagi** di Dashboard Piket.
 > - `dist/` dan `presensi-modern/publish/`
 > - `Default Project/publish/assets/index-*.js` dan `Default Project/publish/kasus.html`
 >
-> Verifikasi cepat: buka `…/exec?action=getVersion` → harus `{"success":true,"version":"v5",...}`.
+> Verifikasi cepat: buka `…/exec?action=getVersion` → harus `{"success":true,"version":"v6",...}`.
 > Jika ada salinan/hosting lain, pastikan juga memakai ID di atas.
 
 ---
@@ -264,10 +269,36 @@ lain, peringatan A/C dan kasus, serta tidak ada error konsol.
   centang beberapa siswa + jam datang + keterangan, dan tombol hapus per baris.
   Nama petugas diambil dari akun yang sedang login.
 
-**Yang diuji (harness `gas_test.js`, 131 tes):** simpan 2 siswa, baca ulang, urutan jam,
+**Yang diuji (harness `gas_test.js`, 138 tes):** simpan 2 siswa, baca ulang, urutan jam,
 petugas tersimpan, duplikat dilewati, filter kelas, jam tidak valid ditolak, daftar
-siswa kosong ditolak, jam kosong memakai jam sekarang, hapus baris, dan hapus ID asing.
+siswa kosong ditolak, jam kosong memakai jam sekarang, hapus baris, hapus ID asing,
+serta filter **bulan**, **bulan + kelas**, **bulan + NISN**, dan **tanggal + NISN**.
 Dashboard Piket & portal juga diuji di browser dengan mock API (tanpa error konsol).
+
+---
+
+## 6e. Hapus tombol install & laporan keterlambatan orang tua (v6)
+
+### Tombol install dihapus
+- Tombol **Pasang** di topbar HP, item **“Pasang aplikasi”** di sidebar desktop dan
+  sheet *Lainnya*, tombol di halaman Login, serta halaman **`/install`** dihapus.
+- **Pop-up pertama tetap ada** (mobile, sekali, setelah ~2,6 detik). Pop-up tidak
+  muncul lagi bila aplikasi sudah terpasang (standalone) atau sudah pernah ditutup.
+- Bila browser menyediakan prompt native, pop-up langsung memanggilnya; bila tidak,
+  pop-up menampilkan panduan menu browser (Install aplikasi / Tambah ke layar utama).
+
+### Keterlambatan di Portal Orang Tua
+- `getApelPagi(tanggal, kelas, bulan, nisn)`:
+  - `tanggal` + `kelas` → perilaku lama (Dashboard Piket),
+  - `bulan` + `kelas` (+ `nisn`) → laporan satu bulan untuk portal orang tua,
+  - tanpa `tanggal`/`bulan` → tetap default **hari ini** (kompatibel).
+- Respons menambah field `bulan` dan `nisn`; `tanggal` berisi tanggal filter atau
+  string kosong saat mode bulanan.
+- Kartu **Keterlambatan** di portal menampilkan jumlah × terlambat bulan itu, daftar
+  tanggal/jam datang/keterangan, dan status hari ini. Bila backend masih lama
+  (belum mengembalikan `bulan`), kartu menampilkan keterangan “belum tersedia”
+  alih-alih data yang salah.
+- Portal memakai filter `nisn` di backend sehingga data siswa lain tidak dikirim.
 
 ---
 
