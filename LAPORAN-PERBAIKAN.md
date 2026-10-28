@@ -108,7 +108,7 @@ antarmuka; pemasangan PWA hanya lewat pop-up pertama dan menu browser.
 
 > **URL deployment (sudah diseragamkan):**
 > Semua salinan aplikasi kini memakai deployment ID yang sama:
-> `AKfycbyQ2zcEWonrxEzfG0v844_7Oj5wN_qHRVUwULEO5NG7gjR_wTTjK4j0C435TcG5Hsk`
+> `AKfycbzjuoBgMlKE2BVUEU3pwZwWGMyITWZUIaq4f8gWx0fGG7dlS6bWUCKqsIWiZJkVDq8`
 >
 > - `src/lib/api.js` (sumber `GAS_URL`)
 > - `dist/` dan `presensi-modern/publish/`
