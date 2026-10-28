@@ -1,6 +1,6 @@
 # Laporan Debug & Optimasi — Presensi SMKN 1 Kuantan Mudik
 
-**File hasil:** `kode.gs` (versi v4)
+**File hasil:** `kode.gs` (versi v5)
 **File lama:** `kode.gs.txt` (tidak diubah, disimpan sebagai pembanding)
 
 Semua perbaikan backend tetap memakai nama action, bentuk request, dan bentuk respons
@@ -8,6 +8,12 @@ yang sudah dipakai aplikasi React. Versi v4 menambah dua action baru
 (`getRekapGuruSemester`, `sinkronKasusDariAbsensi`) dan field `kasusDibuat` pada
 `simpanAbsensi`; frontend versi baru memakai action tersebut untuk laporan semester
 pertemuan 1–24 dan notifikasi kasus otomatis.
+
+Versi **v5** menambah tiga action apel pagi (`getApelPagi`, `simpanApelPagi`,
+`hapusApelPagi`) dan sheet baru **`Apel`**. Sheet ini sengaja terpisah dari `Absensi`
+agar rekap mapel dan kasus otomatis tidak terpengaruh. Frontend juga menambah portal
+orang tua dengan login **NISN atau nama anak**, penanda **Sabtu/Minggu + libur
+nasional 2026**, dan kartu **apel pagi** di Dashboard Piket.
 
 ---
 
@@ -92,8 +98,8 @@ pertemuan 1–24 dan notifikasi kasus otomatis.
 5. **Deploy → Manage deployments → pilih deployment yang dipakai → ikon pensil (Edit) → Version: New version → Deploy**
    - Execute as: **Me**
    - Who has access: **Anyone**
-6. Buka URL `/exec` hasil deploy, tambahkan `?action=getVersion`. Harus muncul `"version":"v4"`.
-7. Uji cepat: login, input absensi 1 kelas, buka Dashboard/Piket/Riwayat, edit & hapus 1 sesi, lalu cek halaman kasus (jika dipakai).
+6. Buka URL `/exec` hasil deploy, tambahkan `?action=getVersion`. Harus muncul `"version":"v5"` dan `fitur` memuat `"apel-pagi"`.
+7. Uji cepat: login, input absensi 1 kelas, buka Dashboard/Piket/Riwayat, edit & hapus 1 sesi, catat 1 siswa terlambat di kartu **Apel Pagi**, lalu cek halaman kasus (jika dipakai).
 
 > **URL deployment (sudah diseragamkan):**
 > Semua salinan aplikasi kini memakai deployment ID yang sama:
@@ -103,7 +109,7 @@ pertemuan 1–24 dan notifikasi kasus otomatis.
 > - `dist/` dan `presensi-modern/publish/`
 > - `Default Project/publish/assets/index-*.js` dan `Default Project/publish/kasus.html`
 >
-> Verifikasi cepat: buka `…/exec?action=getVersion` → harus `{"success":true,"version":"v4",...}`.
+> Verifikasi cepat: buka `…/exec?action=getVersion` → harus `{"success":true,"version":"v5",...}`.
 > Jika ada salinan/hosting lain, pastikan juga memakai ID di atas.
 
 ---
@@ -196,6 +202,72 @@ semuanya sudah diperbaiki:
    edit mengirim identitas baris; toast untuk kasus otomatis & baris yang ditolak.
 5. **Kepsek:** insight "alpha tertinggi" sebelumnya memilih jurusan dengan alpha **terendah**.
 6. **Input absensi:** kegagalan upload foto kini diberi peringatan (absensi tetap tersimpan).
+
+---
+
+## 6c. Portal Orang Tua / Wali (baru)
+
+Halaman publik `#/ortu`, terpisah dari akun guru/admin. Portal memakai action yang sudah
+ada (`getKelas`, `getSiswa`, `getAbsensiGuru`, `getKasusPembinaan`); tidak ada action
+khusus portal. Action apel pagi hanya dipakai Dashboard Piket.
+
+**Aturan login (paling sederhana, tanpa password):**
+1. Masukkan **NISN anak** (hanya angka) **atau pilih tab “Nama Anak”** lalu tulis nama
+   anak. Nama dinormalisasi (huruf besar/kecil, tanda baca, dan spasi tidak berpengaruh).
+2. Pilih **kelas anak** dari dropdown (memakai daftar resmi `getKelas`).
+3. Bila nama yang dicari cocok dengan lebih dari satu siswa, portal menampilkan daftar
+   pilihan (nama + NISN). Memilih dari daftar **tidak** dihitung sebagai percobaan gagal.
+4. Opsional: centang **“Ingat perangkat ini selama 30 hari”** (aktif default).
+5. Salah 5× → jeda **2 menit** pada perangkat tersebut, dengan hitung mundur.
+
+**Isi dashboard (hanya data anak yang login):**
+- Status kehadiran hari ini + persentase hadir bulan berjalan.
+- Penanda **Libur** untuk Sabtu, Minggu, dan libur nasional (tidak lagi “belum absen”).
+- Rekap H / S / I / A / C per bulan, bisa pindah bulan, plus jumlah **hari efektif** dan
+  daftar **libur nasional** bulan tersebut.
+- Peringatan otomatis bila Alpha+Cabut ≥ 3× sebulan atau ada kasus pembinaan terbuka.
+- Riwayat harian: tanggal, mapel, jam, status.
+
+**Catatan keamanan:** NISN bukan data rahasia dan pembatasan percobaan hanya di sisi
+perangkat (localStorage). Login memakai nama anak juga berarti siapa pun yang tahu kelas
+dan nama anak dapat membuka portal — konsekuensi dari login tanpa password yang diminta.
+Bila perlu lebih ketat, tambahkan faktor kedua (tanggal lahir / kode akses per siswa) dan
+filter `nisn` di backend agar data satu kelas tidak ikut terkirim.
+
+**Yang diuji (mock API):** login NISN, login nama (persis & sebagian), nama ambigu
+(daftar pilihan, tidak menambah hitungan gagal), kunci 5× (hitung mundur berjalan),
+sesi 30 hari, keluar, ganti bulan, penanda libur Sabtu, daftar libur nasional Agustus
+(17 & 25 Agustus) dan 19 hari efektif, status “Hari ini” tetap benar saat melihat bulan
+lain, peringatan A/C dan kasus, serta tidak ada error konsol.
+
+---
+
+## 6d. Kalender libur & apel pagi (v5)
+
+### Kalender libur
+- **Sabtu & Minggu** dihitung libur di Portal Orang Tua, Dashboard Piket, dan form Input
+  Absensi (penanda saja; absensi untuk kegiatan khusus tetap bisa disimpan).
+- **Libur nasional + cuti bersama 2026** mengikuti SKB 3 Menteri, disimpan di
+  `src/lib/libur.js` beserta namanya. Tahun lain tetap memakai aturan Sabtu/Minggu.
+- Helper: `liburInfo(tanggal)`, `labelLibur(tanggal)`, `hariEfektifBulan(bulan)`,
+  `liburNasionalBulan(bulan)`, `liburBulan(bulan)`.
+
+### Apel pagi (`kode.gs` v5)
+- Action baru: `getApelPagi`, `simpanApelPagi`, `hapusApelPagi`.
+- Sheet baru **`Apel`** (9 kolom): `id | tanggal | nisn | nama_siswa | kelas |
+  jam_datang | keterangan | petugas | timestamp`. Terpisah dari `Absensi` agar rekap
+  mapel dan kasus otomatis tidak terpengaruh.
+- Satu baris = satu siswa per tanggal. Duplikat (`tanggal` + `NISN`) dilewati dan
+  dilaporkan pada field `dilewati`.
+- `jam_datang` divalidasi `HH:MM`; bila kosong memakai jam server saat ini.
+- Dashboard Piket: kartu daftar siswa terlambat, form pilih kelas + cari siswa +
+  centang beberapa siswa + jam datang + keterangan, dan tombol hapus per baris.
+  Nama petugas diambil dari akun yang sedang login.
+
+**Yang diuji (harness `gas_test.js`, 131 tes):** simpan 2 siswa, baca ulang, urutan jam,
+petugas tersimpan, duplikat dilewati, filter kelas, jam tidak valid ditolak, daftar
+siswa kosong ditolak, jam kosong memakai jam sekarang, hapus baris, dan hapus ID asing.
+Dashboard Piket & portal juga diuji di browser dengan mock API (tanpa error konsol).
 
 ---
 
