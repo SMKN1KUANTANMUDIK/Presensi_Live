@@ -40,8 +40,8 @@
       } catch (e) {}
     })();
   </script>
-  <script type="module" crossorigin src="./assets/index-DbqN-Rug.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/style-EZ-SeHFV.css">
+  <script type="module" crossorigin src="./assets/index-BlIxbvAV.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/style-DcwZNBOO.css">
 </head>
 <body class="h-full bg-canvas text-ink antialiased">
   <div id="root" class="min-h-full"></div>
@@ -73,6 +73,7 @@
           '<div><b>3.</b> Buka <code style="background:#e2e8f0;padding:1px 6px;border-radius:6px">http://localhost:8080</code></div>' +
           '</div>' +
           '<p style="font-size:11.5px;color:#94a3b8;margin:16px 0 0">Atau unggah folder <b>dist</b> ke hosting HTTPS (Netlify / GitHub Pages) agar bisa dipasang di HP.</p>' +
+          '<button onclick="location.reload()" style="margin-top:14px;width:100%;border:0;border-radius:12px;background:#2563eb;color:#fff;font-size:13.5px;font-weight:700;padding:11px 14px;cursor:pointer">Muat ulang halaman</button>' +
           '</div>';
         document.body.appendChild(box);
       }
@@ -83,12 +84,13 @@
       }
 
       window.addEventListener('load', function () {
+        // Beri waktu cukup untuk jaringan lambat / HP kelas bawah.
         setTimeout(function () {
           var root = document.getElementById('root');
           if (root && root.children.length === 0 && !document.getElementById('boot-help')) {
-            showHelp('Aplikasi gagal dimuat. Pastikan semua file hasil build (<b>folder dist</b>) terunggah lengkap dan dibuka melalui http/https.');
+            showHelp('Aplikasi gagal dimuat. Periksa koneksi internet lalu muat ulang halaman. Jika masih gagal, pastikan semua file hasil build (folder dist) terunggah lengkap.');
           }
-        }, 1500);
+        }, 6000);
       });
     })();
   </script>
