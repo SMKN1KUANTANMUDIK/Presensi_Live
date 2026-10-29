@@ -1,6 +1,6 @@
 # Laporan Debug & Optimasi — Presensi SMKN 1 Kuantan Mudik
 
-**File hasil:** `kode.gs` (versi v7)
+**File hasil:** `kode.gs` (versi v8)
 **File lama:** `kode.gs.txt` (tidak diubah, disimpan sebagai pembanding)
 
 Semua perbaikan backend tetap memakai nama action, bentuk request, dan bentuk respons
@@ -103,7 +103,7 @@ antarmuka; pemasangan PWA hanya lewat pop-up pertama dan menu browser.
 5. **Deploy → Manage deployments → pilih deployment yang dipakai → ikon pensil (Edit) → Version: New version → Deploy**
    - Execute as: **Me**
    - Who has access: **Anyone**
-6. Buka URL `/exec` hasil deploy, tambahkan `?action=getVersion`. Harus muncul `"version":"v7"` dan `fitur` memuat `"nisn-normalisasi"` + `"piket-per-guru"`.
+6. Buka URL `/exec` hasil deploy, tambahkan `?action=getVersion`. Harus muncul `"version":"v8"` dan `fitur` memuat `"nisn-normalisasi"` + `"piket-per-guru"`.
 7. Uji cepat: login, input absensi 1 kelas, buka Dashboard/Piket/Riwayat, edit & hapus 1 sesi, catat 1 siswa terlambat di kartu **Apel Pagi**, lalu cek halaman kasus (jika dipakai).
 
 > **URL deployment (sudah diseragamkan):**
@@ -114,7 +114,7 @@ antarmuka; pemasangan PWA hanya lewat pop-up pertama dan menu browser.
 > - `dist/` dan `presensi-modern/publish/`
 > - `Default Project/publish/assets/index-*.js` dan `Default Project/publish/kasus.html`
 >
-> Verifikasi cepat: buka `…/exec?action=getVersion` → harus `{"success":true,"version":"v7",...}` dan `fitur` memuat `"nisn-normalisasi"`.
+> Verifikasi cepat: buka `…/exec?action=getVersion` → harus `{"success":true,"version":"v8",...}` dan `fitur` memuat `"nisn-normalisasi"`.
 > Jika ada salinan/hosting lain, pastikan juga memakai ID di atas.
 
 ---
@@ -359,6 +359,56 @@ Dashboard Piket & portal juga diuji di browser dengan mock API (tanpa error kons
   NISN, dan rekap semester).
 - Uji browser (mock): peringatan "jam sudah pernah disimpan" hanya muncul saat jam yang
   dipilih memang terisi.
+
+---
+
+## 6g. Absensi per jam & rekap harian konsisten (v8)
+
+### Masalah
+1. **Input Absensi tidak menampilkan izin/cabut pada jam tertentu.** Satu sesi (mis. jam
+   3–5) hanya bisa menyimpan satu status untuk semua jam, sehingga izin yang hanya berlaku
+   di jam 4 tidak bisa dicatat — atau justru menyebar ke semua jam.
+2. **Rekap bulanan & semester menghitung per pertemuan, bukan per hari.** Siswa yang hadir
+   di jam 1–2 tetapi izin di jam 3 tercatat "Hadir" pada pertemuan jam 1–2, sehingga
+   ketidakhadirannya hilang dari rekap.
+
+### Perbaikan backend (`kode.gs` v8)
+- **`simpanAbsensi` menerima `detail[].perJam`** = `{"3":"H","4":"I","5":"H"}`. Baris
+  absensi ditulis per jam dengan status jam itu; NISN ganda digabung dengan status
+  terburuk, dan status harian (terburuk dari semua jam) dipakai untuk kasus otomatis.
+  Tanpa `perJam`, perilaku lama tetap (kontrak lama aman).
+- **Status harian di `getRekapGuruSemester` & `getAbsensiGuru`:** Hadir hanya bila
+  **seluruh jam pada hari itu hadir**; bila ada Sakit/Izin/Alpha/Cabut, status itu yang
+  ditampilkan (prioritas C > A > S > I > H). Berlaku untuk seluruh jam kelas pada tanggal
+  itu — semua guru/mapel — bukan hanya sesi guru yang direkap.
+- **Jumlah semester dihitung per hari:** beberapa pertemuan pada tanggal sama dihitung 1
+  hari (field baru `s.hari`). Metadata jam/mapel/guru tetap dari sesi guru.
+- **`getVersion` → `v8`** dengan fitur baru `absensi-per-jam` + `rekap-harian-konsisten`.
+
+### Perbaikan frontend (`InputAbsensi.jsx`)
+- Pemilih **"Status diisi untuk": Semua jam | Jam 3 | Jam 4 | Jam 5** — pilih satu jam
+  bila izin/cabut hanya terjadi pada jam itu.
+- Chip per baris siswa: **DIISI** (status yang sedang diset per jam) dan **TERSIMPAN**
+  (status non-hadir yang sudah ada di server).
+- Kartu **"Tercatat hari ini"**: daftar sesi per jam + chip non-hadir per siswa, dengan
+  tautan ke **Riwayat → Edit** untuk mengubah data yang sudah tersimpan.
+- **Dua bug race condition diperbaiki:** (a) pembungkus `onStatus` hanya menerima satu
+  argumen sehingga NISN yang masuk ke `setOne` alih-alih status — chip tidak pernah
+  berubah; (b) `loadSiswa` mereset `editJam`/`perJam` *setelah* await sehingga pilihan
+  pengguna bisa tertimpa — reset kini dilakukan sebelum fetch.
+- Tombol **"Semua hadir"** tetap non-destruktif (tidak menimpa absen yang sudah dipilih).
+
+### Catatan kaki laporan (`Report.jsx`)
+- Tabel semester & bulanan kini mencantumkan: *"Status harian: Hadir hanya bila seluruh
+  jam pada hari itu hadir; bila ada Sakit/Izin/Alpha/Cabut, status itu yang ditampilkan."*
+
+### Verifikasi
+- `gas_test.js`: **170 tes lulus, 0 gagal** (12 tes baru: perJam tersimpan 9 baris, piket
+  H2 I1, dua pertemuan satu tanggal → cabut dihitung 1 hari, bulanan memakai status harian
+  dari sesi guru lain).
+- Uji browser (mock): klik "Jam 4" lalu "Izin" → chip berubah `J4 Izin` (J3/J5 tetap ✓);
+  kembali "Semua jam" → `J3 Izin J4 Izin J5 Izin`; payload simpan memuat `perJam` per
+  siswa; race ganti kelas lalu langsung klik status tetap konsisten.
 
 ---
 
