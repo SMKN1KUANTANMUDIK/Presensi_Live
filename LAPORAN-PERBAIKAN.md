@@ -1,6 +1,6 @@
 # Laporan Debug & Optimasi — Presensi SMKN 1 Kuantan Mudik
 
-**File hasil:** `kode.gs` (versi v6)
+**File hasil:** `kode.gs` (versi v7)
 **File lama:** `kode.gs.txt` (tidak diubah, disimpan sebagai pembanding)
 
 Semua perbaikan backend tetap memakai nama action, bentuk request, dan bentuk respons
@@ -103,7 +103,7 @@ antarmuka; pemasangan PWA hanya lewat pop-up pertama dan menu browser.
 5. **Deploy → Manage deployments → pilih deployment yang dipakai → ikon pensil (Edit) → Version: New version → Deploy**
    - Execute as: **Me**
    - Who has access: **Anyone**
-6. Buka URL `/exec` hasil deploy, tambahkan `?action=getVersion`. Harus muncul `"version":"v6"` dan `fitur` memuat `"apel-pagi"` dan `"apel-bulanan"`.
+6. Buka URL `/exec` hasil deploy, tambahkan `?action=getVersion`. Harus muncul `"version":"v7"` dan `fitur` memuat `"nisn-normalisasi"` + `"piket-per-guru"`.
 7. Uji cepat: login, input absensi 1 kelas, buka Dashboard/Piket/Riwayat, edit & hapus 1 sesi, catat 1 siswa terlambat di kartu **Apel Pagi**, lalu cek halaman kasus (jika dipakai).
 
 > **URL deployment (sudah diseragamkan):**
@@ -114,7 +114,7 @@ antarmuka; pemasangan PWA hanya lewat pop-up pertama dan menu browser.
 > - `dist/` dan `presensi-modern/publish/`
 > - `Default Project/publish/assets/index-*.js` dan `Default Project/publish/kasus.html`
 >
-> Verifikasi cepat: buka `…/exec?action=getVersion` → harus `{"success":true,"version":"v6",...}`.
+> Verifikasi cepat: buka `…/exec?action=getVersion` → harus `{"success":true,"version":"v7",...}` dan `fitur` memuat `"nisn-normalisasi"`.
 > Jika ada salinan/hosting lain, pastikan juga memakai ID di atas.
 
 ---
@@ -304,6 +304,61 @@ Dashboard Piket & portal juga diuji di browser dengan mock API (tanpa error kons
 - **Ramah backend lama di Dashboard Piket:** bila action apel belum ada, kartu Apel Pagi
   menampilkan keterangan tenang di dalam kartu + tombol *Catat siswa* dinonaktifkan.
   Tidak ada lagi toast merah saat halaman dibuka.
+
+---
+
+## 6f. Laporan per jam, ringkasan harian, & absensi per guru (v7)
+
+### Rekap harian
+- Sel tabel memakai status **jam itu sendiri** (bukan warna status akhir hari):
+  `✓` = hadir, `S`/`I`/`A`/`C` = lainnya, `·` = belum ada input.
+- Baris kepala kedua menampilkan **mata pelajaran tiap jam** (dari `jamInfo`),
+  sehingga jelas jam ke berapa dan mapel apa yang tercatat.
+- Kolom **Status** tetap merangkum akhir hari (prioritas `C > A > S > I > H`).
+
+### Rekap bulanan
+- Berubah menjadi **ringkasan harian**: satu tanggal hanya dicetak bila ada minimal
+  satu siswa dengan status selain hadir pada hari itu.
+- Sel berisi status terburuk hari tersebut; `✓` bila seluruh jam hadir; `·` bila siswa
+  tidak punya catatan pada hari itu.
+- Ditambah kolom **Jumlah hari** (H/S/I/A/C) yang dihitung dari **semua hari yang sudah
+  diinput**, bukan hanya hari yang ditampilkan, agar total tetap real.
+- Bila tidak ada ketidakhadiran sebulan, tabel diganti keterangan "seluruh siswa hadir".
+
+### Dashboard Piket
+- `getDashboardPiket` (backend) kini mengembalikan:
+  - `guruList[].jam` (daftar jam mengajar guru+mapel),
+  - `guruList[].absen` (siswa non-hadir: `nisn`, `nama`, `status`, `jam`),
+  - `guruList[].totalAbsen`,
+  - `jamInfo` per kelas: `{ jam: { mapel, guru } }`.
+- Kartu baru **"Absensi per Guru"** menampilkan daftar sesi real sesuai input guru
+  (jam, mapel, kelas, guru, jumlah hadir/tidak hadir) beserta chip nama siswa yang
+  tidak hadir. Kartu kelas tetap menjadi ringkasan H/S/I/A/C hari itu; baris guru di
+  kartu kelas kini menampilkan mapel, jam, dan jumlah absen.
+- Bila backend masih v6 (belum ada `absen`/`jam`), kartu menampilkan keterangan
+  "rincian belum tersedia" dan meminta deploy ulang - tanpa error.
+
+### Perbaikan NISN nol depan (v7.1)
+- **Penyebab rekap kosong.** Google Sheets menyimpan NISN sebagai angka sehingga nol di
+  depan hilang (`0098873773` → `98873773`). Akibatnya baris absensi tidak cocok dengan
+  master siswa: hanya siswa yang NISN-nya tidak berawalan nol yang tercentang, dan status
+  `A`/`C` tidak pernah muncul di rekap.
+- **Perbaikan.** Semua pencocokan NISN (rekap harian/bulanan, kartu piket per guru,
+  rekap guru semester, laporan orang tua, apel pagi, kasus otomatis) kini memakai kunci
+  `nisnKey` yang membuang nol di depan pada kedua sisi. Nilai NISN yang ditampilkan tetap
+  NISN asli dari master.
+- **Pencegahan.** Kolom NISN diformat teks (`@`) sebelum menulis absensi/apel/kasus/data
+  siswa, agar nol di depan tetap tersimpan untuk data baru.
+- **Hint input.** Bila jam yang dipilih sudah pernah disimpan, halaman Input Absensi
+  menampilkan peringatan untuk mengubah lewat **Riwayat → Edit** (simpan ulang akan
+  ditolak karena jam sudah terisi).
+
+### Verifikasi
+- `gas_test.js`: **156 tes lulus, 0 gagal** (termasuk 13 tes baru: NISN tanpa nol depan
+  tetap tercentang, `A`/`C` muncul, absen per guru memakai NISN utuh, filter apel per
+  NISN, dan rekap semester).
+- Uji browser (mock): peringatan "jam sudah pernah disimpan" hanya muncul saat jam yang
+  dipilih memang terisi.
 
 ---
 
