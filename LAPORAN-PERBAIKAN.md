@@ -1,6 +1,6 @@
 # Laporan Debug & Optimasi — Presensi SMKN 1 Kuantan Mudik
 
-**File hasil:** `kode.gs` (versi v8)
+**File hasil:** `kode.gs` (versi v8) · frontend v2.6
 **File lama:** `kode.gs.txt` (tidak diubah, disimpan sebagai pembanding)
 
 Semua perbaikan backend tetap memakai nama action, bentuk request, dan bentuk respons
@@ -409,6 +409,45 @@ Dashboard Piket & portal juga diuji di browser dengan mock API (tanpa error kons
 - Uji browser (mock): klik "Jam 4" lalu "Izin" → chip berubah `J4 Izin` (J3/J5 tetap ✓);
   kembali "Semua jam" → `J3 Izin J4 Izin J5 Izin`; payload simpan memuat `perJam` per
   siswa; race ganti kelas lalu langsung klik status tetap konsisten.
+
+---
+
+## 6h. Peningkatan UX friendly & mudah (frontend v2.7)
+
+### Masalah
+- Pindah halaman dari posisi scroll bawah → halaman baru terbuka di tengah.
+- Tombol harian terlalu kecil untuk sentuhan jari (chip status 26 px, "Semua hadir"
+  28 px, pemilih jam 26 px) — rentan salah ketuk.
+- Toast "Absensi tersimpan" muncul menutupi bottom nav; action bar "Simpan" juga
+  tertimpa nav di layar kecil (offset 4,25 rem < tinggi nav ±4,5 rem).
+- Pengguna wajib mengisi "Jam selesai" meski hampir selalu sama dengan "Jam mulai".
+- Label checkbox "Tandai absen" membingungkan (checkbox-nya menandai *hadir*).
+- Pencarian siswa tak punya tombol bersihkan; hero Dashboard membungkus `<button>`
+  di dalam `<a>` (HTML tak valid).
+
+### Perbaikan (`App.jsx`, `InputAbsensi.jsx`, `Dashboard.jsx`, `toast.jsx`)
+- **`ScrollToTop`** — reset `scrollY` ke 0 setiap `pathname` berubah.
+- **Target sentuh ≥ 36 px** (`min-h-9`): chip status absen (48 px), pemilih jam
+  (36 px), filter status (36 px), "Semua hadir" (36 px), checkbox ber-`aria-label`.
+- **Toast naik ke `5,5 rem`** (di atas bottom nav yang ±4,5 rem); di `lg` kembali
+  `1,5 rem` (sidebar, tanpa nav bawah). **Action bar Simpan** → `4,75 rem`.
+- **Jam selesai otomatis** mengikuti jam mulai (dipertahankan bila masih valid).
+- Pencarian: tombol **× "Bersihkan pencarian"** (muncul hanya bila query terisi).
+- Label checkbox **"Hadir"/"Absen"** + `aria-label="Tandai (nama) hadir"`.
+- Hero Dashboard: `<Link>` bergaya tombol (bukan `<Button>` di dalam `<Link>`).
+- Tombol UpdateBar "Muat ulang"/tutup diperbesar ke `min-h-9`/`size-9`.
+- Ikon PWA diganti dari **`logo_app.png`** (flood-fill sudut hitam → transparan,
+  flatten ke latar `#2c7fba`): 11 file, total **285 kB** (semula ±600 kB);
+  maskable memakai logo 72% di tengah. SW `v2.12.0`, `package.json` 2.7.0.
+
+### Verifikasi (mock port 4193)
+- Chip per jam: pilih Jam 3–5 → siswa izin jam 5 menampilkan `J3 ✓ J4 ✓ J5 Izin`.
+- "Jam mulai = 3" → "Jam selesai" otomatis `3` (dan tetap `3` saat rentang diubah
+  ke 5, karena valid).
+- Scroll: gulir ke 1390 px → pindah rute → `scrollY = 0`.
+- Toast "Semua 6 siswa ditandai hadir": jarak bawah 78 px vs nav 72 px → di atas nav.
+- Action bar Simpan: 76 px vs nav 72 px → tidak tertutup nav.
+- Tombol × pencarian muncul/hilang mengikuti query; **0 error console**.
 
 ---
 

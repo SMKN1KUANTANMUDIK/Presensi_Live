@@ -1,12 +1,38 @@
 # Presensi — SMKN 1 Kuantan Mudik (React + Tailwind PWA)
 
-Versi 2.5 - antarmuka React 19 + Vite + Tailwind CSS 4, mobile-first, PWA yang bisa dipasang, plus **manajemen data guru & siswa** (CRUD + import CSV).
+Versi 2.7 - antarmuka React 19 + Vite + Tailwind CSS 4, mobile-first, PWA yang bisa dipasang, plus **manajemen data guru & siswa** (CRUD + import CSV).
 
 Backend: **Google Apps Script + Google Spreadsheet** (`kode.gs` - versi v8: absensi per jam, rekap harian, rekap semester, kasus otomatis, apel pagi, dan rincian per guru).
 
 ---
 
 ## 1. Yang baru di versi ini
+
+### Peningkatan UX friendly & mudah (v2.7)
+- **Scroll ke atas otomatis** saat pindah halaman — tidak lagi mendarat di posisi
+  scroll halaman sebelumnya.
+- **Target sentuh lebih besar** (minimal ±36 px) pada tombol yang dipakai tiap hari:
+  chip status absen, pemilih jam (Semua jam/Jam 1–24), filter status, tombol
+  "Semua hadir", dan checkbox hadir.
+- **Toast tidak menutupi bottom nav** — notifikasi (mis. "tersimpan") kini muncul
+  di atas menu bawah, dan action bar "Simpan" juga tidak lagi tertimpa nav.
+- **"Jam selesai" otomatis mengikuti "Jam mulai"** (kasus umum: satu jam) — satu
+  langkah lebih sedikit sebelum menyimpan.
+- **Label checkbox jelas**: "Hadir"/"Absen" + `aria-label` "Tandai (nama) hadir".
+- **Tombol bersihkan (×) pada pencarian siswa**; hero Dashboard kini tautan yang
+  valid (sebelumnya `<button>` di dalam `<a>`); tombol UpdateBar lebih besar.
+- **Ikon PWA baru dari `logo_app.png`**: seluruh set (72–512 + maskable) di-generate
+  ulang — total 285 kB (semula ±600 kB), sudut bersih, logo 72% di tengah untuk
+  maskable. Service worker `v2.12.0`.
+
+### Optimasi performa (v2.6)
+- **Code-split per rute** (`React.lazy`): bundle awal turun dari 491 kB → 290 kB
+  (gzip 137 → 92 kB). Halaman lain (Input, Report, Riwayat, dll.) diunduh saat rute
+  dibuka, dengan fallback "Memuat halaman…".
+- **Logo PNG → WebP**: `logo_riau.png` + `logo_sekolah.png` (367 kB) diganti varian
+  WebP 512×512 (69 kB, tampilan tetap tajam). Semua rujukan (Login, Report, Portal
+  Ortu, kasus.html, precache SW) ikut diperbarui.
+- Service worker `v2.11.0` — pengguna lama otomatis memperbarui cache.
 
 ### Absensi per jam & rekap harian konsisten (v8)
 - **Izin/cabut hanya di jam tertentu.** Pemilih *"Status diisi untuk: Semua jam | Jam 3 |
