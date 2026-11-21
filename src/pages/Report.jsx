@@ -125,25 +125,22 @@ export default function Report() {
     setSigNama('');
     setSigNip('');
     try {
-      if (next === 'wali') {
-        const res = await api.getGuruData();
-        const found = (res?.data || []).find(
-          (g) =>
-            g.role === 'wali' &&
-            (g.kelas_wali === kelas || String(g.kelas_wali || '').startsWith(`${kelas} `))
-        );
-        if (found) {
-          setSigNama(found.nama || '');
-          setSigNip(found.nip || '');
-        }
-      } else if (next === 'guru') {
+      if (next === 'guru') {
         const target = result?.guru || guru || name;
         const found = guruList.find((g) => g.nama === target);
         setSigNama(target || '');
         setSigNip(found?.nip || '');
-      } else if (next === 'kepsek' || next === 'piket') {
+      } else if (next === 'wali' || next === 'kepsek' || next === 'piket') {
         const res = await api.getGuruData();
-        const found = (res?.data || []).find((g) => g.role === next);
+        const list = res?.data || [];
+        const found =
+          next === 'wali'
+            ? list.find(
+                (g) =>
+                  g.role === 'wali' &&
+                  (g.kelas_wali === kelas || String(g.kelas_wali || '').startsWith(`${kelas} `))
+              )
+            : list.find((g) => g.role === next);
         if (found) {
           setSigNama(found.nama || '');
           setSigNip(found.nip || '');

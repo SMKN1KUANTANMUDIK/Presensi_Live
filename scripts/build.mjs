@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -30,6 +31,21 @@ if (existsSync(distAssets)) {
   }
 }
 
+// Sinkronkan versi cache Service Worker dengan hash hasil build terbaru
+const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'));
+const buildHash = existsSync(distIndex)
+  ? createHash('sha1').update(readFileSync(distIndex)).digest('hex').slice(0, 8)
+  : Date.now().toString(36);
+const swVersion = `v${pkg.version}-${buildHash}`;
+const swPath = resolve(root, 'sw.js');
+if (existsSync(swPath)) {
+  const swText = readFileSync(swPath, 'utf8').replace(
+    /const VERSION = '[^']+';/,
+    `const VERSION = '${swVersion}';`
+  );
+  writeFileSync(swPath, swText, 'utf8');
+}
+
 // Salin aset statis ke dist/ agar dist/ siap deploy mandiri
 const staticFiles = [
   'manifest.webmanifest',
@@ -57,4 +73,4 @@ mkdirSync(rootAssets, { recursive: true });
 cpSync(resolve(distDir, 'assets'), rootAssets, { recursive: true });
 cpSync(distIndex, resolve(root, 'index.html'));
 
-console.log('Build selesai: dist/ dan root index.html + assets/ sudah sinkron.');
+console.log(`Build selesai (${swVersion}): dist/ dan root index.html + assets/ sudah sinkron.`);

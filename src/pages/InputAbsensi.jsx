@@ -31,6 +31,32 @@ function jamRange(mulai, selesai) {
   return Array.from({ length: b - a + 1 }, (_, i) => a + i);
 }
 
+const STATUS_PRIOR = { C: 5, A: 4, S: 3, I: 2, H: 1 };
+
+function summarizeStudent(statusJam, savedJam, jamDipilih, editJam) {
+  const activeKey = editJam === 'all' ? statusJam[jamDipilih[0]] || 'H' : statusJam[editJam] || 'H';
+  const worst = jamDipilih.reduce((acc, j) => {
+    const st = statusJam[j] || 'H';
+    return (STATUS_PRIOR[st] || 0) > (STATUS_PRIOR[acc] || 0) ? st : acc;
+  }, 'H');
+  const tone = TONE[(STATUS_MAP[worst] || STATUS[0]).tone];
+  const savedNonH = Object.entries(savedJam || {})
+    .filter(([, v]) => v && v !== 'H')
+    .sort((a, b) => Number(a[0]) - Number(b[0]));
+  return { activeKey, worst, tone, savedNonH };
+}
+
+function compressImageToDataUrl(source, srcWidth, srcHeight, maxWidth = 960, quality = 0.72) {
+  const scale = srcWidth > maxWidth ? maxWidth / srcWidth : 1;
+  const w = Math.max(1, Math.round(srcWidth * scale));
+  const h = Math.max(1, Math.round(srcHeight * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  canvas.getContext('2d').drawImage(source, 0, 0, w, h);
+  return canvas.toDataURL('image/jpeg', quality);
+}
+
 /* =========================================================
    Kartu siswa (mobile)
 ========================================================= */
@@ -45,16 +71,7 @@ function StudentCard({
   onStatus,
   onToggleHadir,
 }) {
-  const activeKey = editJam === 'all' ? statusJam[jamDipilih[0]] || 'H' : statusJam[editJam] || 'H';
-  const worst = jamDipilih.reduce((acc, j) => {
-    const st = statusJam[j] || 'H';
-    const p = { C: 5, A: 4, S: 3, I: 2, H: 1 };
-    return (p[st] || 0) > (p[acc] || 0) ? st : acc;
-  }, 'H');
-  const tone = TONE[(STATUS_MAP[worst] || STATUS[0]).tone];
-  const savedNonH = Object.entries(savedJam || {})
-    .filter(([, v]) => v && v !== 'H')
-    .sort((a, b) => Number(a[0]) - Number(b[0]));
+  const { activeKey, worst, tone, savedNonH } = summarizeStudent(statusJam, savedJam, jamDipilih, editJam);
 
   return (
     <div
@@ -160,16 +177,7 @@ function StudentRow({
   onStatus,
   onToggleHadir,
 }) {
-  const activeKey = editJam === 'all' ? statusJam[jamDipilih[0]] || 'H' : statusJam[editJam] || 'H';
-  const worst = jamDipilih.reduce((acc, j) => {
-    const st = statusJam[j] || 'H';
-    const p = { C: 5, A: 4, S: 3, I: 2, H: 1 };
-    return (p[st] || 0) > (p[acc] || 0) ? st : acc;
-  }, 'H');
-  const tone = TONE[(STATUS_MAP[worst] || STATUS[0]).tone];
-  const savedNonH = Object.entries(savedJam || {})
-    .filter(([, v]) => v && v !== 'H')
-    .sort((a, b) => Number(a[0]) - Number(b[0]));
+  const { activeKey, worst, tone, savedNonH } = summarizeStudent(statusJam, savedJam, jamDipilih, editJam);
 
   return (
     <tr className="group border-b border-line/60 last:border-0 hover:bg-sunken/40">
@@ -322,12 +330,14 @@ export default function InputAbsensi() {
         return;
       }
       try {
-        const [jamRes, piketRes] = await Promise.all([
-          api.getJamTerisi(date, kelasName),
-          api.getDashboardPiket(date, kelasName).catch(() => null),
-        ]);
-        setJamTerisi((jamRes?.jamTerisi || []).map(Number));
+        const piketRes = await api.getDashboardPiket(date, kelasName);
         const d = piketRes?.data?.[0];
+        if (Array.isArray(d?.jamTerisi)) {
+          setJamTerisi(d.jamTerisi.map(Number));
+        } else {
+          const jamRes = await api.getJamTerisi(date, kelasName);
+          setJamTerisi((jamRes?.jamTerisi || []).map(Number));
+        }
         const savedByNisn = {};
         (d?.siswaList || []).forEach((s) => {
           savedByNisn[String(s.nisn)] = s.jam || {};
@@ -623,8 +633,8 @@ export default function InputAbsensi() {
       setJamMulai('');
       setJamSelesai('');
       setEditJam('all');
+      setPerJamState({});
       await loadJamTerisi(kelas, tanggal);
-      await loadSiswa(kelas);
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -671,13 +681,27 @@ export default function InputAbsensi() {
   const capture = () => {
     const video = videoRef.current;
     if (!video) return;
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth || 1280;
-    canvas.height = video.videoHeight || 720;
-    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-    setPhoto(canvas.toDataURL('image/jpeg', 0.82));
+    setPhoto(
+      compressImageToDataUrl(video, video.videoWidth || 1280, video.videoHeight || 720, 960, 0.72)
+    );
     setCameraOpen(false);
     toast.success('Foto kelas diambil');
+  };
+
+  const onPhotoFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        setPhoto(compressImageToDataUrl(img, img.width, img.height, 960, 0.72));
+        setCameraOpen(false);
+        toast.success('Foto kelas dipilih');
+      };
+      img.src = String(reader.result || '');
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -1164,8 +1188,12 @@ export default function InputAbsensi() {
               {cameraError}
             </div>
           )}
+          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-line bg-sunken/40 px-3 py-2.5 text-[12px] font-bold text-ink transition hover:border-brand/50 hover:bg-brand-soft/40">
+            <input type="file" accept="image/*" className="hidden" onChange={onPhotoFile} />
+            Atau pilih foto dari galeri / file
+          </label>
           <p className="text-[11.5px] font-medium text-muted">
-            Foto bersifat opsional dan diunggah ke Google Drive saat absensi disimpan.
+            Foto otomatis dikompresi agar cepat diunggah ke Google Drive saat absensi disimpan.
           </p>
         </div>
       </Sheet>

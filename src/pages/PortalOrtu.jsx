@@ -55,6 +55,16 @@ function saveSesi(data) {
   return payload;
 }
 
+function updateStoredSesi(next) {
+  try {
+    if (localStorage.getItem(SESI_KEY)) {
+      localStorage.setItem(SESI_KEY, JSON.stringify({ ...next, exp: next.exp || Date.now() + REMEMBER_MS }));
+    }
+  } catch {
+    /* abaikan */
+  }
+}
+
 function clearSesi() {
   try {
     localStorage.removeItem(SESI_KEY);
@@ -112,6 +122,7 @@ export default function PortalOrtu() {
   const [ingat, setIngat] = useState(true);
   const [kelasList, setKelasList] = useState([]);
   const [pilihan, setPilihan] = useState([]);
+  const [selectToken, setSelectToken] = useState('');
   const [error, setError] = useState('');
   const [checking, setChecking] = useState(false);
   const [lockState, setLockState] = useState(() => readLock());
@@ -144,6 +155,52 @@ export default function PortalOrtu() {
     setLoading(true);
     try {
       const today = todayISO();
+
+      const applyUnified = (res) => {
+        const stat = res.statBulan || { H: 0, S: 0, I: 0, A: 0, C: 0 };
+        const riwayat = (res.riwayatBulan || []).map((r) => {
+          const firstDetail = Array.isArray(r.detail) && r.detail[0] ? r.detail[0] : {};
+          const jamNums = Object.keys(r.jam || {}).map(Number).filter((n) => n > 0).sort((a, b) => a - b);
+          return {
+            tanggal: r.tanggal,
+            status: r.status,
+            mapel: firstDetail.mapel || '',
+            jam: jamNums.length ? jamNums.join(', ') : '',
+          };
+        });
+        const todayRow = riwayat.find((r) => r.tanggal === today);
+        setDataBulan({ stat, riwayat, todayStatus: todayRow ? todayRow.status : null });
+
+        const apelList = res.apelBulan || [];
+        const hariIni = apelList.find((a) => a.tanggal === today) || null;
+        setApel({ supported: true, list: apelList, hariIni });
+        const openK = (res.kasus || []).filter((k) => k.status === 'Open').length;
+        setKasusOpen(openK);
+      };
+
+      let activeToken = sesi.parentToken || '';
+      if (activeToken) {
+        let unified = await api.getPortalOrtu(bulan, activeToken).catch(() => null);
+        if (unified?.code === 'UNAUTHORIZED') {
+          const refreshed = await api.cariSiswaOrtu(sesi.kelas, 'nisn', sesi.nisn).catch(() => null);
+          if (refreshed?.success && refreshed.token) {
+            activeToken = refreshed.token;
+            const nextSesi = { ...sesi, parentToken: activeToken };
+            updateStoredSesi(nextSesi);
+            setSesi(nextSesi);
+            unified = await api.getPortalOrtu(bulan, activeToken).catch(() => null);
+          }
+        }
+        if (unified?.success) {
+          applyUnified(unified);
+          return;
+        }
+        if (unified && !/Action tidak ditemukan/i.test(unified.error || '')) {
+          return;
+        }
+      }
+
+      // Fallback untuk backend v8/v9 yang belum mendukung getPortalOrtu
       const [absRes, piketToday, apelRes, kasusRes] = await Promise.all([
         api.getAbsensiGuru(sesi.kelas, '', bulan).catch(() => null),
         api.getDashboardPiket(today, sesi.kelas).catch(() => null),
@@ -198,11 +255,46 @@ export default function PortalOrtu() {
     if (checking || locked) return;
     setError('');
     setPilihan([]);
+    setSelectToken('');
     if (!kelas) return setError('Pilih kelas anak terlebih dahulu.');
     if (!inputVal.trim()) return setError(tab === 'nisn' ? 'Masukkan NISN anak.' : 'Masukkan nama anak.');
 
     setChecking(true);
     try {
+      const cariRes = await api.cariSiswaOrtu(kelas, tab, inputVal.trim());
+      if (cariRes && !/Action tidak ditemukan/i.test(cariRes.error || '')) {
+        if (cariRes.code === 'RATE_LIMITED') {
+          setError(cariRes.error || 'Terlalu banyak percobaan gagal. Coba lagi beberapa saat.');
+          return;
+        }
+        if (!cariRes.success) {
+          const nextLock = recordFail();
+          setLockState(nextLock);
+          setNowMs(Date.now());
+          setError(cariRes.error || 'Siswa tidak ditemukan di kelas tersebut. Periksa kembali NISN/nama dan kelas.');
+          return;
+        }
+        clearLock();
+        setLockState(null);
+
+        const matches = cariRes.matches || [];
+        if (matches.length > 1) {
+          setSelectToken(cariRes.selectToken || '');
+          setPilihan(matches);
+          return;
+        }
+        const m = cariRes.siswa || matches[0];
+        const target = {
+          nisn: m.nisn,
+          nama: m.nama_siswa || m.nama,
+          kelas: m.kelas || kelas,
+          parentToken: cariRes.token || '',
+        };
+        setSesi(ingat ? saveSesi(target) : target);
+        return;
+      }
+
+      // Fallback untuk backend v8/v9
       const res = await api.getSiswa(kelas);
       const list = res?.data || [];
       let matches = [];
@@ -244,7 +336,30 @@ export default function PortalOrtu() {
     }
   };
 
-  const pilihKandidat = (s) => {
+  const pilihKandidat = async (s) => {
+    setError('');
+    if (selectToken) {
+      setChecking(true);
+      try {
+        const res = await api.pilihSiswaOrtu(selectToken, s.nisn);
+        if (!res?.success) throw new Error(res?.error || 'Pilihan siswa kedaluwarsa, silakan cari ulang.');
+        const m = res.siswa || s;
+        const target = {
+          nisn: m.nisn,
+          nama: m.nama_siswa || m.nama,
+          kelas: m.kelas || kelas,
+          parentToken: res.token || '',
+        };
+        setSesi(ingat ? saveSesi(target) : target);
+        setPilihan([]);
+        setSelectToken('');
+      } catch (err) {
+        setError(err.message || 'Gagal memilih siswa.');
+      } finally {
+        setChecking(false);
+      }
+      return;
+    }
     const target = { nisn: s.nisn, nama: s.nama_siswa || s.nama, kelas: s.kelas || kelas };
     setSesi(ingat ? saveSesi(target) : target);
     setPilihan([]);

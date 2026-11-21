@@ -8,9 +8,66 @@ export const GAS_URL =
 
 const TIMEOUT_MS = 20000;
 const LONG_TIMEOUT_MS = 60000;
+const CLIENT_CACHE_TTL_MS = 3 * 60 * 1000;
 
-async function request(params, { method = 'GET', body, timeoutMs = TIMEOUT_MS } = {}) {
-  const qs = Object.entries(params || {})
+let tokenGetter = () => '';
+let unauthorizedHandler = null;
+
+export function setTokenGetter(fn) {
+  tokenGetter = typeof fn === 'function' ? fn : () => '';
+}
+
+export function setUnauthorizedHandler(fn) {
+  unauthorizedHandler = typeof fn === 'function' ? fn : null;
+}
+
+const memCache = new Map();
+const inflight = new Map();
+
+export function invalidateClientCache(prefix = '') {
+  if (!prefix) {
+    memCache.clear();
+    return;
+  }
+  for (const key of memCache.keys()) {
+    if (key.startsWith(prefix)) memCache.delete(key);
+  }
+}
+
+function cachedGet(cacheKey, fetcher, ttlMs = CLIENT_CACHE_TTL_MS) {
+  const hit = memCache.get(cacheKey);
+  if (hit && Date.now() - hit.at < ttlMs) {
+    return Promise.resolve(hit.value);
+  }
+  if (inflight.has(cacheKey)) {
+    return inflight.get(cacheKey);
+  }
+  const promise = fetcher()
+    .then((res) => {
+      if (res?.success) {
+        memCache.set(cacheKey, { at: Date.now(), value: res });
+      }
+      return res;
+    })
+    .finally(() => {
+      inflight.delete(cacheKey);
+    });
+  inflight.set(cacheKey, promise);
+  return promise;
+}
+
+async function request(params, { method = 'GET', body, timeoutMs = TIMEOUT_MS, skipAuth = false } = {}) {
+  const token = skipAuth ? '' : String(tokenGetter?.() || '').trim();
+  const finalParams =
+    method === 'GET' && token && !(params && params.token)
+      ? { ...(params || {}), token }
+      : params;
+  const finalBody =
+    method === 'POST' && body && typeof body === 'object' && token && !body.token
+      ? { ...body, token }
+      : body;
+
+  const qs = Object.entries(finalParams || {})
     .filter(([, v]) => v !== undefined && v !== null && v !== '')
     .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
     .join('&');
@@ -24,18 +81,24 @@ async function request(params, { method = 'GET', body, timeoutMs = TIMEOUT_MS } 
       method,
       // text/plain menghindari preflight CORS di Apps Script
       headers: method === 'POST' ? { 'Content-Type': 'text/plain;charset=utf-8' } : undefined,
-      body: method === 'POST' ? JSON.stringify(body) : undefined,
+      body: method === 'POST' ? JSON.stringify(finalBody) : undefined,
       redirect: 'follow',
       signal: controller.signal,
     });
 
     const text = await res.text();
     if (!text || !text.trim()) throw new Error('Server tidak mengirim data (respons kosong).');
+    let parsed;
     try {
-      return JSON.parse(text);
+      parsed = JSON.parse(text);
     } catch {
       throw new Error('Respons server bukan JSON yang valid.');
     }
+
+    if (!skipAuth && parsed?.code === 'UNAUTHORIZED') {
+      unauthorizedHandler?.(parsed.error || 'Sesi berakhir. Silakan masuk kembali.');
+    }
+    return parsed;
   } catch (err) {
     if (err.name === 'AbortError') throw new Error('Koneksi timeout — server tidak merespons.');
     if (err instanceof TypeError) throw new Error('Tidak bisa terhubung ke server. Periksa koneksi internet.');
@@ -45,35 +108,87 @@ async function request(params, { method = 'GET', body, timeoutMs = TIMEOUT_MS } 
   }
 }
 
-const get = (params) => request(params, { method: 'GET' });
-const post = (action, data = {}) => request({}, { method: 'POST', body: { action, data } });
-const postRaw = (payload) => request({}, { method: 'POST', body: payload });
+const get = (params, opts) => request(params, { method: 'GET', ...(opts || {}) });
+const post = (action, data = {}, opts) =>
+  request({}, { method: 'POST', body: { action, data }, ...(opts || {}) });
+const postRaw = (payload, opts) => request({}, { method: 'POST', body: payload, ...(opts || {}) });
 
 export const api = {
-  getVersion: () => get({ action: 'getVersion' }).catch(() => ({ success: false, version: 'v1' })),
+  getVersion: () =>
+    cachedGet('version', () => get({ action: 'getVersion' }, { skipAuth: true }), 5 * 60 * 1000).catch(() => ({
+      success: false,
+      version: 'v1',
+    })),
 
   // auth
-  login: (username, password) => get({ action: 'login', username, password }),
+  login: async (username, password) => {
+    invalidateClientCache();
+    const res = await postRaw({ action: 'login', username, password }, { skipAuth: true });
+    if (res && !res.success && /Action tidak ditemukan/i.test(res.error || '')) {
+      return get({ action: 'login', username, password }, { skipAuth: true });
+    }
+    return res;
+  },
+  logout: () => {
+    invalidateClientCache();
+    return postRaw({ action: 'logout' }).catch(() => null);
+  },
 
-  // referensi
-  getConfig: () => get({ action: 'getConfig' }),
-  getKelas: () => get({ action: 'getKelas' }),
-  getJurusan: () => get({ action: 'getJurusan' }),
-  getGuru: () => get({ action: 'getGuru' }),
+  // portal orang tua
+  cariSiswaOrtu: (kelas, mode, query) =>
+    postRaw({ action: 'cariSiswaOrtu', kelas, mode, query }, { skipAuth: true }),
+  pilihSiswaOrtu: (selectToken, nisn) =>
+    postRaw({ action: 'pilihSiswaOrtu', selectToken, nisn }, { skipAuth: true }),
+  getPortalOrtu: (bulan, parentToken) =>
+    request(
+      { action: 'getPortalOrtu', bulan, token: parentToken },
+      { method: 'GET', skipAuth: true, timeoutMs: LONG_TIMEOUT_MS }
+    ),
+
+  // referensi (di-cache di memori + deduplikasi in-flight)
+  getConfig: () => cachedGet('config', () => get({ action: 'getConfig' })),
+  getKelas: () => cachedGet('kelas', () => get({ action: 'getKelas' }, { skipAuth: true })),
+  getJurusan: () => cachedGet('jurusan', () => get({ action: 'getJurusan' })),
+  getGuru: () => cachedGet('guru', () => get({ action: 'getGuru' })),
   getWaliKelas: (kelas) => get({ action: 'getWaliKelas', kelas }),
 
   // data master (admin)
-  getGuruData: () => get({ action: 'getGuruData' }),
-  getSiswaData: (kelas) => get({ action: 'getSiswaData', kelas }),
-  simpanGuru: (data) => post('simpanGuru', data),
-  hapusGuru: (nip) => post('hapusGuru', { nip }),
-  importGuru: (payload) => post('importGuru', payload),
-  simpanSiswa: (data) => post('simpanSiswa', data),
-  hapusSiswa: (nisn) => post('hapusSiswa', { nisn }),
-  importSiswa: (payload) => post('importSiswa', payload),
+  getGuruData: () => cachedGet('guruData', () => get({ action: 'getGuruData' })),
+  getSiswaData: (kelas = '') =>
+    cachedGet(`siswaData:${kelas}`, () => get({ action: 'getSiswaData', kelas })),
+  simpanGuru: async (data) => {
+    const res = await post('simpanGuru', data);
+    if (res?.success) invalidateClientCache();
+    return res;
+  },
+  hapusGuru: async (nip) => {
+    const res = await post('hapusGuru', { nip });
+    if (res?.success) invalidateClientCache();
+    return res;
+  },
+  importGuru: async (payload) => {
+    const res = await post('importGuru', payload);
+    if (res?.success) invalidateClientCache();
+    return res;
+  },
+  simpanSiswa: async (data) => {
+    const res = await post('simpanSiswa', data);
+    if (res?.success) invalidateClientCache();
+    return res;
+  },
+  hapusSiswa: async (nisn) => {
+    const res = await post('hapusSiswa', { nisn });
+    if (res?.success) invalidateClientCache();
+    return res;
+  },
+  importSiswa: async (payload) => {
+    const res = await post('importSiswa', payload);
+    if (res?.success) invalidateClientCache();
+    return res;
+  },
 
   // siswa & jam
-  getSiswa: (kelas) => get({ action: 'getSiswa', kelas }),
+  getSiswa: (kelas) => cachedGet(`siswa:${kelas || ''}`, () => get({ action: 'getSiswa', kelas })),
   getJamTerisi: (tanggal, kelas) => get({ action: 'getJamTerisi', tanggal, kelas }),
 
   // input

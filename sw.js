@@ -4,7 +4,7 @@
    jadi aplikasi tetap bisa dipasang walau di-hosting di subfolder.
 ========================================================= */
 
-const VERSION = 'v2.16.0';
+const VERSION = 'v2.8.0-f605d49b';
 const CACHE = `presensi-${VERSION}`;
 const SCOPE = self.registration ? self.registration.scope : self.location.href;
 const url = (p) => new URL(p, SCOPE).href;
@@ -20,6 +20,7 @@ const PRECACHE = [
   url('icons/icon-192.png'),
   url('icons/icon-512.png'),
   url('logo_sekolah.webp'),
+  url('logo_riau.webp'),
 ];
 
 const GAS_ORIGINS = ['script.google.com', 'script.googleusercontent.com'];

@@ -1,7 +1,7 @@
 // ============================================================
-//  FILE: kode.gs  |  VERSI: v8 (final)  |  Diperbarui: 2026-10-29
+//  FILE: kode.gs  |  VERSI: v10  |  Diperbarui: 2026-11-21
 //  Setelah deploy, verifikasi: <URL /exec>?action=getVersion
-//  harus menampilkan "version":"v8".
+//  harus menampilkan "version":"v10".
 // ============================================================
 // ============================================================
 //  PRESENSI SMKN 1 KUANTAN MUDIK
@@ -164,6 +164,9 @@ const RIWAYAT_LIMIT_DEFAULT = 0;    // 0 = tanpa batas jumlah sesi
 const RIWAYAT_BUDGET_MS = 12000;    // < timeout frontend 20 detik
 const MAKS_FOTO_BYTE = 6 * 1024 * 1024;
 const MAKS_JAM = 20;
+const SESSION_TTL = 21600;        // 6 jam (batas maksimal CacheService)
+const LOGIN_MAX_FAIL = 5;
+const LOGIN_LOCK_SEC = 120;
 
 // ============================================================
 //  UTILITAS UMUM
@@ -494,6 +497,182 @@ function bumpAbsensiCache() {
   } catch (e) { /* abaikan */ }
 }
 
+function apelCacheVersion() {
+  try {
+    return CacheService.getScriptCache().get("apelVer") || "0";
+  } catch (e) {
+    return "0";
+  }
+}
+
+function bumpApelCache() {
+  try {
+    CacheService.getScriptCache().put("apelVer", String(Date.now()), CACHE_TTL);
+  } catch (e) { /* abaikan */ }
+}
+
+function kasusCacheVersion() {
+  try {
+    return CacheService.getScriptCache().get("kasusVer") || "0";
+  } catch (e) {
+    return "0";
+  }
+}
+
+function bumpKasusCache() {
+  try {
+    CacheService.getScriptCache().put("kasusVer", String(Date.now()), CACHE_TTL);
+  } catch (e) { /* abaikan */ }
+}
+
+// ============================================================
+//  KEAMANAN: HASH PASSWORD & TOKEN SESI
+// ============================================================
+
+function sha256Hex(text) {
+  const bytes = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    String(text || ""),
+    Utilities.Charset.UTF_8
+  );
+  let out = "";
+  for (let i = 0; i < bytes.length; i++) {
+    const v = bytes[i] < 0 ? bytes[i] + 256 : bytes[i];
+    out += (v < 16 ? "0" : "") + v.toString(16);
+  }
+  return out;
+}
+
+function hashPassword(plain) {
+  const salt = Utilities.getUuid().replace(/-/g, "").slice(0, 16);
+  return "sha256$" + salt + "$" + sha256Hex(salt + ":" + String(plain || ""));
+}
+
+function verifyPassword(plain, stored) {
+  const p = String(plain || "");
+  const s = String(stored || "");
+  if (!s) return { ok: false, needsUpgrade: false };
+  if (s.indexOf("sha256$") === 0) {
+    const parts = s.split("$");
+    if (parts.length !== 3) return { ok: false, needsUpgrade: false };
+    return { ok: sha256Hex(parts[1] + ":" + p) === parts[2], needsUpgrade: false };
+  }
+  return { ok: s === p, needsUpgrade: s === p };
+}
+
+function generateToken() {
+  return Utilities.getUuid().replace(/-/g, "") + Utilities.getUuid().replace(/-/g, "").slice(0, 16);
+}
+
+function issueSessionToken(user) {
+  const token = generateToken();
+  const payload = {
+    nip: user.nip || "",
+    nama: user.nama || user.nama_guru || "",
+    username: user.username || "",
+    role: normalizeRole(user.role),
+    mapel: user.mapel || "",
+    kelas_wali: user.kelas_wali || user.kelas || ""
+  };
+  try {
+    CacheService.getScriptCache().put("sess:" + token, JSON.stringify(payload), SESSION_TTL);
+  } catch (e) { /* abaikan */ }
+  return token;
+}
+
+function getSession(token) {
+  const t = str(token);
+  if (!t) return null;
+  try {
+    const cache = CacheService.getScriptCache();
+    const raw = cache.get("sess:" + t);
+    if (!raw) return null;
+    cache.put("sess:" + t, raw, SESSION_TTL);
+    return JSON.parse(raw);
+  } catch (e) {
+    return null;
+  }
+}
+
+function revokeSession(token) {
+  const t = str(token);
+  if (!t) return { success: true };
+  try {
+    CacheService.getScriptCache().remove("sess:" + t);
+  } catch (e) { /* abaikan */ }
+  return { success: true };
+}
+
+function requireAuth(token, allowedRoles) {
+  const sess = getSession(token);
+  if (!sess) {
+    return {
+      ok: false,
+      response: { success: false, code: "UNAUTHORIZED", error: "Sesi berakhir atau tidak valid. Silakan masuk kembali." }
+    };
+  }
+  if (allowedRoles && allowedRoles.length && allowedRoles.indexOf(sess.role) === -1) {
+    return {
+      ok: false,
+      response: { success: false, code: "FORBIDDEN", error: "Akses ditolak untuk peran \"" + sess.role + "\"." }
+    };
+  }
+  return { ok: true, session: sess };
+}
+
+function withAuth(allowedRoles, fn) {
+  return (req, token) => {
+    const auth = requireAuth(token, allowedRoles);
+    if (!auth.ok) return auth.response;
+    return fn(req, auth.session);
+  };
+}
+
+function issueParentToken(siswa) {
+  const token = generateToken();
+  const payload = {
+    nisn: str(siswa.nisn),
+    nama: str(siswa.nama || siswa.nama_siswa),
+    kelas: str(siswa.kelas)
+  };
+  try {
+    CacheService.getScriptCache().put("ortu:" + token, JSON.stringify(payload), SESSION_TTL);
+  } catch (e) { /* abaikan */ }
+  return token;
+}
+
+function getParentSession(token) {
+  const t = str(token);
+  if (!t) return null;
+  try {
+    const cache = CacheService.getScriptCache();
+    const raw = cache.get("ortu:" + t);
+    if (!raw) return null;
+    cache.put("ortu:" + t, raw, SESSION_TTL);
+    return JSON.parse(raw);
+  } catch (e) {
+    return null;
+  }
+}
+
+function issueSelectToken(kelas, matches) {
+  const token = generateToken();
+  const payload = {
+    kelas: str(kelas),
+    nisnList: matches.map(m => nisnKey(m.nisn)).filter(Boolean)
+  };
+  try {
+    CacheService.getScriptCache().put("ortuSel:" + token, JSON.stringify(payload), 300);
+  } catch (e) { /* abaikan */ }
+  return token;
+}
+
+function kasusActor(sess) {
+  if (!sess) return { role: "wali_kelas", kelasWali: "" };
+  const lvl = sess.role === "admin" ? "bk" : sess.role === "kepsek" ? "kepsek" : "wali_kelas";
+  return { role: lvl, kelasWali: str(sess.kelas_wali) };
+}
+
 // ============================================================
 //  HELPER SHEET
 // ============================================================
@@ -541,49 +720,77 @@ function appendRows(sh, rows, header, textCols) {
 // ============================================================
 
 const GET_ACTIONS = {
-  login:                   p => doLogin(p.username, p.password),
-  getConfig:               () => getConfig(),
-  getSiswa:                p => getSiswa(p.kelas),
-  getJamTerisi:            p => getJamTerisi(p.tanggal, p.kelas),
-  getKelas:                () => getKelas(),
-  getJurusan:              () => getJurusan(),
-  getGuru:                 () => getGuruList(),
-  getWaliKelas:            p => getWaliKelas(p.kelas),
-  getDashboardAdmin:       () => getDashboardAdmin(),
-  getDashboardPiket:       p => getDashboardPiket(p.tanggal, p.kelas),
-  getDashboardKepsek:      p => getDashboardKepsek(p.mode, p.tanggal, p.bulan, p.kelas, p.jurusan),
-  getRiwayatAbsensi:       p => getRiwayatAbsensi(p),
-  getDetailAbsensi:        p => getDetailAbsensi(p.id),
-  getAbsensiGuru:          p => getAbsensiGuru(p.kelas, p.guru, p.bulan),
-  getRekapBulanan:         p => getRekapBulanan(p.kelas, p.bulan),
-  getMonitoringSiswa:      p => getMonitoringSiswa(p.nisn, p.bulan),
-  getRekapGuruSemester:    p => getRekapGuruSemester(p.kelas, p.guru, p.semester, p.tahun, p.mapel, p.maks),
-  getGuruData:             () => getGuruData(),
-  getSiswaData:            p => getSiswaData(p.kelas),
   getVersion:              () => getVersion(),
-  getKasusPembinaan:       p => getKasusPembinaan(p.status, p.kelas, p.role, p.kelas_wali, p.level),
-  getPeringatanWaliKelas:  p => getPeringatanWaliKelas(p.kelas),
-  sinkronKasusDariAbsensi: p => sinkronKasusDariAbsensi(p.role, p.kelas_wali, p.kelas, p.tanggal),
-  getApelPagi:             p => getApelPagi(p.tanggal, p.kelas, p.bulan, p.nisn)
+  getKelas:                () => getKelas(),
+  login:                   p => doLogin(p.username, p.password),
+  getPortalOrtu:           (p, token) => getPortalOrtu(p.bulan, token),
+
+  getConfig:               withAuth(ROLE_VALID, () => getConfig()),
+  getSiswa:                withAuth(ROLE_VALID, p => getSiswa(p.kelas)),
+  getJamTerisi:            withAuth(ROLE_VALID, p => getJamTerisi(p.tanggal, p.kelas)),
+  getJurusan:              withAuth(ROLE_VALID, () => getJurusan()),
+  getGuru:                 withAuth(ROLE_VALID, () => getGuruList()),
+  getWaliKelas:            withAuth(ROLE_VALID, p => getWaliKelas(p.kelas)),
+  getDashboardAdmin:       withAuth(["admin"], () => getDashboardAdmin()),
+  getDashboardPiket:       withAuth(ROLE_VALID, p => getDashboardPiket(p.tanggal, p.kelas)),
+  getDashboardKepsek:      withAuth(["admin", "kepsek"], p => getDashboardKepsek(p.mode, p.tanggal, p.bulan, p.kelas, p.jurusan)),
+  getRiwayatAbsensi:       withAuth(["admin", "kepsek", "piket", "guru", "wali"], p => getRiwayatAbsensi(p)),
+  getDetailAbsensi:        withAuth(["admin", "kepsek", "piket", "guru", "wali"], p => getDetailAbsensi(p.id)),
+  getAbsensiGuru:          withAuth(ROLE_VALID, p => getAbsensiGuru(p.kelas, p.guru, p.bulan)),
+  getRekapBulanan:         withAuth(ROLE_VALID, p => getRekapBulanan(p.kelas, p.bulan)),
+  getMonitoringSiswa:      withAuth(ROLE_VALID, p => getMonitoringSiswa(p.nisn, p.bulan)),
+  getRekapGuruSemester:    withAuth(ROLE_VALID, p => getRekapGuruSemester(p.kelas, p.guru, p.semester, p.tahun, p.mapel, p.maks)),
+  getGuruData:             withAuth(["admin"], () => getGuruData()),
+  getSiswaData:            withAuth(["admin"], p => getSiswaData(p.kelas)),
+  getKasusPembinaan:       withAuth(["admin", "kepsek", "wali"], (p, sess) => {
+    const actor = kasusActor(sess);
+    return getKasusPembinaan(p.status, p.kelas, actor.role, actor.kelasWali, p.level);
+  }),
+  getPeringatanWaliKelas:  withAuth(["admin", "kepsek", "wali"], (p, sess) => {
+    const actor = kasusActor(sess);
+    return getPeringatanWaliKelas(actor.role === "wali_kelas" ? actor.kelasWali : (p.kelas || actor.kelasWali));
+  }),
+  sinkronKasusDariAbsensi: withAuth(["admin", "kepsek", "wali"], (p, sess) => {
+    const actor = kasusActor(sess);
+    return sinkronKasusDariAbsensi(actor.role, actor.kelasWali, p.kelas, p.tanggal);
+  }),
+  getApelPagi:             withAuth(ROLE_VALID, p => getApelPagi(p.tanggal, p.kelas, p.bulan, p.nisn))
 };
 
 const POST_ACTIONS = {
-  simpanAbsensi:          b => simpanAbsensi(b.data),
-  uploadFoto:             b => uploadFoto(b.data),
-  updateAbsensi:          b => updateAbsensi(b.data),
-  hapusAbsensi:           b => hapusAbsensi(b.id),
-  simpanGuru:             b => simpanGuru(b.data),
-  hapusGuru:              b => hapusGuru(b.data || { nip: b.nip }),
-  importGuru:             b => importGuru(b.data),
-  simpanSiswa:            b => simpanSiswa(b.data),
-  hapusSiswa:             b => hapusSiswa(b.data || { nisn: b.nisn }),
-  importSiswa:            b => importSiswa(b.data),
-  simpanKasusPembinaan:   b => simpanKasusPembinaan(b.data, b.role, b.kelas_wali),
-  tutupKasusPembinaan:    b => tutupKasusPembinaan(b.id, b.alasan, b.role),
-  catatTindakanKasus:     b => catatTindakanKasus(b.id, b.level, b.tindakan, b.catatan),
-  escalateKasus:          b => escalateKasus(b.id, b.dariLevel, b.keLevel, b.catatan),
-  simpanApelPagi:         b => simpanApelPagi(b.data, b.petugas),
-  hapusApelPagi:          b => hapusApelPagi((b.data && b.data.id) || b.id)
+  login:                  b => doLogin(b.username, b.password),
+  logout:                 (b, token) => revokeSession(token),
+  cariSiswaOrtu:          b => cariSiswaOrtu(b.kelas, b.mode, b.query),
+  pilihSiswaOrtu:         b => pilihSiswaOrtu(b.selectToken, b.nisn),
+
+  simpanAbsensi:          withAuth(["admin", "guru", "wali", "piket"], b => simpanAbsensi(b.data)),
+  uploadFoto:             withAuth(["admin", "guru", "wali", "piket"], b => uploadFoto(b.data)),
+  updateAbsensi:          withAuth(["admin"], b => updateAbsensi(b.data)),
+  hapusAbsensi:           withAuth(["admin"], b => hapusAbsensi(b.id)),
+  simpanGuru:             withAuth(["admin"], b => simpanGuru(b.data)),
+  hapusGuru:              withAuth(["admin"], b => hapusGuru(b.data || { nip: b.nip })),
+  importGuru:             withAuth(["admin"], b => importGuru(b.data)),
+  simpanSiswa:            withAuth(["admin"], b => simpanSiswa(b.data)),
+  hapusSiswa:             withAuth(["admin"], b => hapusSiswa(b.data || { nisn: b.nisn })),
+  importSiswa:            withAuth(["admin"], b => importSiswa(b.data)),
+  simpanKasusPembinaan:   withAuth(["admin", "kepsek", "wali"], (b, sess) => {
+    const actor = kasusActor(sess);
+    return simpanKasusPembinaan(b.data, actor.role, actor.kelasWali);
+  }),
+  tutupKasusPembinaan:    withAuth(["admin", "kepsek", "wali"], (b, sess) => {
+    const actor = kasusActor(sess);
+    return tutupKasusPembinaan(b.id, b.alasan, actor.role, actor.kelasWali);
+  }),
+  catatTindakanKasus:     withAuth(["admin", "kepsek", "wali"], (b, sess) => {
+    const actor = kasusActor(sess);
+    return catatTindakanKasus(b.id, actor.role, b.tindakan, b.catatan, actor.kelasWali);
+  }),
+  escalateKasus:          withAuth(["admin", "kepsek", "wali"], (b, sess) => {
+    const actor = kasusActor(sess);
+    return escalateKasus(b.id, b.dariLevel, b.keLevel, b.catatan, actor);
+  }),
+  simpanApelPagi:         withAuth(["admin", "piket"], (b, sess) => simpanApelPagi(b.data, sess.nama || b.petugas)),
+  hapusApelPagi:          withAuth(["admin", "piket"], b => hapusApelPagi((b.data && b.data.id) || b.id))
 };
 
 function doGet(e) {
@@ -595,7 +802,7 @@ function doGet(e) {
     return outputJSON({ success: false, error: "Action tidak ditemukan: " + action });
   }
   try {
-    const result = handler(p);
+    const result = handler(p, str(p.token));
     return outputJSON(result || { success: false, error: "Tidak ada hasil" });
   } catch (err) {
     return outputJSON(fail(err));
@@ -614,7 +821,8 @@ function doPost(e) {
     if (!handler) {
       return outputJSON({ success: false, error: "Action tidak ditemukan: " + action });
     }
-    return outputJSON(handler(body) || { success: false, error: "Tidak ada hasil" });
+    const token = str(body.token || (body.data && body.data.token));
+    return outputJSON(handler(body, token) || { success: false, error: "Tidak ada hasil" });
   } catch (err) {
     return outputJSON(fail(err));
   } finally {
@@ -634,7 +842,7 @@ function readPostBody(e) {
 }
 
 // ============================================================
-//  LOGIN
+//  LOGIN (hash SHA-256 + auto-migrasi + rate limit + token)
 //  Sheet Guru: [0]nip [1]nama [2]username [3]password
 //              [4]role [5]mapel [6]kelas_wali
 // ============================================================
@@ -646,28 +854,229 @@ function doLogin(username, password) {
     return { success: false, error: "Username dan password wajib diisi" };
   }
 
-  const rows = getSheet(SHEET_GURU).getDataRange().getValues();
+  const cache = CacheService.getScriptCache();
+  const lockKey = "loginLock:" + u;
+  const failKey = "loginFail:" + u;
+
+  try {
+    const lockedUntil = Number(cache.get(lockKey) || 0);
+    if (lockedUntil > Date.now()) {
+      const sisa = Math.ceil((lockedUntil - Date.now()) / 1000);
+      return {
+        success: false,
+        code: "RATE_LIMITED",
+        retryAfter: sisa,
+        error: "Terlalu banyak percobaan gagal. Coba lagi dalam " + sisa + " detik."
+      };
+    }
+  } catch (e) { /* abaikan */ }
+
+  const sh = getSheet(SHEET_GURU);
+  const rows = sh.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
     const r = rows[i];
     if (str(r[2]).toLowerCase() !== u) continue;
-    if (str(r[3]) !== p) continue;
+    const check = verifyPassword(p, str(r[3]));
+    if (!check.ok) continue;
+
+    // Auto-migrasi password lama (teks biasa) ke sha256$+salt
+    if (check.needsUpgrade) {
+      try {
+        sh.getRange(i + 1, 4).setValue(hashPassword(p));
+      } catch (e) { /* abaikan bila gagal upgrade */ }
+    }
+
+    try {
+      cache.remove(failKey);
+      cache.remove(lockKey);
+    } catch (e) { /* abaikan */ }
 
     const nama = str(r[1]);
+    const userObj = {
+      nip:        str(r[0]),
+      nama_guru:  nama,
+      nama:       nama,
+      username:   str(r[2]).toLowerCase(),
+      role:       normalizeRole(r[4]),
+      mapel:      str(r[5]),
+      kelas:      str(r[6]),   // kelas wali
+      kelas_wali: str(r[6])
+    };
+    const token = issueSessionToken(userObj);
     return {
       success: true,
-      user: {
-        nip:        str(r[0]),
-        nama_guru:  nama,
-        nama:       nama,
-        username:   str(r[2]).toLowerCase(),
-        role:       normalizeRole(r[4]),
-        mapel:      str(r[5]),
-        kelas:      str(r[6]),   // kelas wali
-        kelas_wali: str(r[6])
-      }
+      token: token,
+      user: userObj
     };
   }
+
+  try {
+    const prevFails = Number(cache.get(failKey) || 0) + 1;
+    if (prevFails >= LOGIN_MAX_FAIL) {
+      cache.remove(failKey);
+      cache.put(lockKey, String(Date.now() + LOGIN_LOCK_SEC * 1000), LOGIN_LOCK_SEC);
+      return {
+        success: false,
+        code: "RATE_LIMITED",
+        retryAfter: LOGIN_LOCK_SEC,
+        error: "Terlalu banyak percobaan gagal. Coba lagi dalam " + LOGIN_LOCK_SEC + " detik."
+      };
+    }
+    cache.put(failKey, String(prevFails), LOGIN_LOCK_SEC);
+  } catch (e) { /* abaikan */ }
+
   return { success: false, error: "Username atau password salah" };
+}
+
+// ============================================================
+//  PORTAL ORANG TUA (aman: tanpa kirim no_hp_ortu / daftar kelas)
+// ============================================================
+
+function normOrtuText(v) {
+  return str(v)
+    .toLowerCase()
+    .replace(/[^a-z0-9s]/g, " ")
+    .replace(/s+/g, " ")
+    .trim();
+}
+
+function cariSiswaOrtu(kelas, mode, query) {
+  try {
+    const kls = str(kelas);
+    const m = str(mode) === "nama" ? "nama" : "nisn";
+    const q = str(query);
+    if (!kls || !q) return { success: false, error: "Kelas dan NISN/nama anak wajib diisi" };
+
+    const qKey = m === "nisn" ? nisnKey(q) : normOrtuText(q);
+    if (!qKey) return { success: false, error: "Format NISN/nama tidak valid" };
+
+    const cache = CacheService.getScriptCache();
+    const bucketKey = "ortuFail:" + kls + ":" + sha256Hex(m + ":" + qKey).slice(0, 12);
+    const lockKey = "ortuLock:" + kls + ":" + sha256Hex(m + ":" + qKey).slice(0, 12);
+    try {
+      const lockedUntil = Number(cache.get(lockKey) || 0);
+      if (lockedUntil > Date.now()) {
+        const sisa = Math.ceil((lockedUntil - Date.now()) / 1000);
+        return {
+          success: false,
+          code: "RATE_LIMITED",
+          retryAfter: sisa,
+          error: "Terlalu banyak percobaan gagal. Coba lagi dalam " + sisa + " detik."
+        };
+      }
+    } catch (e) { /* abaikan */ }
+
+    const master = readSiswaMasterCached();
+    const matches = [];
+    for (let i = 0; i < master.length; i++) {
+      const s = master[i];
+      if (s.kelas !== kls) continue;
+      if (m === "nisn") {
+        if (nisnKey(s.nisn) === qKey) {
+          matches.push({ nisn: s.nisn, nama: s.nama, nama_siswa: s.nama, kelas: s.kelas });
+        }
+      } else {
+        if (normOrtuText(s.nama).indexOf(qKey) !== -1) {
+          matches.push({ nisn: s.nisn, nama: s.nama, nama_siswa: s.nama, kelas: s.kelas });
+        }
+      }
+    }
+
+    if (!matches.length) {
+      try {
+        const fails = Number(cache.get(bucketKey) || 0) + 1;
+        if (fails >= LOGIN_MAX_FAIL) {
+          cache.remove(bucketKey);
+          cache.put(lockKey, String(Date.now() + LOGIN_LOCK_SEC * 1000), LOGIN_LOCK_SEC);
+          return {
+            success: false,
+            code: "RATE_LIMITED",
+            retryAfter: LOGIN_LOCK_SEC,
+            error: "Terlalu banyak percobaan gagal. Coba lagi dalam " + LOGIN_LOCK_SEC + " detik."
+          };
+        }
+        cache.put(bucketKey, String(fails), LOGIN_LOCK_SEC);
+      } catch (e) { /* abaikan */ }
+      return { success: false, error: "Siswa tidak ditemukan di kelas tersebut. Periksa kembali NISN/nama dan kelas." };
+    }
+
+    try {
+      cache.remove(bucketKey);
+      cache.remove(lockKey);
+    } catch (e) { /* abaikan */ }
+
+    if (matches.length === 1) {
+      const siswa = matches[0];
+      const token = issueParentToken(siswa);
+      return { success: true, token: token, siswa: siswa, matches: matches };
+    }
+
+    const selectToken = issueSelectToken(kls, matches);
+    return { success: true, selectToken: selectToken, matches: matches };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+function pilihSiswaOrtu(selectToken, nisn) {
+  try {
+    const st = str(selectToken);
+    const nk = nisnKey(nisn);
+    if (!st || !nk) return { success: false, error: "Permintaan tidak valid" };
+
+    const raw = CacheService.getScriptCache().get("ortuSel:" + st);
+    if (!raw) return { success: false, error: "Sesi pemilihan kedaluwarsa, silakan cari ulang." };
+
+    const sel = JSON.parse(raw);
+    if (!sel || !Array.isArray(sel.nisnList) || sel.nisnList.indexOf(nk) === -1) {
+      return { success: false, error: "Siswa tidak termasuk hasil pencarian." };
+    }
+
+    const master = readSiswaMasterCached();
+    for (let i = 0; i < master.length; i++) {
+      const s = master[i];
+      if (s.kelas === sel.kelas && nisnKey(s.nisn) === nk) {
+        const siswa = { nisn: s.nisn, nama: s.nama, nama_siswa: s.nama, kelas: s.kelas };
+        const token = issueParentToken(siswa);
+        try { CacheService.getScriptCache().remove("ortuSel:" + st); } catch (e) { /* abaikan */ }
+        return { success: true, token: token, siswa: siswa };
+      }
+    }
+    return { success: false, error: "Siswa tidak ditemukan" };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+function getPortalOrtu(bulan, token) {
+  const pSess = getParentSession(token);
+  const tSess = !pSess ? getSession(token) : null;
+  if (!pSess && !tSess) {
+    return { success: false, code: "UNAUTHORIZED", error: "Sesi portal berakhir. Silakan masuk kembali." };
+  }
+  const targetNisn = pSess ? pSess.nisn : "";
+  if (!targetNisn) {
+    return { success: false, error: "NISN tidak tersedia pada sesi ini" };
+  }
+  const mon = getMonitoringSiswa(targetNisn, bulan);
+  if (!mon || !mon.success) return mon;
+
+  const siswaSafe = mon.siswa
+    ? { nisn: mon.siswa.nisn, nama: mon.siswa.nama, kelas: mon.siswa.kelas }
+    : null;
+  return {
+    success: true,
+    bulan: mon.bulan,
+    semesterLabel: mon.semesterLabel,
+    tahunAjaran: mon.tahunAjaran,
+    siswa: siswaSafe,
+    statBulan: mon.statBulan,
+    statSemester: mon.statSemester,
+    riwayatBulan: mon.riwayatBulan,
+    apelBulan: mon.apelBulan,
+    totalApelSemester: mon.totalApelSemester,
+    kasus: mon.kasus
+  };
 }
 
 // ============================================================
@@ -712,6 +1121,34 @@ function readSiswaMasterCached() {
   return data;
 }
 
+/** Daftar guru tanpa password, di-cache 10 menit. */
+function readGuruDataCached() {
+  const key = "guru:" + cacheVersion();
+  const cached = cacheGetJson(key);
+  if (cached) return cached;
+
+  const rows = getSheet(SHEET_GURU).getDataRange().getValues();
+  const data = [];
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    const nip = str(r[0]);
+    const nama = str(r[1]);
+    if (!nip && !nama) continue;
+    data.push({
+      rowIndex:    i + 1,
+      nip:         nip,
+      nama:        nama,
+      username:    str(r[2]),
+      role:        normalizeRole(r[4]),
+      mapel:       str(r[5]),
+      kelas_wali:  str(r[6]),
+      hasPassword: Boolean(str(r[3]))
+    });
+  }
+  cachePutJson(key, data, CACHE_TTL);
+  return data;
+}
+
 /** kelas[], guru[], mapel[], jamTersedia[] — di-cache 10 menit. */
 function getConfig() {
   const key = "cfg:" + cacheVersion();
@@ -720,13 +1157,7 @@ function getConfig() {
 
   try {
     const kelas = readKelasList();
-
-    const guruRows = getSheet(SHEET_GURU).getDataRange().getValues();
-    const guru = [];
-    for (let i = 1; i < guruRows.length; i++) {
-      const n = str(guruRows[i][1]);
-      if (n) guru.push(n);
-    }
+    const guru = readGuruDataCached().map(g => g.nama).filter(Boolean);
 
     const mapelRows = getSheet(SHEET_MAPEL).getDataRange().getValues();
     const mapel = [];
@@ -759,7 +1190,12 @@ function getConfig() {
 
 function getKelas() {
   try {
-    return { success: true, data: readKelasList() };
+    const key = "kelas:" + cacheVersion();
+    const cached = cacheGetJson(key);
+    if (cached) return cached;
+    const res = { success: true, data: readKelasList() };
+    cachePutJson(key, res, CACHE_TTL);
+    return res;
   } catch (err) {
     return fail(err);
   }
@@ -767,6 +1203,9 @@ function getKelas() {
 
 function getJurusan() {
   try {
+    const key = "jur:" + cacheVersion();
+    const cached = cacheGetJson(key);
+    if (cached) return cached;
     const rows = getSheet(SHEET_KELAS).getDataRange().getValues();
     const set = {};
     for (let i = 1; i < rows.length; i++) {
@@ -775,7 +1214,9 @@ function getJurusan() {
       const jur = str(rows[i][1]) || jurusanOf(kls);
       if (jur) set[jur] = true;
     }
-    return { success: true, data: Object.keys(set).sort() };
+    const res = { success: true, data: Object.keys(set).sort() };
+    cachePutJson(key, res, CACHE_TTL);
+    return res;
   } catch (err) {
     return fail(err);
   }
@@ -783,13 +1224,9 @@ function getJurusan() {
 
 function getGuruList() {
   try {
-    const rows = getSheet(SHEET_GURU).getDataRange().getValues();
-    const data = [];
-    for (let i = 1; i < rows.length; i++) {
-      const nama = str(rows[i][1]);
-      if (!nama) continue;
-      data.push({ nip: str(rows[i][0]), nama: nama, mapel: str(rows[i][5]) });
-    }
+    const data = readGuruDataCached()
+      .filter(g => g.nama)
+      .map(g => ({ nip: g.nip, nama: g.nama, mapel: g.mapel }));
     return { success: true, data: data };
   } catch (err) {
     return fail(err);
@@ -801,13 +1238,13 @@ function getWaliKelas(kelas) {
     const target = str(kelas);
     if (!target) return { success: false, error: "Kelas wajib diisi" };
 
-    const rows = getSheet(SHEET_GURU).getDataRange().getValues();
-    for (let i = 1; i < rows.length; i++) {
-      const kls = str(rows[i][6]);
-      if (kls !== target) continue;
+    const gurus = readGuruDataCached();
+    for (let i = 0; i < gurus.length; i++) {
+      const g = gurus[i];
+      if (g.kelas_wali !== target) continue;
       return {
         success: true,
-        data: { nama: str(rows[i][1]), nip: str(rows[i][0]), kelas: kls }
+        data: { nama: g.nama, nip: g.nip, kelas: g.kelas_wali }
       };
     }
     return { success: false, error: "Wali kelas tidak ditemukan" };
@@ -820,19 +1257,17 @@ function getSiswa(kelas) {
   try {
     const filter = str(kelas);
     const semua = filter.toUpperCase() === "SEMUA";
-    const rows = getSheet(SHEET_SISWA).getDataRange().getValues();
+    const master = readSiswaMasterCached();
     const data = [];
-    for (let i = 1; i < rows.length; i++) {
-      const nisn = str(rows[i][0]);
-      if (!nisn) continue;
-      const kls = str(rows[i][2]);
-      if (!semua && kls !== filter) continue;
+    for (let i = 0; i < master.length; i++) {
+      const s = master[i];
+      if (!semua && s.kelas !== filter) continue;
       data.push({
-        nisn:       nisn,
-        nama_siswa: str(rows[i][1]),
-        kelas:      kls,
-        jk:         str(rows[i][3]),
-        no_hp_ortu: str(rows[i][4])
+        nisn:       s.nisn,
+        nama_siswa: s.nama,
+        kelas:      s.kelas,
+        jk:         s.jk,
+        no_hp_ortu: s.no_hp_ortu
       });
     }
     return { success: true, data: data };
@@ -1086,6 +1521,34 @@ function simpanAbsensi(data) {
 
     if (!siswaRows.length) {
       return { success: false, error: "Data siswa kosong" };
+    }
+
+    // Validasi keanggotaan NISN pada kelas (bila master kelas sudah terisi)
+    const masterKelas = {};
+    let masterKelasCount = 0;
+    readSiswaMasterCached().forEach(s => {
+      if (s.kelas === kelas) {
+        const nk = nisnKey(s.nisn) || s.nisn;
+        if (nk) {
+          masterKelas[nk] = true;
+          masterKelasCount++;
+        }
+      }
+    });
+    if (masterKelasCount > 0) {
+      const validRows = [];
+      for (let i = 0; i < siswaRows.length; i++) {
+        if (masterKelas[siswaRows[i].nisnKey]) {
+          validRows.push(siswaRows[i]);
+        } else {
+          tanpaNisn++;
+        }
+      }
+      if (!validRows.length) {
+        return { success: false, error: "Siswa tidak terdaftar di kelas " + kelas };
+      }
+      siswaRows.length = 0;
+      for (let i = 0; i < validRows.length; i++) siswaRows.push(validRows[i]);
     }
 
     // ── Cek bentrok: satu kelas tidak boleh 2 sesi di jam sama ──
@@ -1576,14 +2039,15 @@ function hapusAbsensi(idEncoded) {
 //  terpisah agar rekap mapel & kasus otomatis tidak terpengaruh.
 // ============================================================
 
-function ensureApelSheet() {
+function ensureApelSheet(readOnly) {
   const ss = getSS();
-  let sh = ss.getSheetByName(SHEET_APEL);
+  let sh = __sheetCache[SHEET_APEL] || ss.getSheetByName(SHEET_APEL);
   if (!sh) {
+    if (readOnly) return null;
     sh = ss.insertSheet(SHEET_APEL);
-    __sheetCache[SHEET_APEL] = sh;
   }
-  ensureHeader(sh, APEL_HEADER);
+  __sheetCache[SHEET_APEL] = sh;
+  if (!readOnly) ensureHeader(sh, APEL_HEADER);
   return sh;
 }
 
@@ -1625,8 +2089,8 @@ function getApelPagi(tanggal, kelas, bulan, nisn) {
     const semua = !filter || filter.toUpperCase() === "SEMUA";
     const filterNisn = str(nisn);
 
-    const sh = ensureApelSheet();
-    const last = sh.getLastRow();
+    const sh = ensureApelSheet(true);
+    const last = sh ? sh.getLastRow() : 0;
     const data = [];
 
     if (last >= 2) {
@@ -1771,6 +2235,7 @@ function simpanApelPagi(data, petugas) {
     }
 
     appendRows(sh, rows, APEL_HEADER, [APEL.NISN]);
+    bumpApelCache();
 
     return {
       success: true,
@@ -1804,6 +2269,7 @@ function hapusApelPagi(id) {
     for (let i = 0; i < ids.length; i++) {
       if (str(ids[i][0]) !== target) continue;
       sh.deleteRow(i + 2);
+      bumpApelCache();
       return { success: true, deleted: 1 };
     }
 
@@ -1922,6 +2388,11 @@ function getRekapGuruSemester(kelas, guru, semester, tahun, mapel, maks) {
 
     const batas = Math.min(Math.max(toInt(maks) || MAKS_PERTEMUAN_SEMESTER, 1), MAKS_PERTEMUAN_SEMESTER);
     const info = semesterRange(semester, tahun, new Date());
+
+    const cacheKey = "rekapSem:" + absCacheVersion() + ":" + cacheVersion() + ":" +
+      filterKelas + ":" + filterGuru + ":" + info.semester + ":" + info.startYear + ":" + filterMapel + ":" + batas;
+    const cached = cacheGetJson(cacheKey);
+    if (cached) return cached;
 
     const sesiMap = {};
     const sesiList = [];
@@ -2071,7 +2542,7 @@ function getRekapGuruSemester(kelas, guru, semester, tahun, mapel, maks) {
       jam_selesai: s.jamSelesai
     }));
 
-    return {
+    const res = {
       success:       true,
       kelas:         filterKelas,
       guru:          filterGuru,
@@ -2087,6 +2558,8 @@ function getRekapGuruSemester(kelas, guru, semester, tahun, mapel, maks) {
       siswa:         siswa,
       mapelList:     Object.keys(mapelSet).sort()
     };
+    cachePutJson(cacheKey, res, 300);
+    return res;
 
   } catch (err) {
     return fail(err);
@@ -2103,17 +2576,16 @@ function getDashboardPiket(tanggal, kelas) {
     const filter = str(kelas);
     const semua = !filter || filter.toUpperCase() === "SEMUA";
 
+    const cacheKey = "dashPiket:" + absCacheVersion() + ":" + cacheVersion() + ":" + tgl + ":" + (semua ? "SEMUA" : filter);
+    const cached = cacheGetJson(cacheKey);
+    if (cached) return cached;
+
     const siswaMaster = readSiswaMasterCached();
     const kelasList   = readKelasList();
     const targetKelas = semua ? kelasList : [filter];
 
-    const jamRows = getSheet(SHEET_JAM).getDataRange().getValues();
-    const jamTersedia = [];
-    for (let i = 1; i < jamRows.length; i++) {
-      const no = toInt(jamRows[i][0]);
-      if (no > 0) jamTersedia.push(no);
-    }
-    jamTersedia.sort((a, b) => a - b);
+    const cfg = getConfig();
+    const jamTersedia = ((cfg && cfg.jamTersedia) || []).map(j => toInt(j.no_jam)).filter(n => n > 0).sort((a, b) => a - b);
 
     // Kelompokkan siswa per kelas sekali jalan
     const siswaPerKelas = {};
@@ -2279,7 +2751,9 @@ function getDashboardPiket(tanggal, kelas) {
       };
     });
 
-    return { success: true, tanggal: tgl, jamTersedia: jamTersedia, data: result };
+    const res = { success: true, tanggal: tgl, jamTersedia: jamTersedia, data: result };
+    cachePutJson(cacheKey, res, 180);
+    return res;
 
   } catch (err) {
     return fail(err);
@@ -2293,14 +2767,13 @@ function getDashboardPiket(tanggal, kelas) {
 function getDashboardAdmin() {
   try {
     const hariIni = dateKey(new Date());
+    const cacheKey = "dashAdmin:" + absCacheVersion() + ":" + cacheVersion() + ":" + apelCacheVersion() + ":" + hariIni;
+    const cached = cacheGetJson(cacheKey);
+    if (cached) return cached;
+
     const siswaMaster = readSiswaMasterCached();
     const totalSiswa = siswaMaster.length;
-
-    const guruRows = getSheet(SHEET_GURU).getDataRange().getValues();
-    let totalGuru = 0;
-    for (let i = 1; i < guruRows.length; i++) {
-      if (str(guruRows[i][1])) totalGuru++;
-    }
+    const totalGuru = readGuruDataCached().filter(g => g.nama).length;
 
     // Status akhir per siswa hari ini
     const siswaHari = {};
@@ -2376,7 +2849,7 @@ function getDashboardAdmin() {
       ? Math.round((stat.H / totalSiswa) * 100)
       : 0;
 
-    return {
+    const res = {
       success: true,
       data: {
         totalSiswa:  totalSiswa,
@@ -2394,6 +2867,8 @@ function getDashboardAdmin() {
         aktivitas:        aktivitas
       }
     };
+    cachePutJson(cacheKey, res, 180);
+    return res;
 
   } catch (err) {
     return fail(err);
@@ -2668,20 +3143,21 @@ function getDashboardKepsek(mode, tanggal, bulan, filterKelas, filterJurusan) {
 //         [15]escalated_to [16]catatan_wali [17]catatan_bk
 // ============================================================
 
-function ensureKasusSheet() {
+function ensureKasusSheet(readOnly) {
   const ss = getSS();
-  let sh = ss.getSheetByName(SHEET_KASUS);
+  let sh = __sheetCache[SHEET_KASUS] || ss.getSheetByName(SHEET_KASUS);
   if (!sh) {
+    if (readOnly) return null;
     sh = ss.insertSheet(SHEET_KASUS);
-    __sheetCache[SHEET_KASUS] = sh;
   }
-  ensureHeader(sh, KASUS_HEADER);
+  __sheetCache[SHEET_KASUS] = sh;
+  if (!readOnly) ensureHeader(sh, KASUS_HEADER);
   return sh;
 }
 
 function getKasusPembinaan(filterStatus, filterKelas, role, kelasWali, filterLevel) {
   try {
-    const sh = ensureKasusSheet();
+    const sh = ensureKasusSheet(true);
 
     const statusFilter = str(filterStatus);
     const kelasFilter  = str(filterKelas);
@@ -2696,7 +3172,7 @@ function getKasusPembinaan(filterStatus, filterKelas, role, kelasWali, filterLev
       return { success: false, error: "Kelas wali tidak diketahui" };
     }
 
-    const all = sh.getDataRange().getValues();
+    const all = sh ? sh.getDataRange().getValues() : [];
     const hpMap = {};
     readSiswaMasterCached().forEach(s => {
       const k = nisnKey(s.nisn);
@@ -2755,8 +3231,8 @@ function getPeringatanWaliKelas(kelasWali) {
     // tanpa kelas wali → jangan hitung seluruh sekolah
     if (!target) return { success: false, error: "Kelas wali tidak diketahui" };
 
-    const sh = ensureKasusSheet();
-    const all = sh.getDataRange().getValues();
+    const sh = ensureKasusSheet(true);
+    const all = sh ? sh.getDataRange().getValues() : [];
     const peringatan = [];
 
     for (let i = 1; i < all.length; i++) {
@@ -2892,7 +3368,10 @@ function buatKasusOtomatisDariHitung(perSiswa, info) {
     });
   });
 
-  if (rows.length) appendRows(sh, rows, KASUS_HEADER, [2]);
+  if (rows.length) {
+    appendRows(sh, rows, KASUS_HEADER, [2]);
+    bumpKasusCache();
+  }
 
   return { dibuat: rows.length, kandidat: kandidat.length, data: dibuat };
 }
@@ -2990,6 +3469,7 @@ function simpanKasusPembinaan(data, role, kelasWali) {
     ];
 
     appendRows(sh, [row], KASUS_HEADER, [2]);
+    bumpKasusCache();
     return { success: true, id: id };
 
   } catch (err) {
@@ -3007,7 +3487,7 @@ function cariBarisKasus(sh, id) {
   return -1;
 }
 
-function catatTindakanKasus(id, level, tindakan, catatan) {
+function catatTindakanKasus(id, level, tindakan, catatan, kelasWali) {
   let lock = null;
   try {
     lock = LockService.getScriptLock();
@@ -3023,6 +3503,13 @@ function catatTindakanKasus(id, level, tindakan, catatan) {
     const row = cariBarisKasus(sh, kasusId);
     if (row < 1) return { success: false, error: "Kasus tidak ditemukan" };
 
+    if (lvl === "wali_kelas") {
+      const klsKasus = str(sh.getRange(row, 5).getValue());
+      if (!kelasWali || klsKasus !== str(kelasWali)) {
+        return { success: false, error: "Anda hanya dapat menindak kasus di kelas wali Anda" };
+      }
+    }
+
     const isi = str(tindakan);
     const cat = str(catatan);
 
@@ -3036,6 +3523,7 @@ function catatTindakanKasus(id, level, tindakan, catatan) {
       sh.getRange(row, 15).setValue(cat ? isi + " — " + cat : isi);
     }
 
+    bumpKasusCache();
     return { success: true };
 
   } catch (err) {
@@ -3045,7 +3533,7 @@ function catatTindakanKasus(id, level, tindakan, catatan) {
   }
 }
 
-function escalateKasus(id, dariLevel, keLevel, catatan) {
+function escalateKasus(id, dariLevel, keLevel, catatan, actor) {
   let lock = null;
   try {
     lock = LockService.getScriptLock();
@@ -3064,6 +3552,16 @@ function escalateKasus(id, dariLevel, keLevel, catatan) {
     const sh = ensureKasusSheet();
     const row = cariBarisKasus(sh, kasusId);
     if (row < 1) return { success: false, error: "Kasus tidak ditemukan" };
+
+    if (actor && actor.role === "wali_kelas") {
+      const klsKasus = str(sh.getRange(row, 5).getValue());
+      if (!actor.kelasWali || klsKasus !== str(actor.kelasWali)) {
+        return { success: false, error: "Anda hanya dapat meneruskan kasus di kelas wali Anda" };
+      }
+      if (dari !== "wali_kelas") {
+        return { success: false, error: "Wali kelas hanya dapat meneruskan kasus level wali_kelas" };
+      }
+    }
 
     // ── Validasi status sebelum menulis ──
     const nowLevel  = normalizeKasusLevel(sh.getRange(row, 12).getValue()) || "wali_kelas";
@@ -3087,6 +3585,7 @@ function escalateKasus(id, dariLevel, keLevel, catatan) {
       sh.getRange(row, col).setValue(prev ? prev + "\n" + cat : cat);
     }
 
+    bumpKasusCache();
     return { success: true };
 
   } catch (err) {
@@ -3096,7 +3595,7 @@ function escalateKasus(id, dariLevel, keLevel, catatan) {
   }
 }
 
-function tutupKasusPembinaan(id, alasan, role) {
+function tutupKasusPembinaan(id, alasan, role, kelasWali) {
   let lock = null;
   try {
     lock = LockService.getScriptLock();
@@ -3109,6 +3608,14 @@ function tutupKasusPembinaan(id, alasan, role) {
     const row = cariBarisKasus(sh, kasusId);
     if (row < 1) return { success: false, error: "Kasus tidak ditemukan" };
 
+    const lvl = normalizeKasusLevel(role) || str(role);
+    if (lvl === "wali_kelas") {
+      const klsKasus = str(sh.getRange(row, 5).getValue());
+      if (!kelasWali || klsKasus !== str(kelasWali)) {
+        return { success: false, error: "Anda hanya dapat menutup kasus di kelas wali Anda" };
+      }
+    }
+
     // Kasus yang sudah ditutup tidak ditimpa lagi (alasan/tanggal ditutup
     // milik penutup pertama tetap terjaga).
     if (str(sh.getRange(row, 8).getValue()) === "Ditutup") {
@@ -3119,7 +3626,8 @@ function tutupKasusPembinaan(id, alasan, role) {
     sh.getRange(row, 9).setValue(str(alasan));
     sh.getRange(row, 10).setValue(nowTimestamp());
 
-    return { success: true, closedBy: normalizeKasusLevel(role) || str(role) };
+    bumpKasusCache();
+    return { success: true, closedBy: lvl };
 
   } catch (err) {
     return fail(err);
@@ -3134,25 +3642,7 @@ function tutupKasusPembinaan(id, alasan, role) {
 
 function getGuruData() {
   try {
-    const rows = getSheet(SHEET_GURU).getDataRange().getValues();
-    const data = [];
-    for (let i = 1; i < rows.length; i++) {
-      const r = rows[i];
-      const nip = str(r[0]);
-      const nama = str(r[1]);
-      if (!nip && !nama) continue;
-      data.push({
-        rowIndex:    i + 1,
-        nip:         nip,
-        nama:        nama,
-        username:    str(r[2]),
-        role:        normalizeRole(r[4]),
-        mapel:       str(r[5]),
-        kelas_wali:  str(r[6]),
-        hasPassword: Boolean(str(r[3]))
-      });
-    }
-    return { success: true, data: data };
+    return { success: true, data: readGuruDataCached() };
   } catch (err) {
     return fail(err);
   }
@@ -3216,9 +3706,9 @@ function simpanGuru(data) {
     let finalPassword;
     if (isUpdate) {
       finalPassword = str(values[targetRow][3]);
-      if (password) finalPassword = password;
+      if (password) finalPassword = hashPassword(password);
     } else {
-      finalPassword = password || DEFAULT_PASSWORD;
+      finalPassword = hashPassword(password || DEFAULT_PASSWORD);
     }
 
     const row = [nip, nama, uname, finalPassword, role, mapel, kelasWali];
@@ -3368,7 +3858,7 @@ function importGuru(data) {
         nip: nip,
         nama: nama,
         username: username,
-        password: password || (lama ? lama.password : DEFAULT_PASSWORD),
+        password: password ? hashPassword(password) : (lama ? lama.password : hashPassword(DEFAULT_PASSWORD)),
         role: role,
         mapel: mapel,
         kelas_wali: kelasWaliAkhir
@@ -3764,6 +4254,11 @@ function getMonitoringSiswa(nisn, bulan) {
     if (!targetKey) return { success: false, error: "NISN wajib diisi" };
 
     const ym = monthKey(bulan) || dateKey(new Date()).slice(0, 7);
+    const monCacheKey = "monSiswa:" + absCacheVersion() + ":" + cacheVersion() + ":" +
+      apelCacheVersion() + ":" + kasusCacheVersion() + ":" + targetKey + ":" + ym;
+    const cached = cacheGetJson(monCacheKey);
+    if (cached) return cached;
+
     const bStart = ym + "-01";
     const bEnd = monthEndKey(ym);
 
@@ -3845,8 +4340,8 @@ function getMonitoringSiswa(nisn, bulan) {
     const apelBulan = [];
     let totalApelSemester = 0;
     try {
-      const shApel = ensureApelSheet();
-      const lastApel = shApel.getLastRow();
+      const shApel = ensureApelSheet(true);
+      const lastApel = shApel ? shApel.getLastRow() : 0;
       if (lastApel >= 2) {
         const vals = shApel.getRange(2, 1, lastApel - 1, APEL_COLS).getValues();
         for (let i = 0; i < vals.length; i++) {
@@ -3872,8 +4367,8 @@ function getMonitoringSiswa(nisn, bulan) {
     // Kasus pembinaan
     const kasus = [];
     try {
-      const shKasus = ensureKasusSheet();
-      const allKasus = shKasus.getDataRange().getValues();
+      const shKasus = ensureKasusSheet(true);
+      const allKasus = shKasus ? shKasus.getDataRange().getValues() : [];
       for (let i = 1; i < allKasus.length; i++) {
         const r = allKasus[i];
         if (!str(r[0])) continue;
@@ -3890,7 +4385,7 @@ function getMonitoringSiswa(nisn, bulan) {
       kasus.sort((a, b) => b.tanggal.localeCompare(a.tanggal));
     } catch (e) { /* abaikan */ }
 
-    return {
+    const res = {
       success: true,
       bulan: ym,
       semesterLabel: semInfo.label,
@@ -3903,6 +4398,8 @@ function getMonitoringSiswa(nisn, bulan) {
       totalApelSemester: totalApelSemester,
       kasus: kasus
     };
+    cachePutJson(monCacheKey, res, 300);
+    return res;
   } catch (err) {
     return fail(err);
   }
@@ -3915,7 +4412,7 @@ function getMonitoringSiswa(nisn, bulan) {
 function getVersion() {
   return {
     success: true,
-    version: "v9",
+    version: "v10",
     perSiswaPerHari: true,
     fitur: [
       "baca-absensi-per-tanggal",
@@ -3936,7 +4433,12 @@ function getVersion() {
       "monitoring-siswa",
       "no-hp-ortu",
       "ews-dini",
-      "cabut-antar-jam"
+      "cabut-antar-jam",
+      "auth-token",
+      "password-hash",
+      "rate-limit",
+      "portal-ortu-aman",
+      "cache-dashboard-monitoring"
     ]
   };
 }
@@ -3995,6 +4497,7 @@ function arsipkanAbsensiLama(bulanSimpan) {
   SpreadsheetApp.flush();
 
   sh.deleteRows(2, jumlah);
+  bumpAbsensiCache();
 
   return { moved: jumlah, batas: batas, arsip: arsip.getParent().getUrl() };
 }

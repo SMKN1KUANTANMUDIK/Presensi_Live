@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import api from './api';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import api, { invalidateClientCache, setTokenGetter, setUnauthorizedHandler } from './api';
+import { useToast } from './toast';
 
 const AuthContext = createContext(null);
 
@@ -7,6 +8,7 @@ const KEYS = {
   login: 'isLogin',
   user: 'user',
   userData: 'userData',
+  token: 'authToken',
 };
 
 function readUser() {
@@ -18,6 +20,14 @@ function readUser() {
     return parsed;
   } catch {
     return null;
+  }
+}
+
+function readToken() {
+  try {
+    return localStorage.getItem(KEYS.token) || '';
+  } catch {
+    return '';
   }
 }
 
@@ -56,6 +66,7 @@ export function homeForRole(user) {
 }
 
 export function AuthProvider({ children }) {
+  const toast = useToast();
   const [user, setUser] = useState(() => {
     try {
       return localStorage.getItem(KEYS.login) ? readUser() : null;
@@ -63,6 +74,29 @@ export function AuthProvider({ children }) {
       return null;
     }
   });
+  const tokenRef = useRef(readToken());
+
+  const clearLocalAuth = useCallback(() => {
+    tokenRef.current = '';
+    localStorage.removeItem(KEYS.login);
+    localStorage.removeItem(KEYS.user);
+    localStorage.removeItem(KEYS.userData);
+    localStorage.removeItem(KEYS.token);
+    invalidateClientCache();
+    setUser(null);
+  }, []);
+
+  useEffect(() => {
+    setTokenGetter(() => tokenRef.current);
+    setUnauthorizedHandler((msg) => {
+      if (!tokenRef.current && !localStorage.getItem(KEYS.login)) return;
+      clearLocalAuth();
+      toast.warning(msg || 'Sesi berakhir. Silakan masuk kembali.');
+    });
+    return () => {
+      setUnauthorizedHandler(null);
+    };
+  }, [clearLocalAuth, toast]);
 
   const login = useCallback(async (username, password) => {
     const res = await api.login(String(username || '').trim(), String(password || ''));
@@ -75,19 +109,23 @@ export function AuthProvider({ children }) {
       username: payload.username || username,
       nama: payload.nama || payload.nama_guru || payload.username || username,
     };
+    const nextToken = String(res.token || payload.token || '');
+    tokenRef.current = nextToken;
     localStorage.setItem(KEYS.login, '1');
     localStorage.setItem(KEYS.user, JSON.stringify(nextUser));
     localStorage.setItem(KEYS.userData, JSON.stringify(nextUser));
+    if (nextToken) localStorage.setItem(KEYS.token, nextToken);
+    else localStorage.removeItem(KEYS.token);
     setUser(nextUser);
     return nextUser;
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem(KEYS.login);
-    localStorage.removeItem(KEYS.user);
-    localStorage.removeItem(KEYS.userData);
-    setUser(null);
-  }, []);
+    if (tokenRef.current) {
+      api.logout();
+    }
+    clearLocalAuth();
+  }, [clearLocalAuth]);
 
   const value = useMemo(
     () => ({
