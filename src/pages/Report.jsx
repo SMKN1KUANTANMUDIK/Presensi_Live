@@ -227,12 +227,17 @@ export default function Report() {
         if (!res?.success || !res.data?.length) throw new Error('Data absensi guru tidak ditemukan.');
         const dates = [...new Set(res.data.map((d) => d.tanggal))].sort();
         const siswaMap = new Map();
+        const statusIndex = new Map();
+        const prior = { C: 5, A: 4, S: 3, I: 2, H: 1 };
         res.data.forEach((d) => {
           if (!siswaMap.has(d.nisn)) siswaMap.set(d.nisn, { nisn: d.nisn, nama: d.nama_siswa });
+          const k = `${d.nisn}|${d.tanggal}`;
+          const prev = statusIndex.get(k);
+          if (!prev || (prior[d.status] || 0) > (prior[prev] || 0)) statusIndex.set(k, d.status);
         });
-        setResult({ mode, kelas, bulan, guru, dates, siswa: [...siswaMap.values()], rows: res.data });
+        setResult({ mode, kelas, bulan, guru, dates, siswa: [...siswaMap.values()], rows: res.data, statusIndex });
       } else {
-        // Coba endpoint cepat 1-request (getRekapBulanan), fallback ke loop bila server masih v8
+        // Coba endpoint cepat 1-request (getRekapBulanan), fallback ke batch paralel bila server masih v8
         try {
           setProgress('Memuat rekap bulanan…');
           const fast = await api.getRekapBulanan(kelas, bulan);
@@ -261,14 +266,21 @@ export default function Report() {
         const dates = Array.from({ length: days }, (_, i) => `${bulan}-${String(i + 1).padStart(2, '0')}`);
 
         const collected = [];
-        for (let i = 0; i < dates.length; i += 1) {
-          setProgress(`Memuat ${i + 1}/${dates.length} hari…`);
-          try {
-            const res = await api.getDashboardPiket(dates[i], kelas);
-            if (res?.success && res.data?.[0]) collected.push({ tanggal: dates[i], data: res.data[0] });
-          } catch {
-            /* skip hari kosong */
-          }
+        const BATCH = 5;
+        for (let i = 0; i < dates.length; i += BATCH) {
+          const slice = dates.slice(i, i + BATCH);
+          setProgress(`Memuat ${Math.min(i + BATCH, dates.length)}/${dates.length} hari…`);
+          const batchRes = await Promise.all(
+            slice.map((tgl) =>
+              api
+                .getDashboardPiket(tgl, kelas)
+                .then((res) => (res?.success && res.data?.[0] ? { tanggal: tgl, data: res.data[0] } : null))
+                .catch(() => null)
+            )
+          );
+          batchRes.forEach((item) => {
+            if (item) collected.push(item);
+          });
         }
         const withData = collected.filter((c) => (c.data.siswaList || []).length);
         if (!withData.length) throw new Error('Tidak ada data pada bulan ini.');
@@ -338,8 +350,7 @@ export default function Report() {
         s.nama || s.nama_siswa || '',
         ...result.dates.map((d) => {
           if (result.mode === 'guru') {
-            const found = result.rows.find((r) => String(r.nisn) === String(s.nisn) && r.tanggal === d);
-            return found?.status || '';
+            return result.statusIndex?.get(`${s.nisn}|${d}`) || '';
           }
           const day = result.collected.find((c) => c.tanggal === d);
           const sw = day?.data?.siswaList?.find((x) => String(x.nisn) === String(s.nisn));
@@ -523,10 +534,7 @@ export default function Report() {
 
     const mapStatus = (nisn, tgl) => {
       if (result.mode === 'guru') {
-        const rows = result.rows.filter((r) => String(r.nisn) === String(nisn) && r.tanggal === tgl);
-        if (!rows.length) return null;
-        const prior = { C: 5, A: 4, S: 3, I: 2, H: 1 };
-        return rows.reduce((acc, r) => ((prior[r.status] || 0) > (prior[acc] || 0) ? r.status : acc), 'H');
+        return result.statusIndex?.get(`${nisn}|${tgl}`) || null;
       }
       const day = result.collected.find((c) => c.tanggal === tgl);
       const siswa = day?.data?.siswaList?.find((s) => String(s.nisn) === String(nisn));
@@ -697,7 +705,10 @@ export default function Report() {
           </div>
         </div>
 
-        <div className="mt-3 flex gap-1 rounded-2xl bg-sunken p-1 sm:max-w-md">
+        <p className="mt-3 text-[11.5px] font-extrabold uppercase tracking-wider text-muted">
+          1. Pilih jenis laporan
+        </p>
+        <div className="mt-1.5 flex gap-1 rounded-2xl bg-sunken p-1 sm:max-w-md">
           {MODES.map((m) => (
             <button
               key={m.key}
@@ -707,16 +718,26 @@ export default function Report() {
                 setResult(null);
               }}
               className={cn(
-                'flex-1 rounded-xl py-1.5 text-[12px] font-extrabold transition',
-                mode === m.key ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink'
+                'flex-1 rounded-xl py-2 text-[12px] font-extrabold transition-all duration-150 active:scale-[.97]',
+                mode === m.key ? 'bg-surface text-brand shadow-sm' : 'text-muted hover:text-ink'
               )}
             >
               {m.label}
             </button>
           ))}
         </div>
+        <p className="mt-2 rounded-xl bg-sunken/50 px-3 py-2 text-[11.5px] font-semibold text-muted">
+          {mode === 'harian'
+            ? 'Menampilkan status setiap siswa per jam pelajaran pada 1 tanggal.'
+            : mode === 'bulanan'
+              ? 'Menampilkan ringkasan kehadiran & jumlah hari tidak hadir selama 1 bulan penuh.'
+              : 'Menampilkan catatan kehadiran khusus mata pelajaran guru per bulan atau per semester.'}
+        </p>
 
-        <div className="mt-3 grid grid-cols-2 gap-2">
+        <p className="mt-3 text-[11.5px] font-extrabold uppercase tracking-wider text-muted">
+          2. Pilih kelas &amp; periode
+        </p>
+        <div className="mt-1.5 grid grid-cols-2 gap-2">
           <Field label="Kelas">
             <Select value={kelas} onChange={(e) => setKelas(e.target.value)} className="h-10 text-[12.5px]">
               <option value="">Pilih kelas</option>
@@ -890,11 +911,11 @@ export default function Report() {
       ) : (
         <Card
           className={cn(
-            'print-sheet overflow-hidden p-4 sm:p-6',
+            'animate-rise print-sheet overflow-hidden p-4 sm:p-6',
             result.mode === 'guru-semester' && 'print-landscape'
           )}
         >
-          <div className="mb-3 flex items-center justify-between gap-2 no-print">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 no-print">
             <div className="flex flex-wrap items-center gap-2">
               <Badge tone="brand">
                 <School className="size-3" /> {result.kelas}
@@ -909,13 +930,17 @@ export default function Report() {
             </div>
             <div className="flex gap-1.5">
               <Button size="sm" variant="outline" onClick={exportCsv}>
-                <Download className="size-3.5" /> CSV
+                <Download className="size-3.5" /> Excel (CSV)
               </Button>
-              <Button size="sm" variant="soft" onClick={print}>
-                <Printer className="size-3.5" /> Cetak
+              <Button size="sm" variant="primary" onClick={print}>
+                <Printer className="size-3.5" /> Cetak / PDF
               </Button>
             </div>
           </div>
+          <p className="no-print mb-3 rounded-xl bg-brand-soft/50 px-3 py-2 text-[11.5px] font-semibold text-muted">
+            Tip: Untuk menyimpan file PDF, tekan <b className="text-ink">Cetak / PDF</b> lalu pilih printer{' '}
+            <b className="text-ink">Simpan sebagai PDF</b>.
+          </p>
 
           <div className="text-slate-900">
             <KopSurat />

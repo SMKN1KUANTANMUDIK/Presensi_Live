@@ -65,11 +65,11 @@ export default function StatusPicker({
             title={s.label}
             onClick={() => onChange?.(s.key)}
             className={cn(
-              'group relative flex flex-col items-center justify-center gap-0.5 rounded-xl font-extrabold transition-all duration-150',
-              'active:scale-[.96]',
+              'group relative flex flex-col items-center justify-center gap-0.5 rounded-xl font-extrabold transition-transform duration-150',
+              'active:scale-[.94]',
               sm ? 'h-8 text-[10.5px]' : 'h-12 text-[11px]',
               active
-                ? cn(tone.soft, tone.text, 'ring-1 shadow-sm', tone.ring)
+                ? cn(tone.soft, tone.text, 'animate-pop ring-1 shadow-sm', tone.ring)
                 : 'text-muted hover:bg-surface hover:text-ink'
             )}
           >

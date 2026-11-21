@@ -18,7 +18,7 @@ import StudentMonitorSheet from '../components/StudentMonitorSheet';
 
 /* ---------------- chart kecil (SVG, tanpa library) ---------------- */
 
-function Donut({ parts, size = 132, thickness = 16 }) {
+function Donut({ parts, centerValue, centerLabel = 'Hadir', size = 140, thickness = 16 }) {
   const total = parts.reduce((a, p) => a + p.value, 0) || 1;
   const r = (size - thickness) / 2;
   const c = 2 * Math.PI * r;
@@ -26,33 +26,42 @@ function Donut({ parts, size = 132, thickness = 16 }) {
 
   return (
     <div className="flex items-center gap-4">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0 -rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" className="text-sunken" strokeWidth={thickness} />
-        {parts.map((p) => {
-          const len = (p.value / total) * c;
-          const el = (
-            <circle
-              key={p.label}
-              cx={size / 2}
-              cy={size / 2}
-              r={r}
-              fill="none"
-              stroke="currentColor"
-              className={p.cls}
-              strokeWidth={thickness}
-              strokeDasharray={`${len} ${c - len}`}
-              strokeDashoffset={-offset}
-              strokeLinecap="butt"
-            />
-          );
-          offset += len;
-          return el;
-        })}
-      </svg>
+      <div className="relative grid shrink-0 place-items-center" style={{ width: size, height: size }}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" className="text-sunken" strokeWidth={thickness} />
+          {parts.map((p) => {
+            const len = (p.value / total) * c;
+            const el = (
+              <circle
+                key={p.label}
+                cx={size / 2}
+                cy={size / 2}
+                r={r}
+                fill="none"
+                stroke="currentColor"
+                className={p.cls}
+                strokeWidth={thickness}
+                strokeDasharray={`${len} ${c - len}`}
+                strokeDashoffset={-offset}
+                strokeLinecap="butt"
+                style={{ transition: 'stroke-dasharray 500ms cubic-bezier(0.22, 1, 0.36, 1), stroke-dashoffset 500ms cubic-bezier(0.22, 1, 0.36, 1)' }}
+              />
+            );
+            offset += len;
+            return el;
+          })}
+        </svg>
+        {centerValue !== undefined && (
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+            <span className="text-[20px] font-extrabold leading-none tabular-nums text-ink">{centerValue}</span>
+            <span className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-muted">{centerLabel}</span>
+          </div>
+        )}
+      </div>
       <ul className="grid flex-1 grid-cols-1 gap-1.5">
         {parts.map((p) => (
-          <li key={p.label} className="flex items-center gap-2 text-[11.5px] font-bold">
-            <span className={cn('size-2 rounded-full bg-current', p.cls)} />
+          <li key={p.label} className="flex items-center gap-2 text-[12px] font-bold">
+            <span className={cn('size-2.5 rounded-full bg-current', p.cls)} />
             <span className="flex-1 text-muted">{p.label}</span>
             <span className="tabular-nums text-ink">{p.value}</span>
           </li>
@@ -70,13 +79,13 @@ function Bars({ data, valueKey = 'hadir', labelKey = 'jurusan' }) {
         const v = Number(d[valueKey]) || 0;
         return (
           <li key={i}>
-            <div className="mb-1 flex items-center justify-between text-[11.5px] font-bold">
+            <div className="mb-1 flex items-center justify-between text-[12px] font-bold">
               <span className="truncate text-muted">{d[labelKey] || '—'}</span>
               <span className="tabular-nums text-ink">{v}%</span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-sunken">
+            <div className="h-2.5 overflow-hidden rounded-full bg-sunken">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-brand to-violet-500 transition-all duration-700"
+                className="animate-bar h-full rounded-full bg-gradient-to-r from-brand to-violet-500"
                 style={{ width: `${Math.max(3, (v / max) * 100)}%` }}
               />
             </div>
@@ -307,15 +316,28 @@ export default function Kepsek() {
             {loading ? (
               <Skeleton className="h-32 rounded-2xl" />
             ) : (
-              <Donut
-                parts={[
-                  { label: 'Hadir', value: Number(kpi.hadir) || 0, cls: 'text-emerald-500' },
-                  { label: 'Sakit', value: Number(kpi.sakit) || 0, cls: 'text-amber-500' },
-                  { label: 'Izin', value: Number(kpi.izin) || 0, cls: 'text-sky-500' },
-                  { label: 'Alpha', value: Number(kpi.alpha) || 0, cls: 'text-rose-500' },
-                  { label: 'Cabut', value: Number(kpi.cabut) || 0, cls: 'text-violet-500' },
-                ]}
-              />
+              (() => {
+                const nonHadir =
+                  (Number(kpi.sakit) || 0) +
+                  (Number(kpi.izin) || 0) +
+                  (Number(kpi.alpha) || 0) +
+                  (Number(kpi.cabut) || 0);
+                const totalUnit = Number(data?.totalUnit) || 0;
+                const hadirCount = totalUnit > 0 ? Math.max(0, totalUnit - nonHadir) : Number(kpi.hadir) || 0;
+                return (
+                  <Donut
+                    centerValue={`${kpi.hadir || 0}%`}
+                    centerLabel="Hadir"
+                    parts={[
+                      { label: 'Hadir', value: hadirCount, cls: 'text-emerald-500' },
+                      { label: 'Sakit', value: Number(kpi.sakit) || 0, cls: 'text-amber-500' },
+                      { label: 'Izin', value: Number(kpi.izin) || 0, cls: 'text-sky-500' },
+                      { label: 'Alpha', value: Number(kpi.alpha) || 0, cls: 'text-rose-500' },
+                      { label: 'Cabut', value: Number(kpi.cabut) || 0, cls: 'text-violet-500' },
+                    ]}
+                  />
+                );
+              })()
             )}
           </div>
         </Card>
@@ -401,17 +423,17 @@ export default function Kepsek() {
               <ul className="divide-y divide-line/70">
                 {rawan.slice(0, 12).map((s, i) => {
                   const total = s.total || 0;
-                  const level = total >= 3 ? 'KRITIS' : total >= 2 ? 'PERINGATAN' : 'PANTAU';
+                  const level = total >= 3 ? 'Perlu Pembinaan' : total >= 2 ? 'Perlu Dipantau' : 'Pantau';
                   const tone = total >= 3 ? 'danger' : total >= 2 ? 'warning' : 'info';
                   const waText = pesanPeringatanDini({
                     nama: s.nama,
                     kelas: s.kelas,
                     alpha: s.alpha ?? (s.status === 'A' ? total : 0),
                     cabut: s.cabut ?? (s.status === 'C' ? total : 0),
-                    periode: mode === 'bulanan' ? formatBulan(bulan) : `Mode ${mode}`,
+                    periode: mode === 'bulanan' ? formatBulan(bulan) : `Periode ${mode}`,
                   });
                   return (
-                    <li key={s.nisn || i} className="flex items-center gap-2.5 px-4 py-2.5">
+                    <li key={s.nisn || i} className="flex items-center gap-2.5 px-4 py-2.5 transition-colors hover:bg-sunken/35">
                       <button
                         type="button"
                         onClick={() =>
@@ -427,7 +449,7 @@ export default function Kepsek() {
                         <p className="truncate text-[13px] font-bold text-ink hover:text-brand">{s.nama}</p>
                         <p className="truncate text-[11px] font-semibold text-muted">
                           {s.kelas} · {total}×{' '}
-                          {s.alpha != null ? `(A:${s.alpha}, C:${s.cabut})` : s.status || 'A'}
+                          {s.alpha != null ? `(${s.alpha} Alpha, ${s.cabut} Cabut)` : s.status || 'Alpha'}
                         </p>
                       </button>
                       <Badge tone={tone}>{level}</Badge>

@@ -70,6 +70,16 @@
   body {
     @apply bg-canvas text-ink font-sans;
     overflow-x: hidden;
+    background-image:
+      radial-gradient(65% 40% at 100% 0%, hsl(221 90% 56% / 0.06), transparent 65%),
+      radial-gradient(50% 35% at 0% 100%, hsl(262 83% 58% / 0.05), transparent 60%);
+    background-attachment: fixed;
+  }
+
+  .dark body {
+    background-image:
+      radial-gradient(60% 38% at 100% 0%, hsl(221 90% 56% / 0.11), transparent 65%),
+      radial-gradient(50% 35% at 0% 100%, hsl(262 83% 58% / 0.09), transparent 60%);
   }
 
   ::selection {
@@ -151,11 +161,11 @@
     0 18px 40px -18px hsl(var(--shadow-color) / 0.35);
 }
 
-/* Animasi masuk halus */
+/* Animasi masuk halus (GPU-composited: transform & opacity) */
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -163,12 +173,54 @@
   }
 }
 
+@keyframes pageIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes sheetIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @keyframes pop {
   0% {
-    transform: scale(0.96);
+    transform: scale(0.95);
   }
-  60% {
-    transform: scale(1.02);
+  55% {
+    transform: scale(1.03);
   }
   100% {
     transform: scale(1);
@@ -181,13 +233,65 @@
   }
 }
 
+@keyframes softPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.72;
+    transform: scale(0.97);
+  }
+}
+
+@keyframes barGrow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
 .animate-rise {
-  animation: rise 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: rise 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-page {
+  animation: pageIn 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-sheet {
+  animation: sheetIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-backdrop {
+  animation: fadeIn 0.18s ease-out both;
+}
+
+.animate-toast {
+  animation: toastIn 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .animate-pop {
-  animation: pop 0.22s ease-out;
+  animation: pop 0.18s cubic-bezier(0.22, 1, 0.36, 1);
 }
+
+.animate-soft-pulse {
+  animation: softPulse 2.2s ease-in-out infinite;
+}
+
+.animate-bar {
+  transform-origin: left center;
+  animation: barGrow 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.stagger-1 { animation-delay: 25ms; }
+.stagger-2 { animation-delay: 50ms; }
+.stagger-3 { animation-delay: 75ms; }
+.stagger-4 { animation-delay: 100ms; }
+.stagger-5 { animation-delay: 125ms; }
+.stagger-6 { animation-delay: 150ms; }
 
 .skeleton {
   position: relative;

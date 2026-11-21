@@ -171,7 +171,7 @@ export default function Siswa() {
 
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
-              <Download className="size-3.5" /> Import
+              <Download className="size-3.5" /> Import Excel/CSV
             </Button>
             <Button size="sm" onClick={openAdd}>
               <Plus className="size-3.5" /> Tambah
@@ -250,7 +250,7 @@ export default function Siswa() {
                     type="button"
                     onClick={() => setMonitorSiswa(s)}
                     aria-label={`Monitoring ${s.nama}`}
-                    className="grid size-8 place-items-center rounded-lg text-muted hover:bg-sunken hover:text-emerald-600"
+                    className="grid size-9 place-items-center rounded-xl text-muted transition hover:bg-sunken hover:text-emerald-600 active:scale-95"
                   >
                     <Activity className="size-4" />
                   </button>
@@ -258,7 +258,7 @@ export default function Siswa() {
                     type="button"
                     onClick={() => openEdit(s)}
                     aria-label={`Edit ${s.nama}`}
-                    className="grid size-8 place-items-center rounded-lg text-muted hover:bg-sunken hover:text-brand"
+                    className="grid size-9 place-items-center rounded-xl text-muted transition hover:bg-sunken hover:text-brand active:scale-95"
                   >
                     <PencilLine className="size-4" />
                   </button>
@@ -266,7 +266,7 @@ export default function Siswa() {
                     type="button"
                     onClick={() => setConfirm(s)}
                     aria-label={`Hapus ${s.nama}`}
-                    className="grid size-8 place-items-center rounded-lg text-muted hover:bg-rose-500/10 hover:text-rose-500"
+                    className="grid size-9 place-items-center rounded-xl text-muted transition hover:bg-rose-500/10 hover:text-rose-500 active:scale-95"
                   >
                     <Trash2 className="size-4" />
                   </button>

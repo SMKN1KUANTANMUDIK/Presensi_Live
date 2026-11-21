@@ -6,17 +6,19 @@ import {
   Download,
   Eye,
   EyeOff,
-  GraduationCap,
+  HelpCircle,
   Lock,
   Moon,
   ShieldCheck,
   Sun,
   UserRound,
+  Users,
   WifiOff,
 } from 'lucide-react';
 import { homeForRole, useAuth } from '../lib/auth';
 import { useTheme } from '../lib/theme';
 import { Button } from '../components/ui';
+import HelpSheet from '../components/HelpSheet';
 
 export default function Login({ onOpenInstall }) {
   const { login, user } = useAuth();
@@ -29,6 +31,7 @@ export default function Login({ onOpenInstall }) {
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
     if (user) navigate(homeForRole(user), { replace: true });
@@ -75,12 +78,14 @@ export default function Login({ onOpenInstall }) {
         />
 
         <div className="relative flex items-center gap-3">
-          <span className="grid size-11 place-items-center rounded-2xl bg-white/15 text-white backdrop-blur">
-            <GraduationCap className="size-6" />
-          </span>
+          <img
+            src="./logo_sekolah.webp"
+            alt="Logo SMKN 1 Kuantan Mudik"
+            className="size-11 rounded-2xl bg-white p-1.5 shadow-lg"
+          />
           <div>
             <p className="text-sm font-extrabold tracking-wide text-white">SMKN 1 KUANTAN MUDIK</p>
-            <p className="text-[11.5px] font-medium text-white/60">Sistem Monitoring Presensi</p>
+            <p className="text-[11.5px] font-medium text-white/65">Sistem Monitoring Presensi</p>
           </div>
         </div>
 
@@ -121,11 +126,18 @@ export default function Login({ onOpenInstall }) {
       {/* -------- form -------- */}
       <div className="relative flex flex-1 flex-col px-5 pb-8 pt-safe sm:px-8">
         <div className="flex items-center justify-end gap-2 py-3">
+          <button
+            type="button"
+            onClick={() => setHelpOpen(true)}
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-brand/25 bg-brand-soft/70 px-3 text-[12px] font-extrabold text-brand transition hover:bg-brand-soft active:scale-95"
+          >
+            <HelpCircle className="size-4" /> Bantuan
+          </button>
           {onOpenInstall && (
             <button
               type="button"
               onClick={onOpenInstall}
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-line bg-surface px-3 text-[12px] font-bold text-muted transition hover:text-brand"
+              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-line bg-surface px-3 text-[12px] font-bold text-muted transition hover:text-brand active:scale-95"
             >
               <Download className="size-4" /> Pasang
             </button>
@@ -157,19 +169,22 @@ export default function Login({ onOpenInstall }) {
             </div>
 
             {error && (
-              <div className="mb-4 flex items-start gap-2 rounded-2xl border border-rose-500/25 bg-rose-500/10 px-3.5 py-3">
+              <div className="animate-pop mb-4 flex items-start gap-2.5 rounded-2xl border border-rose-500/25 bg-rose-500/10 px-3.5 py-3">
                 <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-rose-500 text-[11px] font-extrabold text-white">
                   !
                 </span>
-                <p className="text-[12.5px] font-semibold leading-relaxed text-rose-700 dark:text-rose-300">
-                  {error}
-                </p>
+                <div className="text-[12.5px] leading-relaxed text-rose-700 dark:text-rose-300">
+                  <p className="font-bold">{error}</p>
+                  <p className="mt-0.5 text-[11px] opacity-85">
+                    Pastikan tidak ada spasi dan huruf besar/kecil sesuai.
+                  </p>
+                </div>
               </div>
             )}
 
             <form onSubmit={submit} className="space-y-3.5">
               <label className="block">
-                <span className="mb-1.5 block text-[12.5px] font-bold text-ink/80">Username</span>
+                <span className="mb-1.5 block text-[12.5px] font-bold text-ink/80">Username Guru / Staf</span>
                 <span className="relative block">
                   <UserRound className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-muted" />
                   <input
@@ -180,7 +195,7 @@ export default function Login({ onOpenInstall }) {
                     spellCheck={false}
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Masukkan username"
+                    placeholder="Contoh: waldo atau NIP"
                     className="h-12 w-full rounded-2xl border border-line bg-surface pl-11 pr-4 text-[14px] font-semibold text-ink outline-none transition placeholder:font-medium placeholder:text-muted/70 focus:border-brand focus:ring-4 focus:ring-brand/10"
                   />
                 </span>
@@ -215,12 +230,18 @@ export default function Login({ onOpenInstall }) {
               </Button>
             </form>
 
-            <Link
-              to="/ortu"
-              className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-line bg-surface text-[13px] font-extrabold text-brand transition hover:bg-brand-soft"
-            >
-              Portal Orang Tua / Wali
-            </Link>
+            <div className="mt-5 border-t border-line/70 pt-4">
+              <p className="mb-2 text-center text-[11.5px] font-bold text-muted">
+                Orang tua / wali siswa? Tidak perlu username guru:
+              </p>
+              <Link
+                to="/ortu"
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-brand/25 bg-brand-soft/60 text-[13px] font-extrabold text-brand transition hover:bg-brand-soft active:scale-[.985]"
+              >
+                <Users className="size-4" />
+                Buka Portal Orang Tua (Tanpa Password)
+              </Link>
+            </div>
 
             <p className="mt-4 text-center text-[11.5px] font-medium leading-relaxed text-muted">
               Lupa password? Hubungi administrator sekolah.
@@ -232,6 +253,8 @@ export default function Login({ onOpenInstall }) {
           </div>
         </div>
       </div>
+
+      <HelpSheet open={helpOpen} onClose={() => setHelpOpen(false)} pathname="/login" />
     </div>
   );
 }

@@ -10,7 +10,7 @@ export function Card({ as: Tag = 'section', className, children, ...rest }) {
     <Tag
       {...rest}
       className={cn(
-        'rounded-3xl border border-line bg-surface shadow-card',
+        'rounded-3xl border border-line/90 bg-surface shadow-card transition-shadow duration-200',
         className
       )}
     >
@@ -24,7 +24,7 @@ export function CardHeader({ title, subtitle, icon: Icon, action, className }) {
     <div className={cn('flex items-start justify-between gap-3 px-5 pt-5', className)}>
       <div className="flex min-w-0 items-start gap-3">
         {Icon ? (
-          <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-brand-soft text-brand">
+          <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-brand-soft text-brand shadow-xs">
             <Icon className="size-5" />
           </span>
         ) : null}
@@ -43,13 +43,13 @@ export function CardHeader({ title, subtitle, icon: Icon, action, className }) {
 --------------------------------------------------------- */
 const BTN_VARIANTS = {
   primary:
-    'bg-brand text-white shadow-[0_10px_24px_-12px_var(--brand)] hover:brightness-110 active:brightness-95',
+    'bg-gradient-to-b from-brand to-blue-600 text-white shadow-[0_10px_24px_-10px_var(--brand)] hover:brightness-110 active:brightness-95',
   soft: 'bg-brand-soft text-brand hover:bg-brand/15',
-  outline: 'border border-line bg-surface text-ink hover:bg-sunken',
+  outline: 'border border-line bg-surface text-ink hover:border-line-strong hover:bg-sunken/70',
   ghost: 'text-muted hover:bg-sunken hover:text-ink',
-  danger: 'bg-rose-600 text-white hover:bg-rose-500',
-  success: 'bg-emerald-600 text-white hover:bg-emerald-500',
-  light: 'bg-white text-brand hover:bg-white/90 shadow-lg',
+  danger: 'bg-gradient-to-b from-rose-500 to-rose-600 text-white shadow-[0_8px_20px_-10px_rgba(225,29,72,.65)] hover:brightness-105',
+  success: 'bg-gradient-to-b from-emerald-500 to-emerald-600 text-white shadow-[0_8px_20px_-10px_rgba(5,150,105,.65)] hover:brightness-105',
+  light: 'bg-white text-brand hover:bg-white/95 shadow-lg',
 };
 
 const BTN_SIZES = {
@@ -197,7 +197,7 @@ export function Sheet({ open, onClose, title, children, footer, size = 'md' }) {
   return (
     <div className="fixed inset-0 z-[110] flex items-end justify-center sm:items-center">
       <div
-        className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
+        className="animate-backdrop absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -206,21 +206,24 @@ export function Sheet({ open, onClose, title, children, footer, size = 'md' }) {
         aria-modal="true"
         aria-label={typeof title === 'string' ? title : undefined}
         className={cn(
-          'animate-rise relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-line bg-surface shadow-float',
+          'animate-sheet relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-line bg-surface shadow-float',
           'sm:max-h-[88dvh] sm:rounded-3xl',
           widths[size]
         )}
       >
-        <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-4">
-          <h3 className="text-base font-extrabold text-ink">{title}</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid size-9 place-items-center rounded-xl text-muted transition hover:bg-sunken hover:text-ink"
-            aria-label="Tutup"
-          >
-            <X className="size-5" />
-          </button>
+        <div className="flex flex-col border-b border-line px-5 pb-3.5 pt-2.5 sm:pt-4">
+          <span className="mx-auto mb-2.5 h-1 w-10 rounded-full bg-line-strong sm:hidden" aria-hidden="true" />
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-base font-extrabold text-ink">{title}</h3>
+            <button
+              type="button"
+              onClick={onClose}
+              className="grid size-9 place-items-center rounded-xl text-muted transition hover:bg-sunken hover:text-ink active:scale-95"
+              aria-label="Tutup"
+            >
+              <X className="size-5" />
+            </button>
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4">{children}</div>
         {footer ? <div className="border-t border-line bg-surface px-5 py-3 pb-safe">{footer}</div> : null}
@@ -243,14 +246,14 @@ export function Stat({ icon: Icon, label, value, hint, tone = 'brand', className
   };
 
   return (
-    <Card className={cn('p-4 sm:p-5', className)}>
+    <Card className={cn('group p-4 transition duration-200 hover:-translate-y-0.5 hover:shadow-float sm:p-5', className)}>
       <div className="flex items-start gap-3">
-        <span className={cn('grid size-11 shrink-0 place-items-center rounded-2xl', tones[tone])}>
+        <span className={cn('grid size-11 shrink-0 place-items-center rounded-2xl transition-transform duration-200 group-hover:scale-105', tones[tone])}>
           <Icon className="size-5" />
         </span>
         <div className="min-w-0">
           <p className="text-[10.5px] font-bold uppercase leading-tight tracking-wide text-muted">{label}</p>
-          <p className="mt-1 text-[22px] font-extrabold leading-none tracking-tight text-ink">{value}</p>
+          <p className="mt-1 text-[22px] font-extrabold leading-none tracking-tight tabular-nums text-ink">{value}</p>
           {hint ? <p className="mt-1 line-clamp-2 text-[11px] font-medium leading-tight text-muted">{hint}</p> : null}
         </div>
       </div>

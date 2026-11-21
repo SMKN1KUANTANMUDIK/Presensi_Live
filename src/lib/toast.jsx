@@ -68,7 +68,7 @@ export function ToastProvider({ children }) {
             <div
               key={t.id}
               role="status"
-              className={`animate-rise pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-2xl border border-line bg-surface/95 px-4 py-3 shadow-float ring-1 backdrop-blur ${v.ring}`}
+              className={`animate-toast pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-2xl border border-line bg-surface/95 px-4 py-3 shadow-float ring-1 backdrop-blur ${v.ring}`}
             >
               <Icon className={`mt-0.5 size-5 shrink-0 ${v.iconCls}`} />
               <p className="flex-1 text-[13.5px] font-semibold leading-snug text-ink">{t.message}</p>

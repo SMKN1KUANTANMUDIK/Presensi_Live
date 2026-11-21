@@ -75,6 +75,8 @@ export default function Piket() {
   const [apelJam, setApelJam] = useState('');
   const [apelKet, setApelKet] = useState('');
   const [apelSaving, setApelSaving] = useState(false);
+  const [confirmApel, setConfirmApel] = useState(null);
+  const [deletingApel, setDeletingApel] = useState(false);
 
   const load = useCallback(
     async (date = tanggal) => {
@@ -222,15 +224,19 @@ export default function Piket() {
     }
   };
 
-  const hapusApel = async (item) => {
-    if (!window.confirm(`Hapus catatan apel ${item.nama_siswa || 'siswa ini'}?`)) return;
+  const hapusApel = async () => {
+    if (!confirmApel || deletingApel) return;
+    setDeletingApel(true);
     try {
-      const res = await api.hapusApelPagi(item.id);
+      const res = await api.hapusApelPagi(confirmApel.id);
       if (!res?.success) throw new Error(res?.error || 'Gagal menghapus catatan apel');
-      setApelList((prev) => prev.filter((x) => x.id !== item.id));
+      setApelList((prev) => prev.filter((x) => x.id !== confirmApel.id));
+      setConfirmApel(null);
       toast.success('Catatan apel pagi dihapus.');
     } catch (err) {
       toast.error(err.message || 'Gagal menghapus catatan apel');
+    } finally {
+      setDeletingApel(false);
     }
   };
 
@@ -435,17 +441,17 @@ export default function Piket() {
         <div className="mt-3 grid grid-cols-4 gap-2">
           {[
             { label: 'Hadir', value: summary.hadir, cls: 'text-emerald-600 dark:text-emerald-400' },
-            { label: 'S/I', value: summary.si, cls: 'text-amber-600 dark:text-amber-400' },
-            { label: 'A/C', value: summary.alpha, cls: 'text-rose-600 dark:text-rose-400' },
+            { label: 'Sakit / Izin', value: summary.si, cls: 'text-amber-600 dark:text-amber-400' },
+            { label: 'Alpha / Cabut', value: summary.alpha, cls: 'text-rose-600 dark:text-rose-400' },
             {
-              label: summary.jamKosong > 0 ? 'Belum/Kosong' : 'Belum',
+              label: summary.jamKosong > 0 ? 'Belum / Kosong' : 'Belum Absen',
               value: summary.belum + summary.jamKosong,
               cls: 'text-violet-600 dark:text-violet-400',
             },
           ].map((s) => (
             <div key={s.label} className="rounded-2xl border border-line bg-sunken/40 px-2 py-2 text-center">
               <p className={cn('text-lg font-extrabold leading-none tabular-nums', s.cls)}>{s.value}</p>
-              <p className="mt-1 text-[10.5px] font-bold uppercase tracking-wide text-muted">{s.label}</p>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-muted">{s.label}</p>
             </div>
           ))}
         </div>
@@ -617,7 +623,7 @@ export default function Piket() {
                   />
                   <button
                     type="button"
-                    onClick={() => hapusApel(item)}
+                    onClick={() => setConfirmApel(item)}
                     aria-label={`Hapus catatan ${item.nama_siswa || 'siswa'}`}
                     className="grid size-8 shrink-0 place-items-center rounded-lg text-muted transition hover:bg-rose-500/10 hover:text-rose-600"
                   >
@@ -738,6 +744,20 @@ export default function Piket() {
       </Card>
 
       {/* kelas cards */}
+      {!loading && rows.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-[11px] font-bold text-muted">
+          <span>Daftar Kelas ({rows.length})</span>
+          <span className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1">
+              <span className="size-2.5 rounded-sm bg-emerald-500/35" /> Sudah diabsen
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="size-2.5 rounded-sm bg-line-strong" /> Belum diabsen
+            </span>
+          </span>
+        </div>
+      )}
+
       {loading ? (
         <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -1119,6 +1139,28 @@ export default function Piket() {
             </p>
           )}
         </div>
+      </Sheet>
+
+      <Sheet
+        open={Boolean(confirmApel)}
+        onClose={() => setConfirmApel(null)}
+        title="Hapus catatan terlambat?"
+        size="sm"
+        footer={
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={() => setConfirmApel(null)}>
+              Batal
+            </Button>
+            <Button variant="danger" className="flex-1" loading={deletingApel} onClick={hapusApel}>
+              Ya, hapus
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-[13px] font-medium leading-relaxed text-muted">
+          Catatan keterlambatan apel pagi untuk <b className="text-ink">{confirmApel?.nama_siswa || 'siswa ini'}</b> (
+          {confirmApel?.kelas || '—'}) akan dihapus.
+        </p>
       </Sheet>
 
       <StudentMonitorSheet

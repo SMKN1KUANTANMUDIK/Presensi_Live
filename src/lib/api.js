@@ -192,33 +192,64 @@ export const api = {
   getJamTerisi: (tanggal, kelas) => get({ action: 'getJamTerisi', tanggal, kelas }),
 
   // input
-  simpanAbsensi: (data) => post('simpanAbsensi', data),
+  simpanAbsensi: async (data) => {
+    const res = await post('simpanAbsensi', data);
+    if (res?.success) invalidateClientCache();
+    return res;
+  },
   uploadFoto: (base64) => post('uploadFoto', { base64 }),
 
   // dashboard
   getDashboardAdmin: () => get({ action: 'getDashboardAdmin' }),
-  getDashboardPiket: (tanggal, kelas = 'SEMUA') => get({ action: 'getDashboardPiket', tanggal, kelas }),
+  getDashboardPiket: (tanggal, kelas = 'SEMUA') =>
+    cachedGet(
+      `dashPiket:${tanggal || ''}:${kelas || 'SEMUA'}`,
+      () => get({ action: 'getDashboardPiket', tanggal, kelas }),
+      60 * 1000
+    ),
   getDashboardKepsek: (mode, tanggal, bulan, kelas = 'SEMUA', jurusan = 'SEMUA') =>
     get({ action: 'getDashboardKepsek', mode, tanggal, bulan, kelas, jurusan }),
 
   // apel pagi (keterlambatan)
   getApelPagi: (tanggal = '', kelas = 'SEMUA', bulan = '', nisn = '') =>
     get({ action: 'getApelPagi', tanggal, kelas, bulan, nisn }),
-  simpanApelPagi: (data, petugas = '') => postRaw({ action: 'simpanApelPagi', data, petugas }),
-  hapusApelPagi: (id) => postRaw({ action: 'hapusApelPagi', id }),
+  simpanApelPagi: async (data, petugas = '') => {
+    const res = await postRaw({ action: 'simpanApelPagi', data, petugas });
+    if (res?.success) invalidateClientCache();
+    return res;
+  },
+  hapusApelPagi: async (id) => {
+    const res = await postRaw({ action: 'hapusApelPagi', id });
+    if (res?.success) invalidateClientCache();
+    return res;
+  },
 
   // riwayat, report & monitoring
   getRiwayatAbsensi: (params = {}) => get({ action: 'getRiwayatAbsensi', ...params }),
   getDetailAbsensi: (id) => get({ action: 'getDetailAbsensi', id }),
-  getAbsensiGuru: (kelas, guru, bulan) => get({ action: 'getAbsensiGuru', kelas, guru, bulan }),
+  getAbsensiGuru: (kelas, guru, bulan) =>
+    cachedGet(
+      `absGuru:${kelas || ''}:${guru || ''}:${bulan || ''}`,
+      () => get({ action: 'getAbsensiGuru', kelas, guru, bulan }),
+      60 * 1000
+    ),
   getRekapBulanan: (kelas, bulan) =>
-    request({ action: 'getRekapBulanan', kelas, bulan }, { method: 'GET', timeoutMs: LONG_TIMEOUT_MS }),
+    cachedGet(
+      `rekapBln:${kelas || ''}:${bulan || ''}`,
+      () => request({ action: 'getRekapBulanan', kelas, bulan }, { method: 'GET', timeoutMs: LONG_TIMEOUT_MS }),
+      60 * 1000
+    ),
   getMonitoringSiswa: (nisn, bulan = '') =>
     request({ action: 'getMonitoringSiswa', nisn, bulan }, { method: 'GET', timeoutMs: LONG_TIMEOUT_MS }),
   getRekapGuruSemester: (kelas, guru, semester, tahun, mapel = '', maks = 24) =>
-    request(
-      { action: 'getRekapGuruSemester', kelas, guru, semester, tahun, mapel, maks },
-      { method: 'GET', timeoutMs: LONG_TIMEOUT_MS }
+    cachedGet(
+      `rekapSem:${kelas || ''}:${guru || ''}:${semester || ''}:${tahun || ''}:${mapel || ''}:${maks}`,
+      () =>
+        request(
+          { action: 'getRekapGuruSemester', kelas, guru, semester, tahun, mapel, maks },
+          { method: 'GET', timeoutMs: LONG_TIMEOUT_MS }
+        ),
+      60 * 1000
     ),
 
   // kasus pembinaan
@@ -226,18 +257,38 @@ export const api = {
   getPeringatanWaliKelas: (kelas_wali) => get({ action: 'getPeringatanWaliKelas', kelas_wali }),
   sinkronKasusAbsensi: (params) =>
     request({ action: 'sinkronKasusDariAbsensi', ...params }, { method: 'GET', timeoutMs: LONG_TIMEOUT_MS }),
-  simpanKasusPembinaan: (data, role, kelas_wali = '') =>
-    postRaw({ action: 'simpanKasusPembinaan', data, role, kelas_wali }),
-  catatTindakanKasus: (id, level, tindakan, catatan = '') =>
-    postRaw({ action: 'catatTindakanKasus', id, level, tindakan, catatan }),
-  escalateKasus: (id, dariLevel, keLevel, catatan = '') =>
-    postRaw({ action: 'escalateKasus', id, dariLevel, keLevel, catatan }),
-  tutupKasusPembinaan: (id, alasan, role) =>
-    postRaw({ action: 'tutupKasusPembinaan', id, alasan, role }),
+  simpanKasusPembinaan: async (data, role, kelas_wali = '') => {
+    const res = await postRaw({ action: 'simpanKasusPembinaan', data, role, kelas_wali });
+    if (res?.success) invalidateClientCache();
+    return res;
+  },
+  catatTindakanKasus: async (id, level, tindakan, catatan = '') => {
+    const res = await postRaw({ action: 'catatTindakanKasus', id, level, tindakan, catatan });
+    if (res?.success) invalidateClientCache();
+    return res;
+  },
+  escalateKasus: async (id, dariLevel, keLevel, catatan = '') => {
+    const res = await postRaw({ action: 'escalateKasus', id, dariLevel, keLevel, catatan });
+    if (res?.success) invalidateClientCache();
+    return res;
+  },
+  tutupKasusPembinaan: async (id, alasan, role) => {
+    const res = await postRaw({ action: 'tutupKasusPembinaan', id, alasan, role });
+    if (res?.success) invalidateClientCache();
+    return res;
+  },
 
   // edit & hapus
-  updateAbsensi: (detail) => post('updateAbsensi', { detail }),
-  hapusAbsensi: (id) => postRaw({ action: 'hapusAbsensi', id }),
+  updateAbsensi: async (detail) => {
+    const res = await post('updateAbsensi', { detail });
+    if (res?.success) invalidateClientCache();
+    return res;
+  },
+  hapusAbsensi: async (id) => {
+    const res = await postRaw({ action: 'hapusAbsensi', id });
+    if (res?.success) invalidateClientCache();
+    return res;
+  },
 };
 
 export default api;

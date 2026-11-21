@@ -218,33 +218,37 @@ export default function Kasus() {
             <div>
               <h1 className="text-[15px] font-extrabold tracking-tight text-ink">Kasus Pembinaan</h1>
               <p className="text-[11.5px] font-semibold text-muted">
-                {openCount} terbuka · {list.length} total ditampilkan
+                {openCount} aktif · {list.length} total ditampilkan
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={sinkron} loading={syncing}>
-              <RefreshCw className={cn('size-3.5', syncing && 'animate-spin')} /> Sinkron absensi
+              <RefreshCw className={cn('size-3.5', syncing && 'animate-spin')} /> Cek siswa 3× Alpha/Cabut
             </Button>
             <Button size="sm" onClick={() => setTambahOpen(true)}>
-              <Plus className="size-3.5" /> Tambah kasus
+              <Plus className="size-3.5" /> Catat kasus baru
             </Button>
           </div>
         </div>
 
+        <p className="mt-2.5 rounded-xl bg-sunken/50 px-3 py-2 text-[11.5px] font-medium text-muted">
+          Siswa yang tidak masuk tanpa keterangan (Alpha) atau membolos (Cabut) ≥ 3 hari dalam satu semester otomatis masuk ke daftar ini untuk dibina bersama orang tua.
+        </p>
+
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
           <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="h-10 text-[12.5px]">
-            <option value="Open">Open (Terbuka)</option>
-            <option value="Ditutup">Ditutup</option>
+            <option value="Open">Aktif (Belum selesai)</option>
+            <option value="Ditutup">Sudah selesai</option>
             <option value="">Semua status</option>
           </Select>
 
           <Select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)} className="h-10 text-[12.5px]">
-            <option value="">Semua level</option>
-            <option value="wali_kelas">Wali Kelas</option>
-            <option value="bk">BK</option>
-            <option value="kepsek">Kepsek</option>
+            <option value="">Semua tingkat penanganan</option>
+            <option value="wali_kelas">Ditangani Wali Kelas</option>
+            <option value="bk">Ditangani BK</option>
+            <option value="kepsek">Ditangani Kepala Sekolah</option>
           </Select>
 
           <Select
@@ -298,7 +302,7 @@ export default function Kasus() {
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <Badge tone={isOpen ? 'danger' : 'success'}>{k.status}</Badge>
+                      <Badge tone={isOpen ? 'danger' : 'success'}>{isOpen ? 'Aktif' : 'Selesai'}</Badge>
                       <Badge tone={lvl.tone}>{lvl.label}</Badge>
                       <Badge tone="neutral">{k.jenis}</Badge>
                     </div>
@@ -378,7 +382,7 @@ export default function Kasus() {
                           setEscalateReason('');
                         }}
                       >
-                        <ArrowUpRight className="size-3.5" /> Eskalasi ke {k.level === 'wali_kelas' ? 'BK' : 'Kepsek'}
+                        <ArrowUpRight className="size-3.5" /> Teruskan ke {k.level === 'wali_kelas' ? 'BK' : 'Kepsek'}
                       </Button>
                     )}
                     {canClose && (
@@ -390,7 +394,7 @@ export default function Kasus() {
                           setTutupAlasan('');
                         }}
                       >
-                        <CheckCircle2 className="size-3.5" /> Tutup kasus
+                        <CheckCircle2 className="size-3.5" /> Tandai selesai
                       </Button>
                     )}
                   </div>

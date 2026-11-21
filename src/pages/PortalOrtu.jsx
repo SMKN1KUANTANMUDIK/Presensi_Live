@@ -4,13 +4,16 @@ import {
   AlertTriangle,
   ArrowLeft,
   CalendarDays,
+  CheckCircle2,
   Clock3,
+  HelpCircle,
   LogOut,
   Moon,
   RefreshCw,
   School,
   Search,
   ShieldAlert,
+  Sparkles,
   Sun,
 } from 'lucide-react';
 import api from '../lib/api';
@@ -18,6 +21,7 @@ import { useTheme } from '../lib/theme';
 import { hariEfektifBulan, labelLibur, liburInfo, liburNasionalBulan } from '../lib/libur';
 import { cn, formatBulan, formatTanggal, monthISO, STATUS, todayISO, TONE } from '../lib/utils';
 import { Badge, Button, Card, EmptyState, Field, Input, Select, Skeleton } from '../components/ui';
+import HelpSheet from '../components/HelpSheet';
 
 const SESI_KEY = 'presensi-ortu-sesi';
 const KUNCI_KEY = 'presensi-ortu-kunci';
@@ -133,6 +137,7 @@ export default function PortalOrtu() {
   const [dataBulan, setDataBulan] = useState({ stat: { H: 0, S: 0, I: 0, A: 0, C: 0 }, riwayat: [], todayStatus: null });
   const [apel, setApel] = useState({ supported: true, list: [], hariIni: null });
   const [kasusOpen, setKasusOpen] = useState(0);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const locked = Boolean(lockState && lockState.until > nowMs);
   const sisaDetik = locked ? Math.ceil((lockState.until - nowMs) / 1000) : 0;
@@ -389,18 +394,27 @@ export default function PortalOrtu() {
         <div className="flex items-center justify-between gap-2">
           <Link
             to="/login"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2 text-[12px] font-bold text-muted hover:text-ink"
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-line bg-surface px-3 text-[12px] font-bold text-muted transition hover:text-ink active:scale-95"
           >
             <ArrowLeft className="size-3.5" /> Login Guru
           </Link>
-          <button
-            type="button"
-            onClick={toggle}
-            aria-label="Ubah tema"
-            className="grid size-9 place-items-center rounded-xl border border-line bg-surface text-muted"
-          >
-            {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setHelpOpen(true)}
+              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-brand/25 bg-brand-soft/70 px-3 text-[12px] font-extrabold text-brand transition hover:bg-brand-soft active:scale-95"
+            >
+              <HelpCircle className="size-4" /> Cara Cek
+            </button>
+            <button
+              type="button"
+              onClick={toggle}
+              aria-label="Ubah tema"
+              className="grid size-9 place-items-center rounded-xl border border-line bg-surface text-muted transition active:scale-95"
+            >
+              {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+            </button>
+          </div>
         </div>
 
         {!sesi ? (
@@ -449,7 +463,14 @@ export default function PortalOrtu() {
             )}
 
             <form onSubmit={masuk} className="mt-4 space-y-3">
-              <Field label={tab === 'nisn' ? 'NISN Anak' : 'Nama Lengkap / Panggilan Anak'}>
+              <Field
+                label={tab === 'nisn' ? '1. Masukkan NISN Anak' : '1. Masukkan Nama Anak'}
+                hint={
+                  tab === 'nisn'
+                    ? 'NISN terdiri dari 10 angka (bisa dilihat di kartu pelajar atau rapor).'
+                    : 'Cukup ketik sebagian nama, lalu pilih dari daftar jika ada yang sama.'
+                }
+              >
                 <Input
                   value={inputVal}
                   onChange={(e) => setInputVal(e.target.value)}
@@ -458,7 +479,7 @@ export default function PortalOrtu() {
                 />
               </Field>
 
-              <Field label="Kelas Anak">
+              <Field label="2. Pilih Kelas Anak">
                 <Select value={kelas} onChange={(e) => setKelas(e.target.value)}>
                   <option value="">Pilih kelas</option>
                   {kelasList.map((k) => (
@@ -526,19 +547,61 @@ export default function PortalOrtu() {
                 </Button>
               </div>
 
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-sunken/50 px-3 py-2.5">
-                <div>
-                  <p className="text-[10.5px] font-bold uppercase text-muted">Status Hari Ini ({formatTanggal(today, { withDay: false })})</p>
-                  <p className="text-[13px] font-extrabold text-ink">
-                    {liburHariIni.libur
-                      ? labelLibur(today)
-                      : dataBulan.todayStatus
-                        ? STATUS.find((x) => x.key === dataBulan.todayStatus)?.label
-                        : 'Belum diabsen'}
-                  </p>
-                </div>
-                {apel.hariIni && <Badge tone="warning">Terlambat {apel.hariIni.jam_datang}</Badge>}
-              </div>
+              {(() => {
+                const stKey = dataBulan.todayStatus;
+                const stObj = stKey ? STATUS.find((x) => x.key === stKey) : null;
+                const stTone = stObj ? TONE[stObj.tone] : null;
+                return (
+                  <div
+                    className={cn(
+                      'mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border px-3.5 py-3 transition-colors',
+                      liburHariIni.libur
+                        ? 'border-violet-500/25 bg-violet-500/10'
+                        : stTone
+                          ? cn(stTone.soft, stTone.ring, 'border-transparent ring-1')
+                          : 'border-line bg-sunken/50'
+                    )}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className={cn(
+                          'grid size-9 shrink-0 place-items-center rounded-xl',
+                          liburHariIni.libur
+                            ? 'bg-violet-500/20 text-violet-600 dark:text-violet-300'
+                            : stTone
+                              ? cn(stTone.soft, stTone.text)
+                              : 'bg-surface text-muted'
+                        )}
+                      >
+                        {liburHariIni.libur ? (
+                          <Sparkles className="size-4" />
+                        ) : stKey === 'H' ? (
+                          <CheckCircle2 className="size-5" />
+                        ) : stKey ? (
+                          <AlertTriangle className="size-4" />
+                        ) : (
+                          <Clock3 className="size-4" />
+                        )}
+                      </span>
+                      <div>
+                        <p className="text-[10.5px] font-bold uppercase tracking-wide text-muted">
+                          Hari Ini ({formatTanggal(today, { withDay: false })})
+                        </p>
+                        <p className={cn('text-[14px] font-extrabold', stTone ? stTone.text : 'text-ink')}>
+                          {liburHariIni.libur
+                            ? labelLibur(today)
+                            : stObj
+                              ? stKey === 'H'
+                                ? 'Hadir di Sekolah'
+                                : stObj.label
+                              : 'Belum diabsen hari ini'}
+                        </p>
+                      </div>
+                    </div>
+                    {apel.hariIni && <Badge tone="warning">Terlambat {apel.hariIni.jam_datang}</Badge>}
+                  </div>
+                );
+              })()}
             </Card>
 
             {/* Peringatan */}
@@ -562,7 +625,12 @@ export default function PortalOrtu() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h2 className="text-[13.5px] font-extrabold text-ink">Rekap {formatBulan(bulan)}</h2>
-                  <p className="text-[11px] font-semibold text-muted">{hariEfektif} hari efektif · {persenBulan}% hadir</p>
+                  <p className="text-[11px] font-semibold text-muted">
+                    {hariEfektif} hari efektif ·{' '}
+                    <span className={persenBulan >= 90 ? 'text-emerald-600 dark:text-emerald-400' : persenBulan >= 75 ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400'}>
+                      {totalBulan ? `${persenBulan}% hadir` : 'Belum ada data'}
+                    </span>
+                  </p>
                 </div>
                 <input
                   type="month"
@@ -571,6 +639,31 @@ export default function PortalOrtu() {
                   className="h-9 rounded-xl border border-line bg-sunken/50 px-2.5 text-[12px] font-bold text-ink"
                 />
               </div>
+
+              {!loading && totalBulan > 0 && (
+                <div className="mt-3">
+                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-sunken">
+                    <div
+                      className={cn(
+                        'animate-bar h-full rounded-full',
+                        persenBulan >= 90
+                          ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
+                          : persenBulan >= 75
+                            ? 'bg-gradient-to-r from-amber-500 to-orange-500'
+                            : 'bg-gradient-to-r from-rose-500 to-red-500'
+                      )}
+                      style={{ width: `${Math.max(4, persenBulan)}%` }}
+                    />
+                  </div>
+                  <p className="mt-1 text-[11px] font-semibold text-muted">
+                    {persenBulan >= 90
+                      ? 'Kehadiran anak sangat baik bulan ini.'
+                      : persenBulan >= 75
+                        ? 'Kehadiran anak cukup baik, tetap pantau secara berkala.'
+                        : 'Kehadiran anak perlu perhatian lebih dari orang tua.'}
+                  </p>
+                </div>
+              )}
 
               {loading ? (
                 <Skeleton className="mt-3 h-20 rounded-2xl" />
@@ -674,6 +767,8 @@ export default function PortalOrtu() {
           </>
         )}
       </div>
+
+      <HelpSheet open={helpOpen} onClose={() => setHelpOpen(false)} pathname="/ortu" />
     </div>
   );
 }

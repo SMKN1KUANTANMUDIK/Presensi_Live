@@ -479,6 +479,8 @@ function bumpCache() {
     const stamp = String(Date.now());
     cache.put("dataVer", stamp, CACHE_TTL);
     cache.put("absVer", stamp, CACHE_TTL);
+    cache.put("absResetVer", stamp, CACHE_TTL);
+    cache.put("absStructVer", stamp, CACHE_TTL);
   } catch (e) { /* abaikan */ }
 }
 
@@ -490,10 +492,53 @@ function absCacheVersion() {
   }
 }
 
-/** Dipanggil setiap data absensi berubah (simpan/update/hapus). */
-function bumpAbsensiCache() {
+function absStructVersion() {
   try {
-    CacheService.getScriptCache().put("absVer", String(Date.now()), CACHE_TTL);
+    return CacheService.getScriptCache().get("absStructVer") || "0";
+  } catch (e) {
+    return "0";
+  }
+}
+
+function kelasAbsVersion(kelas) {
+  const k = str(kelas);
+  if (!k) return absCacheVersion();
+  try {
+    const cache = CacheService.getScriptCache();
+    const reset = cache.get("absResetVer") || "0";
+    const kv = cache.get("kAbsVer:" + k) || "0";
+    return reset + ":" + kv;
+  } catch (e) {
+    return absCacheVersion();
+  }
+}
+
+/**
+ * Dipanggil setiap data absensi berubah (simpan/update/hapus).
+ * Bila kelas diberikan, hanya cache kelas tersebut yang dibersihkan
+ * (cache rekap kelas lain tetap hangat).
+ */
+function bumpAbsensiCache(kelasList, structural) {
+  try {
+    const cache = CacheService.getScriptCache();
+    const stamp = String(Date.now());
+    cache.put("absVer", stamp, CACHE_TTL);
+    if (structural) cache.put("absStructVer", stamp, CACHE_TTL);
+    if (Array.isArray(kelasList)) {
+      const seen = {};
+      kelasList.forEach(k => {
+        const key = str(k);
+        if (key && !seen[key]) {
+          seen[key] = true;
+          cache.put("kAbsVer:" + key, stamp, CACHE_TTL);
+        }
+      });
+    } else if (kelasList) {
+      cache.put("kAbsVer:" + str(kelasList), stamp, CACHE_TTL);
+    } else {
+      cache.put("absResetVer", stamp, CACHE_TTL);
+      cache.put("absStructVer", stamp, CACHE_TTL);
+    }
   } catch (e) { /* abaikan */ }
 }
 
@@ -1294,47 +1339,55 @@ function getSiswa(kelas) {
  * berulang kali saat menarik rekap bulanan/harian.
  */
 function readAbsensiMonthIndex(sh, last) {
-  const key = "absIdx:" + absCacheVersion() + ":" + last;
+  const key = "absIdx2:" + absStructVersion();
   const cached = cacheGetJson(key);
-  if (cached) return cached;
+  let idx = {};
+  let scanFrom = 2;
 
-  const dates = sh.getRange(2, ABS.TGL + 1, last - 1, 1).getValues();
-  const idx = {};
-  for (let i = 0; i < dates.length; i++) {
-    const k = dateKey(dates[i][0]);
-    if (!k) continue;
-    const ym = k.slice(0, 7);
-    const rowNum = i + 2;
-    if (!idx[ym]) idx[ym] = [rowNum, rowNum];
-    else {
-      if (rowNum < idx[ym][0]) idx[ym][0] = rowNum;
-      if (rowNum > idx[ym][1]) idx[ym][1] = rowNum;
+  if (cached && cached.idx && cached.last) {
+    if (cached.last === last) return cached.idx;
+    if (cached.last < last) {
+      idx = cached.idx;
+      scanFrom = cached.last + 1;
     }
   }
-  cachePutJson(key, idx, CACHE_TTL);
+
+  if (scanFrom <= last) {
+    const count = last - scanFrom + 1;
+    const dates = sh.getRange(scanFrom, ABS.TGL + 1, count, 1).getValues();
+    for (let i = 0; i < dates.length; i++) {
+      const k = dateKey(dates[i][0]);
+      if (!k) continue;
+      const ym = k.slice(0, 7);
+      const rowNum = scanFrom + i;
+      if (!idx[ym]) idx[ym] = [rowNum, rowNum];
+      else {
+        if (rowNum < idx[ym][0]) idx[ym][0] = rowNum;
+        if (rowNum > idx[ym][1]) idx[ym][1] = rowNum;
+      }
+    }
+  }
+
+  cachePutJson(key, { last: last, idx: idx }, CACHE_TTL);
   return idx;
 }
 
-function streamAbsensiRows(startKey, endKey, onChunk) {
-  const sh = getSheet(SHEET_ABSENSI);
-  const last = sh.getLastRow();
-  if (last < 2) return;
+function isWholeMonthSpan(startKey, endKey) {
+  if (!startKey || !endKey) return false;
+  if (startKey.slice(8, 10) !== "01") return false;
+  return endKey === monthEndKey(endKey.slice(0, 7));
+}
 
+function resolveAbsensiSpan(sh, last, startKey, endKey) {
   const lo = startKey || "";
   const hi = endKey || "";
-
-  // Tanpa filter tanggal → langsung baca seluruh isi per potongan.
-  if (!lo && !hi) {
-    readAbsChunks(sh, 2, last - 1, onChunk);
-    return;
-  }
+  if (!lo && !hi) return { first: 2, last: last, wholeMonths: true };
 
   const min = lo || "0000-00-00";
   const max = hi || "9999-99-99";
   const minYm = min.slice(0, 7);
   const maxYm = max.slice(0, 7);
 
-  // Gunakan indeks bulan ter-cache untuk menyempitkan rentang baris yang dibaca.
   const idx = readAbsensiMonthIndex(sh, last);
   let scanFirst = last + 1;
   let scanLast = 0;
@@ -1344,17 +1397,33 @@ function streamAbsensiRows(startKey, endKey, onChunk) {
       if (idx[ym][1] > scanLast) scanLast = idx[ym][1];
     }
   });
+  if (scanLast < scanFirst) return null;
+  return { first: scanFirst, last: scanLast, wholeMonths: isWholeMonthSpan(lo, hi) };
+}
 
-  if (scanLast < scanFirst) return;
+function streamAbsensiRows(startKey, endKey, onChunk) {
+  const sh = getSheet(SHEET_ABSENSI);
+  const last = sh.getLastRow();
+  if (last < 2) return;
 
-  const totalSpan = scanLast - scanFirst + 1;
-  // Jika rentang bulan sudah kecil (<= 1 chunk), baca sekaligus dalam 1 RPC call.
-  if (totalSpan <= CHUNK_ROWS) {
-    readAbsChunks(sh, scanFirst, totalSpan, onChunk);
+  const span = resolveAbsensiSpan(sh, last, startKey, endKey);
+  if (!span) return;
+
+  const totalSpan = span.last - span.first + 1;
+  if (!startKey && !endKey) {
+    readAbsChunks(sh, 2, last - 1, onChunk);
     return;
   }
 
-  const dates = sh.getRange(scanFirst, ABS.TGL + 1, totalSpan, 1).getValues();
+  // Jika rentang bulan sudah kecil atau mencakup bulan penuh, baca langsung tanpa pindai kolom tanggal ke-2.
+  if (totalSpan <= CHUNK_ROWS || span.wholeMonths) {
+    readAbsChunks(sh, span.first, totalSpan, onChunk);
+    return;
+  }
+
+  const min = startKey || "0000-00-00";
+  const max = endKey || "9999-99-99";
+  const dates = sh.getRange(span.first, ABS.TGL + 1, totalSpan, 1).getValues();
   const runs = [];
   let runStart = -1;
   for (let i = 0; i <= dates.length; i++) {
@@ -1366,7 +1435,7 @@ function streamAbsensiRows(startKey, endKey, onChunk) {
     if (inside) {
       if (runStart < 0) runStart = i;
     } else if (runStart >= 0) {
-      runs.push([scanFirst + runStart, i - runStart]);
+      runs.push([span.first + runStart, i - runStart]);
       runStart = -1;
     }
   }
@@ -1388,10 +1457,66 @@ function streamAbsensiRows(startKey, endKey, onChunk) {
   }
 }
 
-function readAbsChunks(sh, firstRow, numRows, onChunk) {
+/**
+ * Pembacaan cepat khusus 1 kelas + rentang kolom tertentu (1-based startCol, numCols).
+ * Memindai 1 kolom KELAS dulu untuk melewati 90%+ baris milik kelas lain.
+ */
+function streamAbsensiKelasRows(startKey, endKey, filterKelas, startCol, numCols, onChunk) {
+  const sh = getSheet(SHEET_ABSENSI);
+  const last = sh.getLastRow();
+  if (last < 2) return;
+
+  const span = resolveAbsensiSpan(sh, last, startKey, endKey);
+  if (!span) return;
+
+  const totalSpan = span.last - span.first + 1;
+  if (!filterKelas || totalSpan <= 1500) {
+    readAbsChunks(sh, span.first, totalSpan, onChunk, startCol, numCols);
+    return;
+  }
+
+  const kelasCol = sh.getRange(span.first, ABS.KELAS + 1, totalSpan, 1).getValues();
+  const runs = [];
+  let runStart = -1;
+  for (let i = 0; i <= kelasCol.length; i++) {
+    const match = i < kelasCol.length && str(kelasCol[i][0]) === filterKelas;
+    if (match) {
+      if (runStart < 0) runStart = i;
+    } else if (runStart >= 0) {
+      runs.push([span.first + runStart, i - runStart]);
+      runStart = -1;
+    }
+  }
+  if (!runs.length) return;
+
+  const merged = [];
+  let matchedTotal = 0;
+  for (let i = 0; i < runs.length; i++) {
+    const cur = runs[i];
+    const prev = merged[merged.length - 1];
+    if (prev && cur[0] - (prev[0] + prev[1]) <= 200) {
+      prev[1] = (cur[0] + cur[1]) - prev[0];
+    } else {
+      merged.push([cur[0], cur[1]]);
+    }
+  }
+  for (let i = 0; i < merged.length; i++) matchedTotal += merged[i][1];
+
+  if (merged.length <= 20 && matchedTotal <= totalSpan * 0.7) {
+    for (let i = 0; i < merged.length; i++) {
+      readAbsChunks(sh, merged[i][0], merged[i][1], onChunk, startCol, numCols);
+    }
+  } else {
+    readAbsChunks(sh, span.first, totalSpan, onChunk, startCol, numCols);
+  }
+}
+
+function readAbsChunks(sh, firstRow, numRows, onChunk, startCol, numCols) {
+  const c0 = startCol || 1;
+  const nc = numCols || ABS_COLS;
   for (let offset = 0; offset < numRows; offset += CHUNK_ROWS) {
     const n = Math.min(CHUNK_ROWS, numRows - offset);
-    const values = sh.getRange(firstRow + offset, 1, n, ABS_COLS).getValues();
+    const values = sh.getRange(firstRow + offset, c0, n, nc).getValues();
     onChunk(values, firstRow + offset);
   }
 }
@@ -1585,7 +1710,7 @@ function simpanAbsensi(data) {
 
     const sh = getSheet(SHEET_ABSENSI);
     appendRows(sh, rows, ABS_HEADER, [ABS.NISN]);
-    bumpAbsensiCache();
+    bumpAbsensiCache(kelas, false);
 
     // ── Kasus pembinaan otomatis (Alpha/Cabut ≥ 3 dalam semester) ──
     let kasusDibuat = 0;
@@ -1943,7 +2068,7 @@ function updateAbsensi(data) {
       vals[row - min][0] = tersimpan[row].status;
     });
     range.setValues(vals);
-    bumpAbsensiCache();
+    bumpAbsensiCache(Object.keys(tersimpan).map(row => tersimpan[row].kelas), false);
 
     // ── Sinkronkan kasus otomatis untuk kelas+tanggal terdampak ──
     let kasusDibuat = 0;
@@ -2022,7 +2147,7 @@ function hapusAbsensi(idEncoded) {
       sh.deleteRows(start, end - start + 1);
       i--;
     }
-    bumpAbsensiCache();
+    bumpAbsensiCache(sesi.kelas, true);
 
     return { success: true, deleted: rowsToDelete.length };
 
@@ -2294,7 +2419,8 @@ function getAbsensiGuru(kelas, guru, bulan) {
     const filterGuru  = str(guru);
     const bulanKey = monthKey(bulan);
 
-    const cacheKey = "absGuru:" + absCacheVersion() + ":" + cacheVersion() + ":" + filterKelas + ":" + filterGuru + ":" + bulanKey;
+    const absVer = filterKelas ? kelasAbsVersion(filterKelas) : absCacheVersion();
+    const cacheKey = "absGuru:" + absVer + ":" + cacheVersion() + ":" + filterKelas + ":" + filterGuru + ":" + bulanKey;
     const cached = cacheGetJson(cacheKey);
     if (cached) return cached;
 
@@ -2308,25 +2434,27 @@ function getAbsensiGuru(kelas, guru, bulan) {
     const hariMap = {};
     const nisnAsli = nisnMasterMap();
 
-    streamAbsensiRows(start, end, values => {
+    // Baca kolom 2..9 (TGL..STATUS) saja, lewati ID, FOTO, TIMESTAMP
+    const C = 1; // offset 1 karena startCol = 2 (ABS.TGL + 1)
+    streamAbsensiKelasRows(start, end, filterKelas, 2, 8, values => {
       for (let i = 0; i < values.length; i++) {
         const r = values[i];
-        const tgl = dateKey(r[ABS.TGL]);
+        const kls = str(r[ABS.KELAS - C]);
+        if (filterKelas && kls !== filterKelas) continue;
+
+        const tgl = dateKey(r[ABS.TGL - C]);
         if (!tgl) continue;
         if (bulanKey && tgl.slice(0, 7) !== bulanKey) continue;
 
-        const kls = str(r[ABS.KELAS]);
-        const gr  = str(r[ABS.GURU]);
-        if (filterKelas && kls !== filterKelas) continue;
-
-        const nisnRaw = str(r[ABS.NISN]);
+        const nisnRaw = str(r[ABS.NISN - C]);
         const nisn = nisnKey(nisnRaw);
         if (!nisn) continue;
 
-        const st = normalizeStatus(r[ABS.STATUS]);
+        const st = normalizeStatus(r[ABS.STATUS - C]);
         const hk = nisn + "|" + tgl;
         if (!hariMap[hk] || PRIOR[st] > PRIOR[hariMap[hk]]) hariMap[hk] = st;
 
+        const gr = str(r[ABS.GURU - C]);
         if (filterGuru && gr !== filterGuru) continue;
 
         const key = nisn + "|" + tgl;
@@ -2335,19 +2463,19 @@ function getAbsensiGuru(kelas, guru, bulan) {
         if (!prev) {
           map[key] = {
             tanggal:    tgl,
-            jam:        toInt(r[ABS.JAM]),
+            jam:        toInt(r[ABS.JAM - C]),
             kelas:      kls,
-            mapel:      str(r[ABS.MAPEL]),
+            mapel:      str(r[ABS.MAPEL - C]),
             guru:       gr,
             nisn:       nisnAsli[nisn] || nisnRaw,
-            nama_siswa: str(r[ABS.NAMA]),
+            nama_siswa: str(r[ABS.NAMA - C]),
             status:     st
           };
         } else if (PRIOR[st] > PRIOR[prev.status]) {
           prev.status = st;
           // metadata mengikuti sesi yang menentukan status akhir
-          prev.jam   = toInt(r[ABS.JAM]);
-          prev.mapel = str(r[ABS.MAPEL]);
+          prev.jam   = toInt(r[ABS.JAM - C]);
+          prev.mapel = str(r[ABS.MAPEL - C]);
           prev.guru  = gr;
         }
       }
@@ -2389,7 +2517,7 @@ function getRekapGuruSemester(kelas, guru, semester, tahun, mapel, maks) {
     const batas = Math.min(Math.max(toInt(maks) || MAKS_PERTEMUAN_SEMESTER, 1), MAKS_PERTEMUAN_SEMESTER);
     const info = semesterRange(semester, tahun, new Date());
 
-    const cacheKey = "rekapSem:" + absCacheVersion() + ":" + cacheVersion() + ":" +
+    const cacheKey = "rekapSem:" + kelasAbsVersion(filterKelas) + ":" + cacheVersion() + ":" +
       filterKelas + ":" + filterGuru + ":" + info.semester + ":" + info.startYear + ":" + filterMapel + ":" + batas;
     const cached = cacheGetJson(cacheKey);
     if (cached) return cached;
@@ -2409,12 +2537,12 @@ function getRekapGuruSemester(kelas, guru, semester, tahun, mapel, maks) {
       if (k && !nisnAsli[k]) nisnAsli[k] = s.nisn;
     });
 
-    streamAbsensiRows(info.start, info.end, values => {
+    streamAbsensiKelasRows(info.start, info.end, filterKelas, 1, 9, values => {
       for (let i = 0; i < values.length; i++) {
         const r = values[i];
-        const tgl = dateKey(r[ABS.TGL]);
-        if (!tgl) continue;
         if (str(r[ABS.KELAS]) !== filterKelas) continue;
+        const tgl = dateKey(r[ABS.TGL]);
+        if (!tgl || tgl < info.start || tgl > info.end) continue;
 
         const nisnRaw = str(r[ABS.NISN]);
         const nisn = nisnKey(nisnRaw);
@@ -4158,7 +4286,7 @@ function getRekapBulanan(kelas, bulan) {
     if (!filterKelas) return { success: false, error: "Kelas wajib diisi" };
 
     const ym = monthKey(bulan) || dateKey(new Date()).slice(0, 7);
-    const cacheKey = "rekapBln:" + absCacheVersion() + ":" + cacheVersion() + ":" + filterKelas + ":" + ym;
+    const cacheKey = "rekapBln:" + kelasAbsVersion(filterKelas) + ":" + cacheVersion() + ":" + filterKelas + ":" + ym;
     const cached = cacheGetJson(cacheKey);
     if (cached) return cached;
 
@@ -4184,25 +4312,28 @@ function getRekapBulanan(kelas, bulan) {
     const dateSet = {};
     const absenDateSet = {};
 
-    streamAbsensiRows(start, end, values => {
+    // Baca kolom 2..9 (TGL..STATUS) khusus blok baris kelas ini
+    const C = 1; // offset 1 karena startCol = 2 (ABS.TGL + 1)
+    streamAbsensiKelasRows(start, end, filterKelas, 2, 8, values => {
       for (let i = 0; i < values.length; i++) {
         const r = values[i];
-        const tgl = dateKey(r[ABS.TGL]);
-        if (!tgl || tgl < start || tgl > end) continue;
-        if (str(r[ABS.KELAS]) !== filterKelas) continue;
+        if (str(r[ABS.KELAS - C]) !== filterKelas) continue;
 
-        const nisnRaw = str(r[ABS.NISN]);
+        const tgl = dateKey(r[ABS.TGL - C]);
+        if (!tgl || tgl < start || tgl > end) continue;
+
+        const nisnRaw = str(r[ABS.NISN - C]);
         const nk = nisnKey(nisnRaw);
         if (!nk) continue;
 
         dateSet[tgl] = true;
-        const st = normalizeStatus(r[ABS.STATUS]);
+        const st = normalizeStatus(r[ABS.STATUS - C]);
         if (st !== "H") absenDateSet[tgl] = true;
 
         if (!siswaMap[nk]) {
           siswaMap[nk] = {
             nisn: nisnRaw,
-            nama: str(r[ABS.NAMA]) || "Siswa",
+            nama: str(r[ABS.NAMA - C]) || "Siswa",
             jk: "",
             no_hp_ortu: "",
             hari: {},

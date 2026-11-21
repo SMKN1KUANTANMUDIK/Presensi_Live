@@ -76,8 +76,8 @@ function StudentCard({
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-3xl border bg-surface p-3.5 shadow-card transition',
-        worst === 'H' ? 'border-line' : tone.border
+        'relative overflow-hidden rounded-3xl border p-3.5 shadow-card transition-colors duration-150',
+        worst === 'H' ? 'border-line bg-surface' : cn(tone.border, tone.soft)
       )}
     >
       <div className="flex items-center gap-2.5">
@@ -180,7 +180,12 @@ function StudentRow({
   const { activeKey, worst, tone, savedNonH } = summarizeStudent(statusJam, savedJam, jamDipilih, editJam);
 
   return (
-    <tr className="group border-b border-line/60 last:border-0 hover:bg-sunken/40">
+    <tr
+      className={cn(
+        'group border-b border-line/60 last:border-0 transition-colors duration-150',
+        worst === 'H' ? 'hover:bg-sunken/40' : tone.soft
+      )}
+    >
       <td className="w-24 px-4 py-2.5">
         <label className="flex min-h-9 cursor-pointer items-center gap-1.5">
           <input
@@ -274,6 +279,14 @@ export default function InputAbsensi() {
   const [query, setQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState(null);
   const [dirty, setDirty] = useState(false);
+  const [pendingSwitch, setPendingSwitch] = useState(null);
+  const [showGuide, setShowGuide] = useState(() => {
+    try {
+      return localStorage.getItem('presensi-hide-input-guide') !== '1';
+    } catch {
+      return true;
+    }
+  });
 
   const [photo, setPhoto] = useState('');
   const [cameraOpen, setCameraOpen] = useState(false);
@@ -704,6 +717,39 @@ export default function InputAbsensi() {
     reader.readAsDataURL(file);
   };
 
+  const hideGuide = () => {
+    setShowGuide(false);
+    try {
+      localStorage.setItem('presensi-hide-input-guide', '1');
+    } catch {
+      /* abaikan */
+    }
+  };
+
+  const requestChangeTanggal = (nextVal) => {
+    if (dirty && siswa.length > 0 && nextVal !== tanggal) {
+      setPendingSwitch({ type: 'tanggal', value: nextVal });
+      return;
+    }
+    setTanggal(nextVal);
+  };
+
+  const requestChangeKelas = (nextVal) => {
+    if (dirty && siswa.length > 0 && nextVal !== kelas) {
+      setPendingSwitch({ type: 'kelas', value: nextVal });
+      return;
+    }
+    setKelas(nextVal);
+  };
+
+  const confirmDiscardAndSwitch = () => {
+    if (!pendingSwitch) return;
+    setDirty(false);
+    if (pendingSwitch.type === 'tanggal') setTanggal(pendingSwitch.value);
+    else if (pendingSwitch.type === 'kelas') setKelas(pendingSwitch.value);
+    setPendingSwitch(null);
+  };
+
   return (
     <div className="space-y-3">
       {/* ---- Sesi absensi ---- */}
@@ -728,18 +774,53 @@ export default function InputAbsensi() {
           </div>
         </div>
 
+        {/* ---- Progres 3 langkah mudah ---- */}
+        <div className="mb-4 grid grid-cols-3 gap-1.5 rounded-2xl bg-sunken/60 p-1.5">
+          {[
+            { no: 1, label: 'Pilih kelas', done: Boolean(kelas) },
+            { no: 2, label: 'Pilih jam', done: Boolean(jamMulai && jamSelesai && !hasOverlapTerisi) },
+            { no: 3, label: 'Simpan', done: false, ready: Boolean(kelas && jamMulai && jamSelesai && total > 0 && !hasOverlapTerisi) },
+          ].map((s) => (
+            <div
+              key={s.no}
+              className={cn(
+                'flex items-center justify-center gap-1.5 rounded-xl px-2 py-1.5 text-[11px] font-extrabold transition-colors duration-200',
+                s.done
+                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                  : s.ready
+                    ? 'bg-brand-soft text-brand'
+                    : 'text-muted'
+              )}
+            >
+              <span
+                className={cn(
+                  'grid size-4 shrink-0 place-items-center rounded-full text-[9.5px] font-extrabold',
+                  s.done
+                    ? 'bg-emerald-500 text-white'
+                    : s.ready
+                      ? 'bg-brand text-white'
+                      : 'bg-line-strong text-muted'
+                )}
+              >
+                {s.done ? '✓' : s.no}
+              </span>
+              <span className="truncate">{s.label}</span>
+            </div>
+          ))}
+        </div>
+
         <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-          <Field label="Tanggal">
+          <Field label="1. Tanggal">
             <input
               type="date"
               value={tanggal}
-              onChange={(e) => setTanggal(e.target.value)}
+              onChange={(e) => requestChangeTanggal(e.target.value)}
               className="h-11 w-full rounded-xl border border-line bg-sunken/50 px-3 text-[13px] font-semibold text-ink outline-none transition focus:border-brand focus:bg-surface focus:ring-4 focus:ring-brand/10"
             />
           </Field>
 
-          <Field label="Kelas">
-            <Select value={kelas} onChange={(e) => setKelas(e.target.value)} disabled={loadingConfig}>
+          <Field label="2. Kelas">
+            <Select value={kelas} onChange={(e) => requestChangeKelas(e.target.value)} disabled={loadingConfig}>
               <option value="">Pilih kelas</option>
               {kelasList.map((k) => (
                 <option key={k} value={k}>
@@ -749,7 +830,7 @@ export default function InputAbsensi() {
             </Select>
           </Field>
 
-          <Field label="Jam mulai">
+          <Field label="3. Jam mulai">
             <Select value={jamMulai} onChange={(e) => onChangeJamMulai(e.target.value)}>
               <option value="">Pilih jam</option>
               {jamOptions.map((o) => (
@@ -761,7 +842,7 @@ export default function InputAbsensi() {
             </Select>
           </Field>
 
-          <Field label="Jam selesai">
+          <Field label="4. Jam selesai">
             <Select value={jamSelesai} onChange={(e) => setJamSelesai(e.target.value)} disabled={!jamMulai}>
               <option value="">Pilih jam</option>
               {jamSelesaiOptions.map((o) => (
@@ -831,6 +912,26 @@ export default function InputAbsensi() {
           )}
         </div>
       </Card>
+
+      {/* ---- Panduan cepat guru ---- */}
+      {showGuide && (
+        <div className="animate-rise flex items-start gap-2.5 rounded-2xl border border-brand/20 bg-brand-soft/60 px-3.5 py-2.5 text-[12px] leading-relaxed text-ink">
+          <Info className="mt-0.5 size-4 shrink-0 text-brand" />
+          <p className="flex-1 font-medium">
+            Semua siswa otomatis dianggap <b className="text-emerald-700 dark:text-emerald-400">Hadir</b>. Cukup pilih{' '}
+            <b>Sakit</b>, <b>Izin</b>, <b>Alpha</b>, atau <b>Cabut</b> pada siswa yang tidak hadir, lalu tekan{' '}
+            <b>Simpan</b>.
+          </p>
+          <button
+            type="button"
+            onClick={hideGuide}
+            aria-label="Tutup panduan"
+            className="grid size-7 shrink-0 place-items-center rounded-lg text-muted transition hover:bg-surface hover:text-ink"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+      )}
 
       {/* ---- Tercatat hari ini ---- */}
       {kelas && tercatatHari.guruList.length > 0 && (
@@ -1146,7 +1247,11 @@ export default function InputAbsensi() {
                 {tidakHadir > 0 && <span className="text-rose-500"> · {tidakHadir} tidak hadir</span>}
               </p>
               <p className="truncate text-[10.5px] font-semibold text-muted">
-                {dirty ? 'Ada perubahan belum disimpan' : 'Siap disimpan'}
+                {!jamMulai || !jamSelesai
+                  ? 'Pilih jam mulai & jam selesai di atas dulu'
+                  : dirty
+                    ? 'Ada perubahan belum disimpan'
+                    : 'Siap disimpan'}
               </p>
             </div>
             <Button onClick={simpan} loading={saving} variant="success" size="md" className="shrink-0">
@@ -1156,6 +1261,29 @@ export default function InputAbsensi() {
           </div>
         </div>
       )}
+
+      {/* ---- confirm discard unsaved changes ---- */}
+      <Sheet
+        open={Boolean(pendingSwitch)}
+        onClose={() => setPendingSwitch(null)}
+        title="Belum disimpan"
+        size="sm"
+        footer={
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={() => setPendingSwitch(null)}>
+              Kembali
+            </Button>
+            <Button variant="danger" className="flex-1" onClick={confirmDiscardAndSwitch}>
+              Ya, ganti
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-[13px] font-medium leading-relaxed text-muted">
+          Anda sudah menandai kehadiran siswa di <b className="text-ink">{kelas}</b> tetapi belum menekan tombol{' '}
+          <b className="text-ink">Simpan</b>. Jika pindah sekarang, pilihan tadi akan direset.
+        </p>
+      </Sheet>
 
       {/* ---- camera sheet ---- */}
       <Sheet
