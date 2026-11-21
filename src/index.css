@@ -1,0 +1,344 @@
+@import 'tailwindcss';
+
+/* Dark mode dikendalikan class .dark pada <html> (bisa di-toggle user) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------
+   Token warna semantik
+--------------------------------------------------------- */
+:root {
+  --canvas: #f4f6fb;
+  --surface: #ffffff;
+  --elevated: #ffffff;
+  --sunken: #f1f5f9;
+  --line: #e4eaf3;
+  --line-strong: #d3dceb;
+  --ink: #0b1220;
+  --muted: #64748b;
+  --brand: #2563eb;
+  --brand-soft: #e8efff;
+  --brand-ink: #ffffff;
+  --shadow-color: 220 40% 40%;
+}
+
+.dark {
+  --canvas: #070b14;
+  --surface: #0d1424;
+  --elevated: #111a2c;
+  --sunken: #0a1120;
+  --line: #1d2942;
+  --line-strong: #2a3a58;
+  --ink: #e9eefb;
+  --muted: #93a2bd;
+  --brand: #4b8bfb;
+  --brand-soft: #12244a;
+  --brand-ink: #ffffff;
+  --shadow-color: 220 60% 3%;
+}
+
+@theme inline {
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-elevated: var(--elevated);
+  --color-sunken: var(--sunken);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-ink: var(--brand-ink);
+
+  --radius-4xl: 2rem;
+}
+
+/* ---------------------------------------------------------
+   Dasar
+--------------------------------------------------------- */
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-canvas text-ink font-sans;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background: var(--brand);
+    color: #fff;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+    border-radius: 0.6rem;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font: inherit;
+    color: inherit;
+  }
+
+  /* date/time picker di iOS & Android */
+  input[type='date'],
+  input[type='month'] {
+    min-height: 2.75rem;
+    appearance: none;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--line-strong);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--muted);
+    background-clip: content-box;
+  }
+}
+
+/* ---------------------------------------------------------
+   Utilitas kecil
+--------------------------------------------------------- */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@utility pb-nav {
+  padding-bottom: calc(4.75rem + env(safe-area-inset-bottom));
+}
+
+@utility shadow-card {
+  box-shadow:
+    0 1px 2px -1px hsl(var(--shadow-color) / 0.14),
+    0 8px 24px -12px hsl(var(--shadow-color) / 0.22);
+}
+
+@utility shadow-float {
+  box-shadow:
+    0 2px 6px -2px hsl(var(--shadow-color) / 0.18),
+    0 18px 40px -18px hsl(var(--shadow-color) / 0.35);
+}
+
+/* Animasi masuk halus */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(0.96);
+  }
+  60% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-rise {
+  animation: rise 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-pop {
+  animation: pop 0.22s ease-out;
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--sunken);
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, hsl(var(--shadow-color) / 0.07), transparent);
+  animation: shimmer 1.4s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------------------------------------------------------
+   Cetak (halaman Report)
+   Hanya isi surat laporan (.print-sheet) yang tampil.
+   Sidebar, header, tombol, dan konten web lain disembunyikan
+   agar output PDF hanya berisi surat formal.
+--------------------------------------------------------- */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 14mm 12mm 16mm 12mm;
+  }
+
+  @page print-landscape {
+    size: A4 landscape;
+    margin: 10mm 10mm 14mm 10mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Sembunyikan SEMUA konten aplikasi... */
+  body * {
+    visibility: hidden !important;
+    position: static !important;
+  }
+
+  /* ...kecuali lembar surat laporan dan anaknya. */
+  .print-sheet,
+  .print-sheet * {
+    visibility: visible !important;
+  }
+
+  .no-print,
+  aside,
+  header,
+  nav,
+  footer,
+  [data-no-print],
+  .print-sheet .no-print {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  .print-only {
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  main,
+  main > div,
+  #root {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+
+  .print-sheet {
+    width: 100% !important;
+    max-width: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #fff !important;
+    page-break-inside: avoid;
+  }
+
+  .print-sheet.print-landscape {
+    page: print-landscape;
+  }
+
+  .print-sheet .overflow-x-auto,
+  .print-sheet .overflow-hidden {
+    overflow: visible !important;
+    width: 100% !important;
+  }
+
+  table {
+    width: 100%;
+    font-size: 9px;
+    border-collapse: collapse !important;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tr,
+  td,
+  th {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Hindari baris tabel terpecah di tengah halaman */
+  table tr {
+    page-break-inside: avoid;
+  }
+
+  .kop-surat {
+    page-break-after: avoid;
+  }
+
+  .tanda-tangan {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  h1, h2, h3 {
+    break-after: avoid;
+  }
+}
