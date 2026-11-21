@@ -113,6 +113,7 @@ export default function StudentMonitorSheet({ siswa, open, onClose, initialBulan
 
   const waRekapText = pesanRekapSiswa({
     nama: profil.nama || nama,
+    nisn: profil.nisn || nisn,
     kelas: profil.kelas || kelas,
     periode: formatBulan(bulan),
     stat: statBulan,
@@ -121,6 +122,7 @@ export default function StudentMonitorSheet({ siswa, open, onClose, initialBulan
 
   const waPeringatanText = pesanPeringatanDini({
     nama: profil.nama || nama,
+    nisn: profil.nisn || nisn,
     kelas: profil.kelas || kelas,
     alpha: statSem ? statSem.A : statBulan.A,
     cabut: statSem ? statSem.C : statBulan.C,

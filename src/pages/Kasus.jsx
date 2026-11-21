@@ -374,11 +374,19 @@ export default function Kasus() {
             const canClose = isOpen && (kasusRole === 'kepsek' || kasusRole === 'bk');
             const waText = pesanPeringatanDini({
               nama: k.nama_siswa,
+              nisn: k.nisn,
               kelas: k.kelas,
               alpha: k.jenis === 'Alpha' ? 3 : 0,
               cabut: k.jenis === 'Cabut' ? 3 : 0,
               kasusOpen: isOpen ? 1 : 0,
-              periode: k.keterangan || formatTanggal(k.tanggal, { withDay: false }),
+              periode: formatTanggal(k.tanggal, { withDay: false }),
+              keterangan: k.keterangan || '',
+              pengirim:
+                kasusRole === 'kepsek'
+                  ? 'Kepala Sekolah'
+                  : kasusRole === 'bk'
+                    ? 'Tim BK / Kesiswaan'
+                    : `Wali Kelas ${k.kelas}`,
             });
 
             return (

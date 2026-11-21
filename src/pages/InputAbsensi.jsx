@@ -1037,11 +1037,13 @@ export default function InputAbsensi() {
                   phone={s.no_hp_ortu}
                   message={pesanAbsenSiswa({
                     nama: s.nama,
+                    nisn: s.nisn,
                     kelas: waAfterSave.kelas,
                     tanggal: waAfterSave.tanggal,
                     status: s.status,
                     jamList: s.jamList,
                     mapel: waAfterSave.mapel,
+                    guru: name,
                   })}
                   label="Kirim WA"
                 />

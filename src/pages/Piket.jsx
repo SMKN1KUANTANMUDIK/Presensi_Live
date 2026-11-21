@@ -636,10 +636,14 @@ export default function Piket() {
                   phone={a.no_hp_ortu}
                   message={pesanAbsenSiswa({
                     nama: a.nama,
+                    nisn: a.nisn,
                     kelas: a.kelas,
                     tanggal,
                     status: a.status,
                     jamList: a.jamBolos,
+                    jamHadir: a.jamHadir,
+                    pengirim: 'Tim Piket',
+                    guru: name,
                   })}
                   label="WA Ortu"
                 />
@@ -725,10 +729,12 @@ export default function Piket() {
                     phone={noHp}
                     message={pesanTerlambatApel({
                       nama: item.nama_siswa,
+                      nisn: item.nisn,
                       kelas: item.kelas,
                       tanggal,
                       jamDatang: item.jam_datang,
                       keterangan: item.keterangan,
+                      petugas: item.petugas || name,
                     })}
                     label="WA"
                   />
@@ -828,11 +834,13 @@ export default function Piket() {
                             phone={noHp}
                             message={pesanAbsenSiswa({
                               nama: a.nama,
+                              nisn: a.nisn,
                               kelas: g.kelas,
                               tanggal,
                               status: a.status,
                               jamList: g.jam,
                               mapel: g.mapel,
+                              guru: g.nama,
                             })}
                             label=""
                             className="!min-h-6 !px-1.5"
@@ -1124,10 +1132,13 @@ export default function Piket() {
                               phone={s.no_hp_ortu}
                               message={pesanAbsenSiswa({
                                 nama: s.nama,
+                                nisn: s.nisn,
                                 kelas: detail.kelas,
                                 tanggal,
                                 status: worst,
                                 jamList: jamNonH,
+                                pengirim: 'Tim Piket',
+                                guru: name,
                               })}
                               label=""
                               className="!min-h-7 !px-2"

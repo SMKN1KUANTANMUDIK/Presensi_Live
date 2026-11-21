@@ -486,10 +486,12 @@ export default function Kepsek() {
                   const tone = total >= 3 ? 'danger' : total >= 2 ? 'warning' : 'info';
                   const waText = pesanPeringatanDini({
                     nama: s.nama,
+                    nisn: s.nisn,
                     kelas: s.kelas,
                     alpha: s.alpha ?? (s.status === 'A' ? total : 0),
                     cabut: s.cabut ?? (s.status === 'C' ? total : 0),
                     periode: mode === 'bulanan' ? formatBulan(bulan) : `Periode ${mode}`,
+                    pengirim: 'Kepala Sekolah',
                   });
                   return (
                     <li key={s.nisn || i} className="flex items-center gap-2.5 px-4 py-2.5 transition-colors hover:bg-sunken/35">
