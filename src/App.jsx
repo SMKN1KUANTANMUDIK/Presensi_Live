@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useState } from 'react';
+import { Component, Suspense, lazy, useEffect, useState } from 'react';
 import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { RefreshCw, X } from 'lucide-react';
 
@@ -10,17 +10,87 @@ import { PWAProvider, usePWA } from './lib/pwa';
 import AppShell from './components/AppShell';
 import Login from './pages/Login';
 
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const InputAbsensi = lazy(() => import('./pages/InputAbsensi'));
-const Piket = lazy(() => import('./pages/Piket'));
-const Riwayat = lazy(() => import('./pages/Riwayat'));
-const Guru = lazy(() => import('./pages/Guru'));
-const Siswa = lazy(() => import('./pages/Siswa'));
-const Kepsek = lazy(() => import('./pages/Kepsek'));
-const Report = lazy(() => import('./pages/Report'));
-const OrangTua = lazy(() => import('./pages/OrangTua'));
-const PortalOrtu = lazy(() => import('./pages/PortalOrtu'));
-const Kasus = lazy(() => import('./pages/Kasus'));
+const CHUNK_ERR_RE = /Failed to fetch dynamically imported module|Importing a module script failed|Loading chunk|ChunkLoadError/i;
+
+function lazyRetry(importer) {
+  return lazy(() =>
+    importer().catch((err) => {
+      if (CHUNK_ERR_RE.test(err?.message || String(err))) {
+        try {
+          const last = Number(sessionStorage.getItem('presensi-auto-recover') || 0);
+          if (Date.now() - last > 30000) {
+            sessionStorage.setItem('presensi-auto-recover', String(Date.now()));
+            if (typeof window.__presensiHardReload === 'function') {
+              window.__presensiHardReload();
+            } else {
+              window.location.reload();
+            }
+            return new Promise(() => {});
+          }
+        } catch {
+          /* abaikan */
+        }
+      }
+      throw err;
+    })
+  );
+}
+
+class AppErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+
+  render() {
+    if (!this.state.error) return this.props.children;
+    const isChunk = CHUNK_ERR_RE.test(this.state.error?.message || String(this.state.error));
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-canvas p-5">
+        <div className="w-full max-w-sm rounded-3xl border border-line bg-surface p-6 text-center shadow-float">
+          <div className="mx-auto mb-4 grid size-12 place-items-center rounded-2xl bg-brand-soft text-brand">
+            <RefreshCw className="size-6" />
+          </div>
+          <h1 className="text-[17px] font-extrabold text-ink">
+            {isChunk ? 'Versi baru aplikasi tersedia' : 'Halaman perlu dimuat ulang'}
+          </h1>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
+            {isChunk
+              ? 'Aplikasi baru saja diperbarui. Ketuk tombol di bawah untuk memuat versi terbaru.'
+              : 'Terjadi gangguan saat membuka halaman ini. Ketuk tombol di bawah untuk memuat ulang.'}
+          </p>
+          <button
+            type="button"
+            onClick={() =>
+              typeof window.__presensiHardReload === 'function'
+                ? window.__presensiHardReload()
+                : window.location.reload()
+            }
+            className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-brand px-4 text-[13.5px] font-extrabold text-white shadow-sm transition active:scale-[.98]"
+          >
+            <RefreshCw className="size-4" /> Muat Versi Terbaru
+          </button>
+        </div>
+      </div>
+    );
+  }
+}
+
+const Dashboard = lazyRetry(() => import('./pages/Dashboard'));
+const InputAbsensi = lazyRetry(() => import('./pages/InputAbsensi'));
+const Piket = lazyRetry(() => import('./pages/Piket'));
+const Riwayat = lazyRetry(() => import('./pages/Riwayat'));
+const Guru = lazyRetry(() => import('./pages/Guru'));
+const Siswa = lazyRetry(() => import('./pages/Siswa'));
+const Kepsek = lazyRetry(() => import('./pages/Kepsek'));
+const Report = lazyRetry(() => import('./pages/Report'));
+const OrangTua = lazyRetry(() => import('./pages/OrangTua'));
+const PortalOrtu = lazyRetry(() => import('./pages/PortalOrtu'));
+const Kasus = lazyRetry(() => import('./pages/Kasus'));
 
 function PageFallback() {
   return (
@@ -220,7 +290,9 @@ export default function App() {
         <PWAProvider>
           <AuthProvider>
             <HashRouter>
-              <AppRoutes />
+              <AppErrorBoundary>
+                <AppRoutes />
+              </AppErrorBoundary>
             </HashRouter>
           </AuthProvider>
         </PWAProvider>

@@ -6,6 +6,8 @@
   <title>Presensi — SMKN 1 Kuantan Mudik</title>
 
   <meta name="description" content="Sistem Monitoring Presensi Siswa Realtime SMKN 1 Kuantan Mudik" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
   <meta name="color-scheme" content="light dark" />
   <meta name="theme-color" content="#2563eb" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)" />
@@ -47,7 +49,51 @@
 
   <script>
     (function () {
-      function showHelp(message) {
+      var RECOVERY_KEY = 'presensi-auto-recover';
+
+      function clearCachesAndReload() {
+        var tasks = [];
+        try {
+          if ('caches' in window) {
+            tasks.push(
+              caches.keys().then(function (keys) {
+                return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+              })
+            );
+          }
+          if ('serviceWorker' in navigator) {
+            tasks.push(
+              navigator.serviceWorker.getRegistrations().then(function (regs) {
+                return Promise.all(regs.map(function (r) { return r.unregister(); }));
+              })
+            );
+          }
+        } catch (e) {}
+
+        Promise.allSettled(tasks).finally(function () {
+          try {
+            var u = new URL(location.href);
+            u.searchParams.set('v', String(Date.now()));
+            location.replace(u.toString());
+          } catch (e) {
+            location.reload();
+          }
+        });
+      }
+
+      window.__presensiHardReload = clearCachesAndReload;
+
+      function tryAutoRecoverOnce() {
+        try {
+          var last = Number(sessionStorage.getItem(RECOVERY_KEY) || 0);
+          if (Date.now() - last < 30000) return false;
+          sessionStorage.setItem(RECOVERY_KEY, String(Date.now()));
+        } catch (e) {}
+        clearCachesAndReload();
+        return true;
+      }
+
+      function showHelp(title, message, hint, isServerError) {
         if (document.getElementById('boot-help')) return;
         var box = document.createElement('div');
         box.id = 'boot-help';
@@ -56,27 +102,69 @@
           'padding:20px;background:#f4f6fb;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#0b1220;text-align:center;box-sizing:border-box';
         box.innerHTML =
           '<div style="box-sizing:border-box;width:100%;max-width:380px;background:#fff;border:1px solid #e4eaf3;border-radius:24px;padding:26px 22px;box-shadow:0 24px 60px -30px rgba(15,23,42,.45)">' +
-          '<div style="width:52px;height:52px;margin:0 auto 16px;border-radius:16px;background:#e8efff;display:flex;align-items:center;justify-content:center;font-size:26px">⚠️</div>' +
-          '<h1 style="font-size:19px;margin:0 0 8px">Aplikasi perlu dibuka lewat server</h1>' +
-          '<p style="font-size:13.5px;line-height:1.6;color:#64748b;margin:0 0 18px">' +
-          message +
-          '</p>' +
-          '<p style="font-size:11.5px;color:#94a3b8;margin:16px 0 0">Unggah folder <b>dist</b> atau root repositori ke hosting HTTPS (GitHub Pages / Netlify).</p>' +
-          '<button onclick="location.reload()" style="margin-top:14px;width:100%;border:0;border-radius:12px;background:#2563eb;color:#fff;font-size:13.5px;font-weight:700;padding:11px 14px;cursor:pointer">Muat ulang halaman</button>' +
+          '<div style="width:52px;height:52px;margin:0 auto 16px;border-radius:16px;background:#e8efff;display:flex;align-items:center;justify-content:center;font-size:26px">🔄</div>' +
+          '<h1 style="font-size:19px;margin:0 0 8px">' + title + '</h1>' +
+          '<p style="font-size:13.5px;line-height:1.6;color:#64748b;margin:0 0 14px">' + message + '</p>' +
+          (hint ? '<p style="font-size:11.5px;color:#94a3b8;margin:0 0 14px">' + hint + '</p>' : '') +
+          '<button onclick="window.__presensiHardReload ? window.__presensiHardReload() : location.reload()" style="width:100%;border:0;border-radius:12px;background:#2563eb;color:#fff;font-size:13.5px;font-weight:700;padding:12px 14px;cursor:pointer">' +
+          (isServerError ? 'Muat ulang halaman' : 'Muat Versi Terbaru') +
+          '</button>' +
           '</div>';
         document.body.appendChild(box);
       }
 
       if (location.protocol === 'file:') {
-        showHelp('Halaman ini dibuka langsung dari file komputer (<b>file://</b>). Browser memblokir pemuatan aplikasi dan pemasangan PWA pada alamat seperti ini.');
+        showHelp(
+          'Aplikasi perlu dibuka lewat server',
+          'Halaman ini dibuka langsung dari file komputer (<b>file://</b>). Browser memblokir pemuatan aplikasi pada alamat seperti ini.',
+          'Unggah folder <b>dist</b> atau root repositori ke hosting HTTPS (GitHub Pages / Netlify).',
+          true
+        );
         return;
       }
+
+      // Bersihkan parameter ?v= setelah auto-recover berhasil
+      try {
+        var curUrl = new URL(location.href);
+        if (curUrl.searchParams.has('v')) {
+          curUrl.searchParams.delete('v');
+          history.replaceState(null, '', curUrl.toString());
+        }
+      } catch (e) {}
+
+      // Jika skrip/CSS hasil build gagal dimuat (404 karena cache index.html lama), otomatis segarkan cache sekali
+      window.addEventListener(
+        'error',
+        function (ev) {
+          var t = ev && ev.target;
+          if (!t || (t.tagName !== 'SCRIPT' && t.tagName !== 'LINK')) return;
+          var src = t.src || t.href || '';
+          if (src.indexOf('/assets/') !== -1) {
+            if (!tryAutoRecoverOnce()) {
+              showHelp(
+                'Versi aplikasi baru tersedia',
+                'Cache browser masih menyimpan versi lama. Ketuk tombol di bawah untuk memuat ulang versi terbaru.',
+                '',
+                false
+              );
+            }
+          }
+        },
+        true
+      );
 
       window.addEventListener('load', function () {
         setTimeout(function () {
           var root = document.getElementById('root');
           if (root && root.children.length === 0 && !document.getElementById('boot-help')) {
-            showHelp('Aplikasi gagal dimuat. Periksa koneksi internet lalu muat ulang halaman.');
+            if (!tryAutoRecoverOnce()) {
+              showHelp(
+                'Halaman perlu dimuat ulang',
+                'Aplikasi sedang diperbarui atau koneksi internet sempat terputus. Ketuk tombol di bawah untuk memuat versi terbaru.',
+                '',
+                false
+              );
+            }
           }
         }, 6000);
       });

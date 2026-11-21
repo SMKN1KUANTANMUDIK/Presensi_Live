@@ -4,7 +4,7 @@
    jadi aplikasi tetap bisa dipasang walau di-hosting di subfolder.
 ========================================================= */
 
-const VERSION = 'v2.8.0-965aec71';
+const VERSION = 'v2.8.0-4b5f0fdf';
 const CACHE = `presensi-${VERSION}`;
 const SCOPE = self.registration ? self.registration.scope : self.location.href;
 const url = (p) => new URL(p, SCOPE).href;
@@ -34,12 +34,16 @@ self.addEventListener('install', (event) => {
       const cache = await caches.open(CACHE);
       await Promise.allSettled(
         PRECACHE.map((u) =>
-          cache.add(new Request(u, { cache: 'reload' })).catch(() => {
+          cache.add(new Request(u, { cache: 'no-cache' })).catch(() => {
             console.warn('[SW] gagal precache', u);
           })
         )
       );
-      await self.skipWaiting();
+      // Jangan skipWaiting paksa saat ada tab lama aktif agar chunk halaman yang sedang
+      // dibuka tidak 404. UpdateBar akan mengirim SKIP_WAITING saat user klik Muat ulang.
+      if (!self.registration.active) {
+        await self.skipWaiting();
+      }
     })()
   );
 });
@@ -100,13 +104,18 @@ self.addEventListener('fetch', (event) => {
 async function networkFirstPage(request) {
   const cache = await caches.open(CACHE);
   try {
-    const res = await fetch(request);
-    if (res?.ok) cache.put(request, res.clone());
-    return res;
+    // Selalu validasi ke server agar GitHub Pages max-age=600 tidak menyajikan index.html basi
+    const res = await fetch(new Request(request.url, { cache: 'no-cache' }));
+    const ct = res.headers.get('content-type') || '';
+    if (res?.ok && ct.includes('text/html')) {
+      cache.put(url('index.html'), res.clone());
+      return res;
+    }
+    throw new Error('Respons halaman tidak valid');
   } catch {
     return (
-      (await cache.match(request)) ||
       (await cache.match(url('index.html'))) ||
+      (await cache.match(request)) ||
       (await cache.match(OFFLINE_URL)) ||
       new Response('<h1>Offline</h1>', { status: 503, headers: { 'Content-Type': 'text/html' } })
     );
@@ -116,10 +125,15 @@ async function networkFirstPage(request) {
 async function staleWhileRevalidate(request) {
   const cache = await caches.open(CACHE);
   const cached = await cache.match(request);
+  const isCode = /\.(?:js|mjs|css)$/i.test(new URL(request.url).pathname);
 
   const network = fetch(request)
     .then((res) => {
-      if (res?.ok) cache.put(request, res.clone());
+      const ct = res.headers.get('content-type') || '';
+      // Jangan pernah cache halaman 404 HTML sebagai file JS/CSS
+      if (res?.ok && !(isCode && ct.includes('text/html'))) {
+        cache.put(request, res.clone());
+      }
       return res;
     })
     .catch(() => null);

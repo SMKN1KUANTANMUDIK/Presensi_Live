@@ -26,7 +26,10 @@ export function PWAProvider({ children }) {
     const register = async () => {
       try {
         const swUrl = new URL('sw.js', document.baseURI).href;
-        const reg = await navigator.serviceWorker.register(swUrl, { scope: './' });
+        const reg = await navigator.serviceWorker.register(swUrl, {
+          scope: './',
+          updateViaCache: 'none',
+        });
         if (cancelled) return;
         regRef.current = reg;
         setSw({ supported: true, registered: true, scope: reg.scope, state: 'active' });
@@ -73,8 +76,21 @@ export function PWAProvider({ children }) {
   }, []);
 
   const applyUpdate = useCallback(() => {
-    regRef.current?.waiting?.postMessage('SKIP_WAITING');
-    setTimeout(() => window.location.reload(), 400);
+    const waiting = regRef.current?.waiting;
+    if (!waiting) {
+      if (typeof window.__presensiHardReload === 'function') window.__presensiHardReload();
+      else window.location.reload();
+      return;
+    }
+    let reloaded = false;
+    const reloadOnce = () => {
+      if (reloaded) return;
+      reloaded = true;
+      window.location.reload();
+    };
+    navigator.serviceWorker?.addEventListener('controllerchange', reloadOnce, { once: true });
+    waiting.postMessage('SKIP_WAITING');
+    setTimeout(reloadOnce, 1200);
   }, []);
 
   const value = useMemo(
