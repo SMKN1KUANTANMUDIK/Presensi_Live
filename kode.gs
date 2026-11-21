@@ -1807,7 +1807,10 @@ function parseSessionId(rawId) {
 
   if (raw.indexOf("|") !== -1) return fromPipe(raw);
 
-  const cleaned = raw.replace(/-/g, "+").replace(/_/g, "/").replace(/\s+/g, "");
+  let cleaned = raw.replace(/-/g, "+").replace(/_/g, "/").replace(/\s+/g, "");
+  const padRem = cleaned.length % 4;
+  if (padRem === 2) cleaned += "==";
+  else if (padRem === 3) cleaned += "=";
   try {
     const text = Utilities.newBlob(Utilities.base64Decode(cleaned)).getDataAsString("UTF-8");
     const obj = JSON.parse(text);
@@ -1933,7 +1936,10 @@ function prosesRiwayat(values, sesi, filterTgl, filterBulan, filterKelas) {
  */
 function makeSessionId(tgl, kelas, mapel, guru) {
   if (mapel.indexOf("|") !== -1 || guru.indexOf("|") !== -1) {
-    return Utilities.base64Encode(JSON.stringify({ tanggal: tgl, kelas: kelas, mapel: mapel, guru: guru }));
+    return Utilities.base64Encode(
+      JSON.stringify({ tanggal: tgl, kelas: kelas, mapel: mapel, guru: guru }),
+      Utilities.Charset.UTF_8
+    );
   }
   return tgl + "|" + kelas + "|" + mapel + "|" + guru;
 }
@@ -1950,34 +1956,57 @@ function getDetailAbsensi(idEncoded) {
     }
 
     const detail = [];
-    streamAbsensiRows(sesi.tanggal, sesi.tanggal, (values, firstRow) => {
+    const nisnAsli = nisnMasterMap();
+    let jamMulai = 0;
+    let jamSelesai = 0;
+    let fotoSesi = "";
+
+    streamAbsensiKelasRows(sesi.tanggal, sesi.tanggal, sesi.kelas, 1, ABS_COLS, (values, firstRow) => {
       for (let i = 0; i < values.length; i++) {
         const r = values[i];
-        if (dateKey(r[ABS.TGL]) !== sesi.tanggal) continue;
         if (str(r[ABS.KELAS]) !== sesi.kelas) continue;
+        if (dateKey(r[ABS.TGL]) !== sesi.tanggal) continue;
         if (str(r[ABS.MAPEL]) !== sesi.mapel) continue;
         if (str(r[ABS.GURU]) !== sesi.guru) continue;
 
+        const jam = toInt(r[ABS.JAM]);
+        const nisnRaw = str(r[ABS.NISN]);
+        const nk = nisnKey(nisnRaw);
+        const foto = str(r[ABS.FOTO]);
+
+        if (jam > 0) {
+          if (!jamMulai || jam < jamMulai) jamMulai = jam;
+          if (jam > jamSelesai) jamSelesai = jam;
+        }
+        if (!fotoSesi && foto) fotoSesi = foto;
+
         detail.push({
           rowIndex:   firstRow + i,
-          jam:        toInt(r[ABS.JAM]),
-          nisn:       str(r[ABS.NISN]),
+          jam:        jam,
+          nisn:       (nk && nisnAsli[nk]) || nisnRaw,
           nama_siswa: str(r[ABS.NAMA]),
           status:     normalizeStatus(r[ABS.STATUS]),
-          foto:       str(r[ABS.FOTO])
+          foto:       foto
         });
       }
     });
 
+    detail.sort((a, b) =>
+      String(a.nama_siswa).localeCompare(String(b.nama_siswa)) || (a.jam - b.jam)
+    );
+
     return {
       success: true,
       data: {
-        id:       str(idEncoded),
-        tanggal:  sesi.tanggal,
-        kelas:    sesi.kelas,
-        mapel:    sesi.mapel,
-        guru:     sesi.guru,
-        detail:   detail
+        id:          str(idEncoded),
+        tanggal:     sesi.tanggal,
+        kelas:       sesi.kelas,
+        mapel:       sesi.mapel,
+        guru:        sesi.guru,
+        jam_mulai:   jamMulai,
+        jam_selesai: jamSelesai,
+        foto:        fotoSesi,
+        detail:      detail
       }
     };
 
@@ -2118,11 +2147,11 @@ function hapusAbsensi(idEncoded) {
     const sh = getSheet(SHEET_ABSENSI);
     const rowsToDelete = [];
 
-    streamAbsensiRows(sesi.tanggal, sesi.tanggal, (values, firstRow) => {
+    streamAbsensiKelasRows(sesi.tanggal, sesi.tanggal, sesi.kelas, 1, ABS_COLS, (values, firstRow) => {
       for (let i = 0; i < values.length; i++) {
         const r = values[i];
-        if (dateKey(r[ABS.TGL]) !== sesi.tanggal) continue;
         if (str(r[ABS.KELAS]) !== sesi.kelas) continue;
+        if (dateKey(r[ABS.TGL]) !== sesi.tanggal) continue;
         if (str(r[ABS.MAPEL]) !== sesi.mapel) continue;
         if (str(r[ABS.GURU]) !== sesi.guru) continue;
         rowsToDelete.push(firstRow + i);

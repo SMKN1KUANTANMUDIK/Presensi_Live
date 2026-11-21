@@ -8,7 +8,6 @@ import { ToastProvider } from './lib/toast';
 import { PWAProvider, usePWA } from './lib/pwa';
 
 import AppShell from './components/AppShell';
-import InstallSheet from './components/InstallSheet';
 import Login from './pages/Login';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -22,7 +21,6 @@ const Report = lazy(() => import('./pages/Report'));
 const OrangTua = lazy(() => import('./pages/OrangTua'));
 const PortalOrtu = lazy(() => import('./pages/PortalOrtu'));
 const Kasus = lazy(() => import('./pages/Kasus'));
-const Install = lazy(() => import('./pages/Install'));
 
 function PageFallback() {
   return (
@@ -90,14 +88,11 @@ function UpdateBar() {
 }
 
 /* ---------------- layout wrapper ---------------- */
-function Shell({ children, onOpenInstall }) {
-  return <AppShell onOpenInstall={onOpenInstall}>{children}</AppShell>;
+function Shell({ children }) {
+  return <AppShell>{children}</AppShell>;
 }
 
 function AppRoutes() {
-  const [installOpen, setInstallOpen] = useState(false);
-  const openInstall = () => setInstallOpen(true);
-
   return (
     <>
       <ScrollToTop />
@@ -105,9 +100,8 @@ function AppRoutes() {
 
       <Suspense fallback={<PageFallback />}>
         <Routes>
-          <Route path="/login" element={<Login onOpenInstall={openInstall} />} />
+          <Route path="/login" element={<Login />} />
           <Route path="/ortu" element={<PortalOrtu />} />
-          <Route path="/install" element={<Install onOpenInstall={openInstall} />} />
 
           <Route path="/" element={<Landing />} />
 
@@ -115,7 +109,7 @@ function AppRoutes() {
             path="/dashboard"
             element={
               <Guard roles={['admin']}>
-                <Shell onOpenInstall={openInstall}>
+                <Shell>
                   <Dashboard />
                 </Shell>
               </Guard>
@@ -125,7 +119,7 @@ function AppRoutes() {
             path="/input"
             element={
               <Guard roles={['guru', 'wali', 'admin']}>
-                <Shell onOpenInstall={openInstall}>
+                <Shell>
                   <InputAbsensi />
                 </Shell>
               </Guard>
@@ -135,7 +129,7 @@ function AppRoutes() {
             path="/piket"
             element={
               <Guard roles={['piket', 'admin']}>
-                <Shell onOpenInstall={openInstall}>
+                <Shell>
                   <Piket />
                 </Shell>
               </Guard>
@@ -145,7 +139,7 @@ function AppRoutes() {
             path="/guru"
             element={
               <Guard roles={['admin']}>
-                <Shell onOpenInstall={openInstall}>
+                <Shell>
                   <Guru />
                 </Shell>
               </Guard>
@@ -155,7 +149,7 @@ function AppRoutes() {
             path="/siswa"
             element={
               <Guard roles={['admin']}>
-                <Shell onOpenInstall={openInstall}>
+                <Shell>
                   <Siswa />
                 </Shell>
               </Guard>
@@ -165,7 +159,7 @@ function AppRoutes() {
             path="/riwayat"
             element={
               <Guard roles={['admin']}>
-                <Shell onOpenInstall={openInstall}>
+                <Shell>
                   <Riwayat />
                 </Shell>
               </Guard>
@@ -175,7 +169,7 @@ function AppRoutes() {
             path="/kepsek"
             element={
               <Guard roles={['kepsek']}>
-                <Shell onOpenInstall={openInstall}>
+                <Shell>
                   <Kepsek />
                 </Shell>
               </Guard>
@@ -185,7 +179,7 @@ function AppRoutes() {
             path="/report"
             element={
               <Guard roles={['guru', 'wali', 'admin']}>
-                <Shell onOpenInstall={openInstall}>
+                <Shell>
                   <Report />
                 </Shell>
               </Guard>
@@ -195,7 +189,7 @@ function AppRoutes() {
             path="/kasus"
             element={
               <Guard roles={['admin', 'kepsek', 'wali']}>
-                <Shell onOpenInstall={openInstall}>
+                <Shell>
                   <Kasus />
                 </Shell>
               </Guard>
@@ -205,7 +199,7 @@ function AppRoutes() {
             path="/orangtua"
             element={
               <Guard roles={['guru', 'wali', 'admin']}>
-                <Shell onOpenInstall={openInstall}>
+                <Shell>
                   <OrangTua />
                 </Shell>
               </Guard>
@@ -215,8 +209,6 @@ function AppRoutes() {
           <Route path="*" element={<Landing />} />
         </Routes>
       </Suspense>
-
-      <InstallSheet open={installOpen} onClose={() => setInstallOpen(false)} />
     </>
   );
 }

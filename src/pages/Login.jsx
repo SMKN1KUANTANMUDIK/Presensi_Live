@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
   CheckCircle2,
-  Download,
   Eye,
   EyeOff,
   HelpCircle,
@@ -20,7 +19,7 @@ import { useTheme } from '../lib/theme';
 import { Button } from '../components/ui';
 import HelpSheet from '../components/HelpSheet';
 
-export default function Login({ onOpenInstall }) {
+export default function Login() {
   const { login, user } = useAuth();
   const { dark, toggle } = useTheme();
   const navigate = useNavigate();
@@ -133,15 +132,6 @@ export default function Login({ onOpenInstall }) {
           >
             <HelpCircle className="size-4" /> Bantuan
           </button>
-          {onOpenInstall && (
-            <button
-              type="button"
-              onClick={onOpenInstall}
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-line bg-surface px-3 text-[12px] font-bold text-muted transition hover:text-brand active:scale-95"
-            >
-              <Download className="size-4" /> Pasang
-            </button>
-          )}
           <button
             type="button"
             onClick={toggle}

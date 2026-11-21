@@ -225,8 +225,10 @@ export const api = {
   },
 
   // riwayat, report & monitoring
-  getRiwayatAbsensi: (params = {}) => get({ action: 'getRiwayatAbsensi', ...params }),
-  getDetailAbsensi: (id) => get({ action: 'getDetailAbsensi', id }),
+  getRiwayatAbsensi: (params = {}) =>
+    request({ action: 'getRiwayatAbsensi', ...params }, { method: 'GET', timeoutMs: LONG_TIMEOUT_MS }),
+  getDetailAbsensi: (id) =>
+    request({ action: 'getDetailAbsensi', id }, { method: 'GET', timeoutMs: LONG_TIMEOUT_MS }),
   getAbsensiGuru: (kelas, guru, bulan) =>
     cachedGet(
       `absGuru:${kelas || ''}:${guru || ''}:${bulan || ''}`,

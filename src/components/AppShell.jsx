@@ -3,7 +3,6 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   BarChart3,
   ClipboardList,
-  Download,
   GraduationCap,
   HelpCircle,
   History,
@@ -22,12 +21,10 @@ import {
 } from 'lucide-react';
 import { useAuth, displayName, roleLabel } from '../lib/auth';
 import { useTheme } from '../lib/theme';
-import { usePWA } from '../lib/pwa';
 import { useToast } from '../lib/toast';
 import { cn, initials } from '../lib/utils';
 import { Sheet } from './ui';
 import HelpSheet from './HelpSheet';
-import InstallPopup from './InstallPopup';
 
 const ICONS = {
   dashboard: LayoutDashboard,
@@ -82,13 +79,11 @@ const TITLES = {
   '/siswa': 'Data Siswa',
   '/kasus': 'Kasus Pembinaan',
   '/orangtua': 'Monitoring Siswa',
-  '/install': 'Pasang Aplikasi',
 };
 
-export default function AppShell({ children, onOpenInstall }) {
+export default function AppShell({ children }) {
   const { user, role, logout } = useAuth();
   const { dark, toggle } = useTheme();
-  const { installed } = usePWA();
   const toast = useToast();
   const location = useLocation();
   const navigate = useNavigate();
@@ -181,16 +176,6 @@ export default function AppShell({ children, onOpenInstall }) {
             <HelpCircle className="size-[18px]" />
             Panduan halaman ini
           </button>
-          {!installed && (
-            <button
-              type="button"
-              onClick={onOpenInstall}
-              className="flex w-full items-center gap-3 rounded-2xl border border-dashed border-line-strong px-3 py-2.5 text-[13px] font-bold text-muted transition hover:border-brand hover:text-brand"
-            >
-              <Download className="size-[18px]" />
-              Pasang aplikasi
-            </button>
-          )}
           <button
             type="button"
             onClick={toggle}
@@ -353,19 +338,6 @@ export default function AppShell({ children, onOpenInstall }) {
             Panduan cara pakai
           </button>
 
-          {!installed && (
-            <button
-              type="button"
-              onClick={() => {
-                setMenuOpen(false);
-                onOpenInstall?.();
-              }}
-              className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-[14px] font-bold text-ink transition hover:bg-sunken"
-            >
-              <Download className="size-[18px]" />
-              Pasang aplikasi ke HP
-            </button>
-          )}
           <button
             type="button"
             onClick={toggle}
@@ -388,9 +360,8 @@ export default function AppShell({ children, onOpenInstall }) {
         </div>
       </Sheet>
 
-      {/* ============ HELP & INSTALL & ACCOUNT SHEETS ============ */}
+      {/* ============ HELP & ACCOUNT SHEETS ============ */}
       <HelpSheet open={helpOpen} onClose={() => setHelpOpen(false)} pathname={location.pathname} />
-      <InstallPopup onOpenInstall={onOpenInstall} />
 
       <Sheet open={accountOpen} onClose={() => setAccountOpen(false)} title="Akun Saya" size="sm">
         <div className="flex items-center gap-3 rounded-2xl border border-line bg-sunken/40 p-3.5">
