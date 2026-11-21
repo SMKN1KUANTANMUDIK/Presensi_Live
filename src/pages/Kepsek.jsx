@@ -10,8 +10,11 @@ import {
 } from 'lucide-react';
 import api from '../lib/api';
 import { useToast } from '../lib/toast';
-import { cn, formatBulan, formatTanggal, monthISO, statusHari, todayISO, TONE } from '../lib/utils';
+import { cn, formatBulan, formatTanggal, monthISO } from '../lib/utils';
+import { pesanPeringatanDini } from '../lib/whatsapp';
 import { Badge, Button, Card, CardHeader, EmptyState, Select, Skeleton, Stat } from '../components/ui';
+import WaButton from '../components/WaButton';
+import StudentMonitorSheet from '../components/StudentMonitorSheet';
 
 /* ---------------- chart kecil (SVG, tanpa library) ---------------- */
 
@@ -128,6 +131,8 @@ function Sparkline({ data, valueKey = 'persen', labelKey = 'bulan' }) {
 
 /* ---------------- halaman ---------------- */
 
+import { todayISO } from '../lib/utils';
+
 const MODES = [
   { key: 'harian', label: 'Harian' },
   { key: 'mingguan', label: 'Mingguan' },
@@ -144,6 +149,7 @@ export default function Kepsek() {
   const [kelasList, setKelasList] = useState([]);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [monitorSiswa, setMonitorSiswa] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -179,7 +185,7 @@ export default function Kepsek() {
   const jurusan = data?.grafikJurusan || [];
   const trend = data?.trendBulanan || [];
   const semester = data?.trendSemester || [];
-  const rawan = data?.siswaCabut || [];
+  const rawan = data?.peringatanDini?.length ? data.peringatanDini : data?.siswaCabut || [];
 
   const insight = useMemo(() => {
     const list = [];
@@ -192,8 +198,10 @@ export default function Kepsek() {
         ? 'Kehadiran sekolah dalam kondisi baik.'
         : 'Kehadiran sekolah perlu perhatian.'
     );
-    const kritis = rawan.filter((s) => (s.total || 0) >= 2).length;
-    if (kritis) list.push(`${kritis} siswa masuk kategori rawan disiplin.`);
+    const kritis = rawan.filter((s) => (s.total || 0) >= 3).length;
+    const dini = rawan.filter((s) => (s.total || 0) === 2).length;
+    if (kritis) list.push(`${kritis} siswa mencapai ambang kritis (≥ 3× Alpha/Cabut).`);
+    if (dini) list.push(`${dini} siswa masuk peringatan dini (2× Alpha/Cabut).`);
     if (ranking.length) list.push(`Kelas terbaik: ${ranking[0].kelas}.`);
     return list;
   }, [jurusan, kpi.hadir, ranking, rawan]);
@@ -385,25 +393,45 @@ export default function Kepsek() {
         </Card>
 
         <Card className="overflow-hidden">
-          <CardHeader title="Siswa perlu perhatian" subtitle="Alpha / cabut terbanyak" icon={AlertTriangle} />
+          <CardHeader title="Peringatan Dini & Siswa Rawan" subtitle="Alpha / cabut terbanyak (≥ 2×)" icon={AlertTriangle} />
           <div className="mt-3 border-t border-line/70">
             {rawan.length === 0 ? (
               <EmptyState icon={AlertTriangle} title="Tidak ada siswa rawan" className="py-8" />
             ) : (
               <ul className="divide-y divide-line/70">
-                {rawan.slice(0, 8).map((s, i) => {
+                {rawan.slice(0, 12).map((s, i) => {
                   const total = s.total || 0;
-                  const level = total >= 5 ? 'KRITIS' : total >= 3 ? 'PERHATIAN' : 'PANTAU';
-                  const tone = total >= 5 ? 'danger' : total >= 3 ? 'warning' : 'info';
+                  const level = total >= 3 ? 'KRITIS' : total >= 2 ? 'PERINGATAN' : 'PANTAU';
+                  const tone = total >= 3 ? 'danger' : total >= 2 ? 'warning' : 'info';
+                  const waText = pesanPeringatanDini({
+                    nama: s.nama,
+                    kelas: s.kelas,
+                    alpha: s.alpha ?? (s.status === 'A' ? total : 0),
+                    cabut: s.cabut ?? (s.status === 'C' ? total : 0),
+                    periode: mode === 'bulanan' ? formatBulan(bulan) : `Mode ${mode}`,
+                  });
                   return (
-                    <li key={i} className="flex items-center gap-3 px-4 py-2.5">
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[13px] font-bold text-ink">{s.nama}</p>
+                    <li key={s.nisn || i} className="flex items-center gap-2.5 px-4 py-2.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setMonitorSiswa({
+                            nisn: s.nisn,
+                            nama: s.nama,
+                            kelas: s.kelas,
+                            no_hp_ortu: s.no_hp_ortu,
+                          })
+                        }
+                        className="min-w-0 flex-1 text-left"
+                      >
+                        <p className="truncate text-[13px] font-bold text-ink hover:text-brand">{s.nama}</p>
                         <p className="truncate text-[11px] font-semibold text-muted">
-                          {s.kelas} · {total}× {s.status || 'A'}
+                          {s.kelas} · {total}×{' '}
+                          {s.alpha != null ? `(A:${s.alpha}, C:${s.cabut})` : s.status || 'A'}
                         </p>
-                      </div>
+                      </button>
                       <Badge tone={tone}>{level}</Badge>
+                      <WaButton size="xs" phone={s.no_hp_ortu} message={waText} label="WA" />
                     </li>
                   );
                 })}
@@ -412,6 +440,12 @@ export default function Kepsek() {
           </div>
         </Card>
       </div>
+
+      <StudentMonitorSheet
+        open={Boolean(monitorSiswa)}
+        siswa={monitorSiswa}
+        onClose={() => setMonitorSiswa(null)}
+      />
     </div>
   );
 }

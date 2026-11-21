@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { BarChart3, FileText, Printer, RefreshCw, School } from 'lucide-react';
+import { BarChart3, Download, FileText, Printer, School } from 'lucide-react';
 import api from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { useToast } from '../lib/toast';
+import { downloadText, toCSV } from '../lib/csv';
 import {
   cn,
   formatBulan,
@@ -47,7 +48,7 @@ function KopSurat() {
     <div className="kop-surat mb-4">
       <div className="flex items-start gap-3 border-b-3 border-slate-900 pb-2">
         <img
-          src="./logo_riau.png"
+          src="./logo_riau.webp"
           alt=""
           className="size-16 object-contain sm:size-20"
         />
@@ -68,7 +69,7 @@ function KopSurat() {
           </p>
         </div>
         <img
-          src="./logo_sekolah.png"
+          src="./logo_sekolah.webp"
           alt=""
           className="size-16 object-contain sm:size-20"
         />
@@ -234,6 +235,30 @@ export default function Report() {
         });
         setResult({ mode, kelas, bulan, guru, dates, siswa: [...siswaMap.values()], rows: res.data });
       } else {
+        // Coba endpoint cepat 1-request (getRekapBulanan), fallback ke loop bila server masih v8
+        try {
+          setProgress('Memuat rekap bulanan…');
+          const fast = await api.getRekapBulanan(kelas, bulan);
+          if (fast?.success) {
+            if (!fast.dates?.length) throw new Error('Tidak ada data pada bulan ini.');
+            setResult({
+              mode: 'bulanan-fast',
+              kelas,
+              bulan,
+              dates: fast.dates,
+              datesWithAbsen: fast.datesWithAbsen || [],
+              siswa: fast.siswa || [],
+            });
+            toast.success('Rekap siap dicetak');
+            return;
+          }
+          if (!/Action tidak ditemukan/i.test(fast?.error || '')) {
+            throw new Error(fast?.error || 'Gagal memuat rekap bulanan.');
+          }
+        } catch (fastErr) {
+          if (!/Action tidak ditemukan/i.test(fastErr?.message || '')) throw fastErr;
+        }
+
         const [y, m] = bulan.split('-').map(Number);
         const days = new Date(y, m, 0).getDate();
         const dates = Array.from({ length: days }, (_, i) => `${bulan}-${String(i + 1).padStart(2, '0')}`);
@@ -265,34 +290,124 @@ export default function Report() {
 
   const print = () => window.print();
 
+  const exportCsv = () => {
+    if (!result) return;
+    const fname = `rekap-${result.mode}-${result.kelas || 'kelas'}.csv`.replace(/\s+/g, '_').toLowerCase();
+    if (result.mode === 'harian') {
+      const siswa = result.data.siswaList || [];
+      const headers = ['No', 'NISN', 'Nama Siswa', ...Array.from({ length: 11 }, (_, i) => `Jam ${i + 1}`), 'Status'];
+      const rows = siswa.map((s, i) => [
+        i + 1,
+        s.nisn || '',
+        s.nama || '',
+        ...Array.from({ length: 11 }, (_, j) => s.jam?.[j + 1] || ''),
+        statusHari(s.jam) || '',
+      ]);
+      downloadText(fname, toCSV(headers, rows));
+    } else if (result.mode === 'guru-semester') {
+      const pCols = (result.pertemuan || []).map((p) => `P${p.no} (${p.tanggal})`);
+      const headers = ['No', 'NISN', 'Nama Siswa', ...pCols, 'H', 'S', 'I', 'A', 'C'];
+      const rows = result.siswa.map((s, i) => [
+        i + 1,
+        s.nisn || '',
+        s.nama || '',
+        ...(result.pertemuan || []).map((p) => s.status?.[p.no] || ''),
+        s.totals?.H || 0,
+        s.totals?.S || 0,
+        s.totals?.I || 0,
+        s.totals?.A || 0,
+        s.totals?.C || 0,
+      ]);
+      downloadText(fname, toCSV(headers, rows));
+    } else if (result.mode === 'bulanan-fast') {
+      const headers = ['No', 'NISN', 'Nama Siswa', ...result.dates, 'H', 'S', 'I', 'A', 'C'];
+      const rows = result.siswa.map((s, i) => [
+        i + 1,
+        s.nisn || '',
+        s.nama || '',
+        ...result.dates.map((d) => s.hari?.[d] || ''),
+        s.totals?.H || 0,
+        s.totals?.S || 0,
+        s.totals?.I || 0,
+        s.totals?.A || 0,
+        s.totals?.C || 0,
+      ]);
+      downloadText(fname, toCSV(headers, rows));
+    } else {
+      const headers = ['No', 'NISN', 'Nama Siswa', ...result.dates];
+      const rows = result.siswa.map((s, i) => [
+        i + 1,
+        s.nisn || '',
+        s.nama || s.nama_siswa || '',
+        ...result.dates.map((d) => {
+          if (result.mode === 'guru') {
+            const found = result.rows.find((r) => String(r.nisn) === String(s.nisn) && r.tanggal === d);
+            return found?.status || '';
+          }
+          const day = result.collected.find((c) => c.tanggal === d);
+          const sw = day?.data?.siswaList?.find((x) => String(x.nisn) === String(s.nisn));
+          return sw ? statusHari(sw.jam) || '' : '';
+        }),
+      ]);
+      downloadText(fname, toCSV(headers, rows));
+    }
+    toast.success('File CSV diunduh');
+  };
+
   /* ---------- render tabel harian ---------- */
   const tabelHarian = () => {
     if (!result || result.mode !== 'harian') return null;
     const siswa = result.data.siswaList || [];
+    const jamInfo = result.data.jamInfo || {};
+    const hasJamInfo = Object.keys(jamInfo).length > 0;
     const totals = { H: 0, S: 0, I: 0, A: 0, C: 0 };
     siswa.forEach((s) => {
       const st = statusHari(s.jam);
       if (st) totals[st] += 1;
     });
 
+    const cellTone = (st) =>
+      st === 'A' || st === 'C' ? 'text-rose-600' : st === 'S' || st === 'I' ? 'text-amber-600' : 'text-slate-600';
+
     return (
       <table className="w-full border-collapse text-[11px]">
         <thead>
           <tr className="bg-slate-100">
-            <th className="border border-slate-300 px-1.5 py-1 text-left">No</th>
-            <th className="border border-slate-300 px-1.5 py-1 text-left">Nama siswa</th>
+            <th rowSpan={hasJamInfo ? 2 : 1} className="border border-slate-300 px-1.5 py-1 text-left">
+              No
+            </th>
+            <th rowSpan={hasJamInfo ? 2 : 1} className="border border-slate-300 px-1.5 py-1 text-left">
+              Nama siswa
+            </th>
             {Array.from({ length: 11 }, (_, i) => (
               <th key={i} className="border border-slate-300 px-1 py-1">
                 {i + 1}
               </th>
             ))}
-            <th className="border border-slate-300 px-1.5 py-1">Status</th>
+            <th rowSpan={hasJamInfo ? 2 : 1} className="border border-slate-300 px-1.5 py-1">
+              Status
+            </th>
           </tr>
+          {hasJamInfo && (
+            <tr className="bg-slate-50">
+              {Array.from({ length: 11 }, (_, i) => {
+                const info = jamInfo[i + 1];
+                return (
+                  <th
+                    key={i}
+                    title={info ? `${info.mapel || ''} (${info.guru || ''})` : ''}
+                    className="max-w-[3.5rem] truncate border border-slate-300 px-0.5 py-0.5 text-[7.5px] font-semibold text-slate-600"
+                  >
+                    {info?.mapel ? String(info.mapel).slice(0, 8) : '—'}
+                  </th>
+                );
+              })}
+            </tr>
+          )}
         </thead>
         <tbody>
           {siswa.map((s, i) => {
             const akhir = statusHari(s.jam);
-            const tone = TONE[STATUS.find((x) => x.key === akhir)?.tone || 'hadir'];
             return (
               <tr key={s.nisn || i}>
                 <td className="border border-slate-300 px-1.5 py-0.5 text-center">{i + 1}</td>
@@ -304,7 +419,7 @@ export default function Report() {
                       key={j}
                       className={cn(
                         'border border-slate-300 px-1 py-0.5 text-center font-bold',
-                        st && st !== 'H' ? tone.text : 'text-slate-500'
+                        st ? cellTone(st) : 'text-slate-400'
                       )}
                     >
                       {st ? (st === 'H' ? '✓' : st) : '·'}
@@ -332,7 +447,82 @@ export default function Report() {
 
   /* ---------- render matriks (bulanan / guru) ---------- */
   const tabelMatriks = () => {
-    if (!result || result.mode === 'harian') return null;
+    if (!result || result.mode === 'harian' || result.mode === 'guru-semester') return null;
+
+    if (result.mode === 'bulanan-fast') {
+      const absenDates = result.datesWithAbsen || [];
+      if (!absenDates.length) {
+        return (
+          <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-center text-[12px] font-bold text-emerald-800">
+            Seluruh siswa hadir pada semua hari yang tercatat ({result.dates.length} hari input).
+          </div>
+        );
+      }
+      const ringkas = ['H', 'S', 'I', 'A', 'C'];
+      return (
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-[10px]">
+            <thead>
+              <tr className="bg-slate-100">
+                <th rowSpan={2} className="border border-slate-300 px-1 py-1">No</th>
+                <th rowSpan={2} className="border border-slate-300 px-1.5 py-1 text-left">Nama siswa</th>
+                <th colSpan={absenDates.length} className="border border-slate-300 px-1 py-1">
+                  Tanggal dengan Ketidakhadiran
+                </th>
+                <th colSpan={5} className="border border-slate-300 px-1 py-1">
+                  Jumlah Hari ({result.dates.length} hari)
+                </th>
+              </tr>
+              <tr className="bg-slate-50">
+                {absenDates.map((d) => (
+                  <th key={d} className="border border-slate-300 px-0.5 py-1 text-[8.5px]">
+                    {String(d).slice(8)}/{String(d).slice(5, 7)}
+                  </th>
+                ))}
+                {ringkas.map((k) => (
+                  <th key={k} className="border border-slate-300 px-1 py-1 text-[8.5px]">
+                    {k}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {result.siswa.map((s, i) => (
+                <tr key={s.nisn || i}>
+                  <td className="border border-slate-300 px-1 py-0.5 text-center">{i + 1}</td>
+                  <td className="border border-slate-300 px-1.5 py-0.5 font-semibold">{s.nama}</td>
+                  {absenDates.map((d) => {
+                    const st = s.hari?.[d];
+                    return (
+                      <td
+                        key={d}
+                        className={cn(
+                          'border border-slate-300 px-0.5 py-0.5 text-center font-bold',
+                          st === 'A' || st === 'C' ? 'text-red-600' : st === 'S' || st === 'I' ? 'text-amber-600' : ''
+                        )}
+                      >
+                        {st ? (st === 'H' ? '✓' : st) : '·'}
+                      </td>
+                    );
+                  })}
+                  {ringkas.map((k) => (
+                    <td
+                      key={k}
+                      className={cn(
+                        'border border-slate-300 px-1 py-0.5 text-center font-bold',
+                        (k === 'A' || k === 'C') && s.totals?.[k] ? 'text-red-600' : ''
+                      )}
+                    >
+                      {s.totals?.[k] || 0}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
 
     const mapStatus = (nisn, tgl) => {
       if (result.mode === 'guru') {
@@ -720,9 +910,14 @@ export default function Report() {
                     : formatBulan(result.bulan)}
               </Badge>
             </div>
-            <Button size="sm" variant="soft" onClick={print}>
-              <Printer className="size-3.5" /> Cetak
-            </Button>
+            <div className="flex gap-1.5">
+              <Button size="sm" variant="outline" onClick={exportCsv}>
+                <Download className="size-3.5" /> CSV
+              </Button>
+              <Button size="sm" variant="soft" onClick={print}>
+                <Printer className="size-3.5" /> Cetak
+              </Button>
+            </div>
           </div>
 
           <div className="text-slate-900">
@@ -739,6 +934,11 @@ export default function Report() {
               <span>A = Alpha</span>
               <span>C = Cabut</span>
             </div>
+            {(result.mode === 'guru-semester' || result.mode === 'bulanan-fast' || result.mode === 'guru') && (
+              <p className="mt-1 text-[8.5px] font-medium text-slate-500">
+                Status harian: Hadir hanya bila seluruh jam pada hari itu hadir; bila ada Sakit/Izin/Alpha/Cabut, status itu yang ditampilkan.
+              </p>
+            )}
 
             <TandaTangan jabatan={sigLabel} nama={signatureName} nip={signatureNip} />
           </div>

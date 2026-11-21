@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
   CheckCircle2,
@@ -144,7 +144,7 @@ export default function Login({ onOpenInstall }) {
           <div className="animate-rise">
             <div className="mb-7 flex flex-col items-center text-center lg:items-start lg:text-left">
               <img
-                src="./logo_sekolah.png"
+                src="./logo_sekolah.webp"
                 alt="Logo SMKN 1 Kuantan Mudik"
                 className="mb-4 size-20 rounded-3xl bg-white p-2 shadow-[0_18px_40px_-20px_rgba(37,99,235,.65)] ring-1 ring-line"
               />
@@ -215,7 +215,14 @@ export default function Login({ onOpenInstall }) {
               </Button>
             </form>
 
-            <p className="mt-5 text-center text-[11.5px] font-medium leading-relaxed text-muted">
+            <Link
+              to="/ortu"
+              className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-line bg-surface text-[13px] font-extrabold text-brand transition hover:bg-brand-soft"
+            >
+              Portal Orang Tua / Wali
+            </Link>
+
+            <p className="mt-4 text-center text-[11.5px] font-medium leading-relaxed text-muted">
               Lupa password? Hubungi administrator sekolah.
             </p>
 

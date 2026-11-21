@@ -15,6 +15,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   Sun,
+  UserCheck,
   UserCog,
   UserRound,
   Users,
@@ -49,18 +50,23 @@ const NAV = {
     { to: '/riwayat', label: 'Riwayat', icon: 'riwayat' },
     { to: '/piket', label: 'Piket', icon: 'piket' },
     { to: '/report', label: 'Report', icon: 'report' },
+    { to: '/kasus', label: 'Kasus Pembinaan', icon: 'kasus' },
   ],
-  kepsek: [{ to: '/kepsek', label: 'Dashboard', icon: 'kepsek' }],
+  kepsek: [
+    { to: '/kepsek', label: 'Dashboard', icon: 'kepsek' },
+    { to: '/kasus', label: 'Kasus Pembinaan', icon: 'kasus' },
+  ],
   piket: [{ to: '/piket', label: 'Dashboard Piket', icon: 'piket' }],
   guru: [
     { to: '/input', label: 'Input Absensi', icon: 'input' },
     { to: '/report', label: 'Report', icon: 'report' },
-    { to: '/orangtua', label: 'Kehadiran Anak', icon: 'orangtua' },
+    { to: '/orangtua', label: 'Monitoring Siswa', icon: 'orangtua' },
   ],
   wali: [
     { to: '/input', label: 'Input Absensi', icon: 'input' },
     { to: '/report', label: 'Report', icon: 'report' },
-    { to: '/orangtua', label: 'Kehadiran Anak', icon: 'orangtua' },
+    { to: '/orangtua', label: 'Monitoring Siswa', icon: 'orangtua' },
+    { to: '/kasus', label: 'Kasus Pembinaan', icon: 'kasus' },
   ],
 };
 
@@ -73,7 +79,8 @@ const TITLES = {
   '/report': 'Rekap & Cetak',
   '/guru': 'Data Guru',
   '/siswa': 'Data Siswa',
-  '/orangtua': 'Kehadiran Anak',
+  '/kasus': 'Kasus Pembinaan',
+  '/orangtua': 'Monitoring Siswa',
   '/install': 'Pasang Aplikasi',
 };
 
@@ -87,15 +94,6 @@ export default function AppShell({ children, onOpenInstall }) {
   const [accountOpen, setAccountOpen] = useState(false);
 
   const items = NAV[role] || NAV.guru;
-  const kelasWali = user?.kelas_wali || user?.kelas || '';
-  const kasusHref =
-    role === 'admin'
-      ? 'kasus.html?role=bk'
-      : role === 'kepsek'
-        ? 'kasus.html?role=kepsek'
-        : role === 'wali'
-          ? `kasus.html?role=wali_kelas${kelasWali ? `&kelas=${encodeURIComponent(kelasWali)}` : ''}`
-          : '';
   const mobilePrimary = items.slice(0, 4);
   const hasMore = items.length > 4;
   const title = TITLES[location.pathname] || 'Presensi';
@@ -153,16 +151,6 @@ export default function AppShell({ children, onOpenInstall }) {
               </NavLink>
             );
           })}
-
-          {kasusHref && (
-            <a
-              href={kasusHref}
-              className="group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-[13.5px] font-bold text-muted transition hover:bg-sunken hover:text-ink"
-            >
-              <ShieldAlert className="size-[18px] shrink-0" />
-              Kasus Pembinaan
-            </a>
-          )}
         </nav>
 
         <div className="space-y-1 border-t border-line pt-3">
@@ -307,17 +295,6 @@ export default function AppShell({ children, onOpenInstall }) {
               </NavLink>
             );
           })}
-
-          {kasusHref && (
-            <a
-              href={kasusHref}
-              onClick={() => setMenuOpen(false)}
-              className="flex items-center gap-3 rounded-2xl px-3 py-3 text-[14px] font-bold text-ink transition hover:bg-sunken"
-            >
-              <ShieldAlert className="size-[18px]" />
-              Kasus Pembinaan
-            </a>
-          )}
 
           {!installed && (
             <button

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Activity,
   ChevronLeft,
   ChevronRight,
   Download,
-  GraduationCap,
   PencilLine,
   Plus,
   Search,
@@ -25,10 +25,11 @@ import {
   Skeleton,
 } from '../components/ui';
 import ImportSheet from '../components/ImportSheet';
+import StudentMonitorSheet from '../components/StudentMonitorSheet';
 
 const PAGE_SIZE = 50;
 
-const emptyForm = { nisn: '', nama: '', kelas: '', jk: '', originalNisn: '' };
+const emptyForm = { nisn: '', nama: '', kelas: '', jk: '', no_hp_ortu: '', originalNisn: '' };
 
 export default function Siswa() {
   const toast = useToast();
@@ -45,6 +46,7 @@ export default function Siswa() {
   const [confirm, setConfirm] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [monitorSiswa, setMonitorSiswa] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -91,7 +93,14 @@ export default function Siswa() {
 
   const openAdd = () => setForm({ ...emptyForm, kelas: kelasFilter || '' });
   const openEdit = (s) =>
-    setForm({ nisn: s.nisn, nama: s.nama, kelas: s.kelas, jk: s.jk, originalNisn: s.nisn });
+    setForm({
+      nisn: s.nisn,
+      nama: s.nama,
+      kelas: s.kelas,
+      jk: s.jk,
+      no_hp_ortu: s.no_hp_ortu || '',
+      originalNisn: s.nisn,
+    });
 
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -108,6 +117,7 @@ export default function Siswa() {
         nama: form.nama.trim(),
         kelas: form.kelas,
         jk: form.jk,
+        no_hp_ortu: (form.no_hp_ortu || '').trim(),
         originalNisn: form.originalNisn,
       });
       if (!res?.success) throw new Error(res?.error || 'Gagal menyimpan');
@@ -233,8 +243,17 @@ export default function Siswa() {
                     <p className="truncate text-[11px] font-semibold text-muted">
                       {s.nisn} · {s.kelas}
                       {s.jk ? ` · ${s.jk}` : ''}
+                      {s.no_hp_ortu ? ` · WA ${s.no_hp_ortu}` : ''}
                     </p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setMonitorSiswa(s)}
+                    aria-label={`Monitoring ${s.nama}`}
+                    className="grid size-8 place-items-center rounded-lg text-muted hover:bg-sunken hover:text-emerald-600"
+                  >
+                    <Activity className="size-4" />
+                  </button>
                   <button
                     type="button"
                     onClick={() => openEdit(s)}
@@ -264,7 +283,8 @@ export default function Siswa() {
                     <th className="px-2 py-2.5 text-[11px] font-extrabold uppercase tracking-wider text-muted">Nama siswa</th>
                     <th className="w-36 px-2 py-2.5 text-[11px] font-extrabold uppercase tracking-wider text-muted">Kelas</th>
                     <th className="w-20 px-2 py-2.5 text-[11px] font-extrabold uppercase tracking-wider text-muted">JK</th>
-                    <th className="w-24 px-4 py-2.5 text-right text-[11px] font-extrabold uppercase tracking-wider text-muted">Aksi</th>
+                    <th className="w-36 px-2 py-2.5 text-[11px] font-extrabold uppercase tracking-wider text-muted">WA Ortu</th>
+                    <th className="w-28 px-4 py-2.5 text-right text-[11px] font-extrabold uppercase tracking-wider text-muted">Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -276,15 +296,33 @@ export default function Siswa() {
                           <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-sunken text-[10px] font-extrabold text-muted">
                             {initials(s.nama)}
                           </span>
-                          <span className="truncate text-[13px] font-bold text-ink">{s.nama}</span>
+                          <button
+                            type="button"
+                            onClick={() => setMonitorSiswa(s)}
+                            className="truncate text-left text-[13px] font-bold text-ink hover:text-brand"
+                          >
+                            {s.nama}
+                          </button>
                         </div>
                       </td>
                       <td className="px-2 py-2">
                         <Badge tone="brand">{s.kelas}</Badge>
                       </td>
                       <td className="px-2 py-2 text-[12px] font-semibold text-muted">{s.jk || '—'}</td>
+                      <td className="px-2 py-2 text-[12px] font-semibold tabular-nums text-muted">
+                        {s.no_hp_ortu || '—'}
+                      </td>
                       <td className="px-4 py-2 text-right">
                         <div className="flex justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setMonitorSiswa(s)}
+                            aria-label={`Monitoring ${s.nama}`}
+                            title="Monitoring kehadiran"
+                            className="grid size-8 place-items-center rounded-lg text-muted hover:bg-sunken hover:text-emerald-600"
+                          >
+                            <Activity className="size-4" />
+                          </button>
                           <button
                             type="button"
                             onClick={() => openEdit(s)}
@@ -369,6 +407,14 @@ export default function Siswa() {
             <Field label="Nama lengkap">
               <Input value={form.nama} onChange={(e) => set('nama', e.target.value)} placeholder="Nama siswa" />
             </Field>
+            <Field label="No. WhatsApp Orang Tua (opsional)" hint="Untuk kirim notifikasi kehadiran gratis via WhatsApp (contoh: 081234567890)">
+              <Input
+                value={form.no_hp_ortu || ''}
+                onChange={(e) => set('no_hp_ortu', e.target.value)}
+                inputMode="tel"
+                placeholder="081234567890"
+              />
+            </Field>
             <div className="grid grid-cols-2 gap-2.5">
               <Field label="Kelas">
                 <Select value={form.kelas} onChange={(e) => set('kelas', e.target.value)}>
@@ -437,6 +483,11 @@ export default function Siswa() {
       </Sheet>
 
       <ImportSheet open={importOpen} kind="siswa" onClose={() => setImportOpen(false)} onDone={load} />
+      <StudentMonitorSheet
+        open={Boolean(monitorSiswa)}
+        siswa={monitorSiswa}
+        onClose={() => setMonitorSiswa(null)}
+      />
     </div>
   );
 }

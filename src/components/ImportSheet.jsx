@@ -17,23 +17,25 @@ import { cn } from '../lib/utils';
 const TEMPLATES = {
   siswa: {
     file: 'format-import-siswa.csv',
-    headers: ['nisn', 'nama_siswa', 'kelas', 'jk'],
-    display: ['nisn', 'nama', 'kelas', 'jk'],
+    headers: ['nisn', 'nama_siswa', 'kelas', 'jk', 'no_hp_ortu'],
+    display: ['nisn', 'nama', 'kelas', 'jk', 'no_hp_ortu'],
     contoh: [
-      ['0012345678', 'Aditya Pratama', 'X TKJ 1', 'L'],
-      ['0012345679', 'Bunga Lestari', 'X TKJ 1', 'P'],
+      ['0012345678', 'Aditya Pratama', 'X TKJ 1', 'L', '081234567890'],
+      ['0012345679', 'Bunga Lestari', 'X TKJ 1', 'P', '081345678901'],
     ],
     kolom: [
       { key: 'nisn', desc: 'Nomor induk siswa (wajib, unik)' },
       { key: 'nama_siswa', desc: 'Nama lengkap siswa (wajib)' },
       { key: 'kelas', desc: 'Contoh: X TKJ 1 (wajib, kelas baru otomatis dibuat)' },
       { key: 'jk', desc: 'L atau P (opsional)' },
+      { key: 'no_hp_ortu', desc: 'Nomor WhatsApp orang tua/wali (opsional, untuk tombol kirim WA gratis)' },
     ],
     map: (o) => ({
       nisn: pick(o, ['nisn']),
       nama: pick(o, ['nama_siswa', 'nama']),
       kelas: pick(o, ['kelas']),
       jk: pick(o, ['jk', 'jenis_kelamin']),
+      no_hp_ortu: pick(o, ['no_hp_ortu', 'no_wa', 'no_hp', 'whatsapp', 'hp_ortu']),
     }),
     validate: (r) => (r.nisn && r.nama && r.kelas ? '' : 'NISN, nama, dan kelas wajib diisi'),
     send: (rows, mode) => api.importSiswa({ rows, mode }),

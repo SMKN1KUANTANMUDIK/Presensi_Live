@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { RefreshCw, X } from 'lucide-react';
 
@@ -9,18 +9,36 @@ import { PWAProvider, usePWA } from './lib/pwa';
 
 import AppShell from './components/AppShell';
 import InstallSheet from './components/InstallSheet';
-
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import InputAbsensi from './pages/InputAbsensi';
-import Piket from './pages/Piket';
-import Riwayat from './pages/Riwayat';
-import Guru from './pages/Guru';
-import Siswa from './pages/Siswa';
-import Kepsek from './pages/Kepsek';
-import Report from './pages/Report';
-import OrangTua from './pages/OrangTua';
-import Install from './pages/Install';
+
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const InputAbsensi = lazy(() => import('./pages/InputAbsensi'));
+const Piket = lazy(() => import('./pages/Piket'));
+const Riwayat = lazy(() => import('./pages/Riwayat'));
+const Guru = lazy(() => import('./pages/Guru'));
+const Siswa = lazy(() => import('./pages/Siswa'));
+const Kepsek = lazy(() => import('./pages/Kepsek'));
+const Report = lazy(() => import('./pages/Report'));
+const OrangTua = lazy(() => import('./pages/OrangTua'));
+const PortalOrtu = lazy(() => import('./pages/PortalOrtu'));
+const Kasus = lazy(() => import('./pages/Kasus'));
+const Install = lazy(() => import('./pages/Install'));
+
+function PageFallback() {
+  return (
+    <div className="flex min-h-[40dvh] items-center justify-center p-6 text-[13px] font-bold text-muted">
+      Memuat halaman…
+    </div>
+  );
+}
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
 
 /* ---------------- guard ---------------- */
 function Guard({ roles, children }) {
@@ -55,7 +73,7 @@ function UpdateBar() {
       <button
         type="button"
         onClick={applyUpdate}
-        className="rounded-lg bg-brand px-2.5 py-1 text-[11.5px] font-extrabold text-white"
+        className="min-h-9 rounded-lg bg-brand px-3 py-1 text-[11.5px] font-extrabold text-white"
       >
         Muat ulang
       </button>
@@ -63,9 +81,9 @@ function UpdateBar() {
         type="button"
         onClick={() => setHidden(true)}
         aria-label="Tutup"
-        className="grid size-7 place-items-center rounded-lg text-muted hover:bg-sunken"
+        className="grid size-9 place-items-center rounded-lg text-muted hover:bg-sunken"
       >
-        <X className="size-3.5" />
+        <X className="size-4" />
       </button>
     </div>
   );
@@ -73,11 +91,7 @@ function UpdateBar() {
 
 /* ---------------- layout wrapper ---------------- */
 function Shell({ children, onOpenInstall }) {
-  return (
-    <AppShell onOpenInstall={onOpenInstall}>
-      {children}
-    </AppShell>
-  );
+  return <AppShell onOpenInstall={onOpenInstall}>{children}</AppShell>;
 }
 
 function AppRoutes() {
@@ -86,104 +100,121 @@ function AppRoutes() {
 
   return (
     <>
+      <ScrollToTop />
       <UpdateBar />
 
-      <Routes>
-        <Route path="/login" element={<Login onOpenInstall={openInstall} />} />
-        <Route path="/install" element={<Install onOpenInstall={openInstall} />} />
+      <Suspense fallback={<PageFallback />}>
+        <Routes>
+          <Route path="/login" element={<Login onOpenInstall={openInstall} />} />
+          <Route path="/ortu" element={<PortalOrtu />} />
+          <Route path="/install" element={<Install onOpenInstall={openInstall} />} />
 
-        <Route path="/" element={<Landing />} />
+          <Route path="/" element={<Landing />} />
 
-        <Route
-          path="/dashboard"
-          element={
-            <Guard roles={['admin']}>
-              <Shell onOpenInstall={openInstall}>
-                <Dashboard />
-              </Shell>
-            </Guard>
-          }
-        />
-        <Route
-          path="/input"
-          element={
-            <Guard roles={['guru', 'wali', 'admin']}>
-              <Shell onOpenInstall={openInstall}>
-                <InputAbsensi />
-              </Shell>
-            </Guard>
-          }
-        />
-        <Route
-          path="/piket"
-          element={
-            <Guard roles={['piket', 'admin']}>
-              <Shell onOpenInstall={openInstall}>
-                <Piket />
-              </Shell>
-            </Guard>
-          }
-        />
-        <Route
-          path="/guru"
-          element={
-            <Guard roles={['admin']}>
-              <Shell onOpenInstall={openInstall}>
-                <Guru />
-              </Shell>
-            </Guard>
-          }
-        />
-        <Route
-          path="/siswa"
-          element={
-            <Guard roles={['admin']}>
-              <Shell onOpenInstall={openInstall}>
-                <Siswa />
-              </Shell>
-            </Guard>
-          }
-        />
-        <Route
-          path="/riwayat"
-          element={
-            <Guard roles={['admin']}>
-              <Shell onOpenInstall={openInstall}>
-                <Riwayat />
-              </Shell>
-            </Guard>
-          }
-        />
-        <Route
-          path="/kepsek"
-          element={
-            <Guard roles={['kepsek']}>
-              <Shell onOpenInstall={openInstall}>
-                <Kepsek />
-              </Shell>
-            </Guard>
-          }
-        />
-        <Route
-          path="/report"
-          element={
-            <Guard roles={['guru', 'wali', 'admin']}>
-              <Shell onOpenInstall={openInstall}>
-                <Report />
-              </Shell>
-            </Guard>
-          }
-        />
-        <Route path="/orangtua" element={
-          <Guard roles={['guru', 'wali', 'admin']}>
-            <Shell onOpenInstall={openInstall}>
-              <OrangTua />
-            </Shell>
-          </Guard>
-        } />
+          <Route
+            path="/dashboard"
+            element={
+              <Guard roles={['admin']}>
+                <Shell onOpenInstall={openInstall}>
+                  <Dashboard />
+                </Shell>
+              </Guard>
+            }
+          />
+          <Route
+            path="/input"
+            element={
+              <Guard roles={['guru', 'wali', 'admin']}>
+                <Shell onOpenInstall={openInstall}>
+                  <InputAbsensi />
+                </Shell>
+              </Guard>
+            }
+          />
+          <Route
+            path="/piket"
+            element={
+              <Guard roles={['piket', 'admin']}>
+                <Shell onOpenInstall={openInstall}>
+                  <Piket />
+                </Shell>
+              </Guard>
+            }
+          />
+          <Route
+            path="/guru"
+            element={
+              <Guard roles={['admin']}>
+                <Shell onOpenInstall={openInstall}>
+                  <Guru />
+                </Shell>
+              </Guard>
+            }
+          />
+          <Route
+            path="/siswa"
+            element={
+              <Guard roles={['admin']}>
+                <Shell onOpenInstall={openInstall}>
+                  <Siswa />
+                </Shell>
+              </Guard>
+            }
+          />
+          <Route
+            path="/riwayat"
+            element={
+              <Guard roles={['admin']}>
+                <Shell onOpenInstall={openInstall}>
+                  <Riwayat />
+                </Shell>
+              </Guard>
+            }
+          />
+          <Route
+            path="/kepsek"
+            element={
+              <Guard roles={['kepsek']}>
+                <Shell onOpenInstall={openInstall}>
+                  <Kepsek />
+                </Shell>
+              </Guard>
+            }
+          />
+          <Route
+            path="/report"
+            element={
+              <Guard roles={['guru', 'wali', 'admin']}>
+                <Shell onOpenInstall={openInstall}>
+                  <Report />
+                </Shell>
+              </Guard>
+            }
+          />
+          <Route
+            path="/kasus"
+            element={
+              <Guard roles={['admin', 'kepsek', 'wali']}>
+                <Shell onOpenInstall={openInstall}>
+                  <Kasus />
+                </Shell>
+              </Guard>
+            }
+          />
+          <Route
+            path="/orangtua"
+            element={
+              <Guard roles={['guru', 'wali', 'admin']}>
+                <Shell onOpenInstall={openInstall}>
+                  <OrangTua />
+                </Shell>
+              </Guard>
+            }
+          />
 
-        <Route path="*" element={<Landing />} />
-      </Routes>
+          <Route path="*" element={<Landing />} />
+        </Routes>
+      </Suspense>
 
       <InstallSheet open={installOpen} onClose={() => setInstallOpen(false)} />
     </>

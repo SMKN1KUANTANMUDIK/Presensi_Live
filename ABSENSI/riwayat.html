@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="theme-color" content="#2563eb"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<title>Riwayat Absensi — Presensi</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="assets/css/main.css"/>
+</head>
+<body>
+<div class="sidebar-overlay" onclick="closeSidebar()"></div>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+      </div>
+      <div class="sidebar-brand-text"><h2>PRESENSI</h2><p>SMKN 1 Kuantan Mudik</p></div>
+    </div>
+    <nav class="sidebar-nav" id="sidebarNav"></nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-user-avatar" id="sidebarAvatar">A</div>
+        <div>
+          <div class="sidebar-user-name" id="sidebarName">Admin</div>
+          <div class="sidebar-user-role" id="sidebarRole">Administrator</div>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="logoutAll()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="topbar">
+      <button class="btn-menu-toggle" onclick="toggleSidebar()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-left">
+        <div class="topbar-title">Riwayat Absensi</div>
+        <div class="topbar-sub">Monitoring & manajemen data absensi</div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn-theme" onclick="toggleTheme()">
+          <svg class="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <svg class="theme-icon-sun" style="display:none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="page-header">
+      <div class="page-header-content">
+        <h1>Riwayat Absensi</h1>
+        <p>Monitoring, edit, dan hapus data absensi sekolah</p>
+        <div class="page-header-meta">
+          <span class="page-header-badge">📊 Realtime Monitoring</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- FILTER -->
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-title">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        Filter Riwayat
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Tanggal</label>
+          <input type="date" id="tanggal" class="form-control"/>
+        </div>
+        <div class="form-group">
+          <label>Kelas</label>
+          <select id="kelas" class="form-control"><option value="">Semua Kelas</option></select>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button id="btnCari" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Cari Riwayat
+        </button>
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="card">
+      <div class="card-title">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Data Riwayat
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>No</th><th>Tanggal</th><th>Kelas</th><th>Mapel</th>
+              <th>Guru</th><th>Jam</th><th>Foto</th><th>Detail</th><th>Edit</th><th>Hapus</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyRiwayat">
+            <tr><td colspan="10" style="padding:24px;color:var(--text-muted)">Belum ada data</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL DETAIL -->
+<div id="modalDetail" class="modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>Detail Absensi</h2>
+      <button id="btnCloseModal" class="modal-close">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="detailContent"></div>
+  </div>
+</div>
+
+<!-- MODAL EDIT -->
+<div id="modalEdit" class="modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>Edit Absensi</h2>
+      <button id="btnCloseEdit" class="modal-close">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>No</th><th>NISN</th><th>Nama</th><th>H</th><th>S</th><th>I</th><th>A</th><th>C</th></tr></thead>
+        <tbody id="tbodyEdit"></tbody>
+      </table>
+    </div>
+    <div style="margin-top:16px">
+      <button id="btnUpdateAbsensi" class="btn btn-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Simpan Perubahan
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/theme.js"></script>
+<script src="assets/js/sidebar.js"></script>
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbw_6HNjl9sS8PqlDvOwnlUCEc5ZOgBbEXjOT2KgGlMsoAWcUqOMSS6U5rrD6-CSmvs/exec";
+function toggleSidebar() { document.body.classList.toggle('sidebar-open'); }
+function closeSidebar() { document.body.classList.remove('sidebar-open'); }
+
+const elTanggal = document.getElementById("tanggal");
+const elKelas = document.getElementById("kelas");
+const btnCari = document.getElementById("btnCari");
+const tbodyRiwayat = document.getElementById("tbodyRiwayat");
+const modalDetail = document.getElementById("modalDetail");
+const detailContent = document.getElementById("detailContent");
+const modalEdit = document.getElementById("modalEdit");
+const tbodyEdit = document.getElementById("tbodyEdit");
+let EDIT_ID = "", EDIT_DETAIL = [];
+
+elTanggal.value = new Date().toISOString().split("T")[0];
+
+async function fetchGet(url) {
+  const res = await fetch(url + (url.includes("?") ? "&" : "?") + "_=" + Date.now());
+  return await res.json();
+}
+async function fetchPost(data) {
+  const res = await fetch(API_URL, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify(data) });
+  return await res.json();
+}
+
+async function loadConfig() {
+  try {
+    const result = await fetchGet(API_URL + "?action=getConfig");
+    if (!result.success) throw new Error(result.error);
+    elKelas.innerHTML = '<option value="">Semua Kelas</option>';
+    (result.kelas || []).forEach(k => { const o = document.createElement("option"); o.value = k; o.textContent = k; elKelas.appendChild(o); });
+  } catch(e) { alert(e.message); }
+}
+
+async function loadRiwayat() {
+  try {
+    tbodyRiwayat.innerHTML = '<tr><td colspan="10" style="padding:20px;color:var(--text-muted)">Loading...</td></tr>';
+    const result = await fetchGet(API_URL + "?action=getRiwayatAbsensi");
+    if (!result.success) throw new Error(result.error);
+    let data = result.data || [];
+    if (elTanggal.value) data = data.filter(d => String(d.tanggal) === String(elTanggal.value));
+    if (elKelas.value) data = data.filter(d => String(d.kelas) === String(elKelas.value));
+    renderRiwayat(data);
+  } catch(e) { tbodyRiwayat.innerHTML = `<tr><td colspan="10">${e.message}</td></tr>`; }
+}
+
+function renderRiwayat(data) {
+  if (!data.length) { tbodyRiwayat.innerHTML = '<tr><td colspan="10" style="padding:20px;color:var(--text-muted)">Tidak ada data</td></tr>'; return; }
+  let html = "", kelasAktif = "";
+  data.forEach((item, index) => {
+    if (kelasAktif !== item.kelas) {
+      kelasAktif = item.kelas;
+      html += `<tr class="kelas-divider"><td colspan="10"><div class="kelas-divider-title">📘 ${kelasAktif}</div></td></tr>`;
+    }
+    html += `<tr>
+      <td>${index+1}</td><td>${item.tanggal||"-"}</td><td>${item.kelas||"-"}</td>
+      <td>${item.mapel||"-"}</td><td>${item.guru||"-"}</td>
+      <td>Jam ${item.jam_mulai||"-"} - ${item.jam_selesai||"-"}</td>
+      <td>${item.foto ? `<a href="${item.foto}" target="_blank" class="btn btn-ghost btn-sm">📷 Lihat</a>` : "-"}</td>
+      <td><button class="btn btn-primary btn-sm" onclick='showDetail(${JSON.stringify(item.id)})'>Detail</button></td>
+      <td><button class="btn btn-outline btn-sm" onclick='openModalEdit(${JSON.stringify(item.id)})'>Edit</button></td>
+      <td><button class="btn btn-danger btn-sm" onclick='deleteAbsensi(${JSON.stringify(item.id)})'>Hapus</button></td>
+    </tr>`;
+  });
+  tbodyRiwayat.innerHTML = html;
+}
+
+function normalizeId(id) {
+  if (!id) return "";
+  id = String(id).trim();
+  if (id.includes("|")) {
+    const parts = id.split("|");
+    return btoa(JSON.stringify({ tanggal: parts[0]||"", kelas: parts[1]||"", mapel: parts[2]||"", guru: parts.slice(3).join("|")||"" }));
+  }
+  return id;
+}
+
+async function showDetail(id) {
+  modalDetail.classList.add("open");
+  detailContent.innerHTML = '<div class="info-msg loading">Loading...</div>';
+  try {
+    const result = await fetchGet(API_URL + "?action=getDetailAbsensi&id=" + encodeURIComponent(normalizeId(id)));
+    if (!result.success) throw new Error(result.error);
+    const data = result.data;
+    const groups = {};
+    (data.detail || []).forEach(item => { const j = item.jam || "-"; if (!groups[j]) groups[j] = []; groups[j].push(item); });
+    let html = `<div class="info-box"><h3>${data.mapel}</h3><p>👨‍🏫 ${data.guru}</p><p>🏫 ${data.kelas}</p></div>`;
+    Object.keys(groups).sort((a,b) => Number(a)-Number(b)).forEach(jam => {
+      html += `<h3 style="margin:16px 0 10px;color:var(--primary);font-size:15px">Jam Ke-${jam}</h3>
+        <div class="table-wrap"><table><thead><tr><th>No</th><th>NISN</th><th>Nama</th><th>Status</th></tr></thead><tbody>
+        ${groups[jam].map((s,i) => `<tr><td>${i+1}</td><td>${s.nisn}</td><td class="td-left">${s.nama_siswa}</td><td>${s.status}</td></tr>`).join("")}
+        </tbody></table></div>`;
+    });
+    detailContent.innerHTML = html;
+  } catch(e) { detailContent.innerHTML = `<div class="info-msg error">${e.message}</div>`; }
+}
+
+async function openModalEdit(id) {
+  EDIT_ID = normalizeId(id);
+  modalEdit.classList.add("open");
+  tbodyEdit.innerHTML = '<tr><td colspan="8" style="padding:20px;color:var(--text-muted)">Loading...</td></tr>';
+  try {
+    const result = await fetchGet(API_URL + "?action=getDetailAbsensi&id=" + encodeURIComponent(EDIT_ID));
+    if (!result.success) throw new Error(result.error);
+    EDIT_DETAIL = result.data.detail || [];
+    renderEditTable();
+  } catch(e) { tbodyEdit.innerHTML = `<tr><td colspan="8">${e.message}</td></tr>`; }
+}
+
+function renderEditTable() {
+  if (!EDIT_DETAIL.length) { tbodyEdit.innerHTML = '<tr><td colspan="8" style="padding:20px;color:var(--text-muted)">Tidak ada data</td></tr>'; return; }
+  const grouped = {};
+  EDIT_DETAIL.forEach(item => { const j = item.jam || item.jam_ke || "Tanpa Jam"; if (!grouped[j]) grouped[j] = []; grouped[j].push(item); });
+  let html = "";
+  Object.keys(grouped).sort((a,b) => Number(a)-Number(b)).forEach(jam => {
+    html += `<tr style="background:var(--primary-xsoft)"><td colspan="8" style="font-weight:800;color:var(--primary-dark);padding:10px 12px">Jam Ke-${jam}</td></tr>`;
+    grouped[jam].forEach((s, i) => {
+      html += `<tr class="siswa-row" data-row="${s.rowIndex}"><td>${i+1}</td><td>${s.nisn}</td><td class="td-left">${s.nama_siswa}</td>
+        ${["H","S","I","A","C"].map(st => `<td><input type="radio" name="s_${s.nisn}_${s.rowIndex}" value="${st}" ${s.status===st?"checked":""}></td>`).join("")}
+      </tr>`;
+    });
+  });
+  tbodyEdit.innerHTML = html;
+}
+
+async function updateAbsensi() {
+  try {
+    const rows = Array.from(document.querySelectorAll("#tbodyEdit tr.siswa-row"));
+    const detail = rows.map(row => {
+      const rowIndex = row.dataset.row;
+      const checked = row.querySelector("input:checked");
+      return { rowIndex: Number(rowIndex), status: checked ? checked.value : "H" };
+    }).filter(d => d.rowIndex);
+    const result = await fetchPost({ action:"updateAbsensi", data:{ detail } });
+    if (!result.success) throw new Error(result.error);
+    alert("Berhasil update absensi");
+    modalEdit.classList.remove("open");
+    loadRiwayat();
+  } catch(e) { alert(e.message); }
+}
+
+async function deleteAbsensi(id) {
+  if (!confirm("Hapus absensi ini?")) return;
+  try {
+    const result = await fetchPost({ action:"hapusAbsensi", id: normalizeId(id) });
+    if (!result.success) throw new Error(result.error);
+    alert("Berhasil dihapus");
+    loadRiwayat();
+  } catch(e) { alert(e.message); }
+}
+
+document.getElementById("btnCloseModal").addEventListener("click", () => modalDetail.classList.remove("open"));
+document.getElementById("btnCloseEdit").addEventListener("click", () => modalEdit.classList.remove("open"));
+document.getElementById("btnUpdateAbsensi").addEventListener("click", updateAbsensi);
+btnCari.addEventListener("click", loadRiwayat);
+window.addEventListener("click", e => {
+  if (e.target === modalDetail) modalDetail.classList.remove("open");
+  if (e.target === modalEdit) modalEdit.classList.remove("open");
+});
+
+window.addEventListener("load", () => { buildSidebar('riwayat.html'); loadConfig(); loadRiwayat(); });
+</script>
+</body>
+</html>

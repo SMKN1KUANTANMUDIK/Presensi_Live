@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="theme-color" content="#2563eb"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<title>Dashboard Piket — Presensi</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="assets/css/main.css"/>
+</head>
+<body>
+<div class="sidebar-overlay" onclick="closeSidebar()"></div>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+      </div>
+      <div class="sidebar-brand-text"><h2>PRESENSI</h2><p>SMKN 1 Kuantan Mudik</p></div>
+    </div>
+    <nav class="sidebar-nav" id="sidebarNav"></nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-user-avatar" id="sidebarAvatar">P</div>
+        <div>
+          <div class="sidebar-user-name" id="sidebarName">Petugas Piket</div>
+          <div class="sidebar-user-role" id="sidebarRole">Piket</div>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="logoutAll()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="topbar">
+      <button class="btn-menu-toggle" onclick="toggleSidebar()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-left">
+        <div class="topbar-title">Dashboard Piket</div>
+        <div class="topbar-sub">Monitoring absensi harian siswa</div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn-theme" onclick="toggleTheme()">
+          <svg class="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <svg class="theme-icon-sun" style="display:none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="page-header">
+      <div class="page-header-content">
+        <h1>Dashboard Piket</h1>
+        <p>Monitoring kehadiran siswa per kelas secara realtime</p>
+        <div class="page-header-meta">
+          <span class="page-header-badge" id="headerDate">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- FILTER -->
+    <div class="card" style="margin-bottom:18px">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+        <div class="form-group" style="flex:1;min-width:180px">
+          <label>Tanggal</label>
+          <input type="date" id="tanggal" class="form-control"/>
+        </div>
+        <div class="form-group" style="flex:2;min-width:200px">
+          <label>Filter Kelas</label>
+          <select id="filterKelas" class="form-control"><option value="">Semua Kelas</option></select>
+        </div>
+        <button onclick="loadDashboard()" class="btn btn-primary" style="height:48px">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.08-4.36"/></svg>
+          Refresh
+        </button>
+      </div>
+    </div>
+
+    <!-- SUMMARY -->
+    <div class="summary-bar">
+      <div class="summary-item"><span>Total Kelas</span><strong id="sumKelas">0</strong></div>
+      <div class="summary-item hadir"><span>Total Hadir</span><strong id="sumHadir">0</strong></div>
+      <div class="summary-item sakit"><span>Sakit/Izin</span><strong id="sumSI">0</strong></div>
+      <div class="summary-item alpha"><span>Alpha/Cabut</span><strong id="sumAlpha">0</strong></div>
+      <div class="summary-item belum"><span>Belum Diabsen</span><strong id="sumBelum">0</strong></div>
+    </div>
+
+    <!-- KELAS GRID -->
+    <div id="kelasContainer" class="kelas-grid"></div>
+
+    <!-- DETAIL -->
+    <div id="detailContainer"></div>
+  </main>
+</div>
+
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/theme.js"></script>
+<script src="assets/js/sidebar.js"></script>
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbw_6HNjl9sS8PqlDvOwnlUCEc5ZOgBbEXjOT2KgGlMsoAWcUqOMSS6U5rrD6-CSmvs/exec";
+let DASHBOARD_DATA = [];
+
+function toggleSidebar() { document.body.classList.toggle('sidebar-open'); }
+function closeSidebar() { document.body.classList.remove('sidebar-open'); }
+
+window.onload = async () => {
+  buildSidebar('piket.html');
+  const now = new Date();
+  document.getElementById("tanggal").value = now.toISOString().split("T")[0];
+  document.getElementById("headerDate").textContent = now.toLocaleDateString("id-ID", { weekday:"long", day:"numeric", month:"long", year:"numeric" });
+  await loadDashboard();
+};
+
+async function loadDashboard() {
+  try {
+    const tanggal = document.getElementById("tanggal").value;
+    const res = await fetch(API_URL + "?action=getDashboardPiket&tanggal=" + encodeURIComponent(tanggal) + "&kelas=SEMUA");
+    const result = await res.json();
+    if (!result.success) throw new Error(result.error);
+    DASHBOARD_DATA = result.data || [];
+    renderFilterKelas();
+    renderCards();
+  } catch(e) {
+    document.getElementById("kelasContainer").innerHTML = `<div class="card" style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted)">${e.message}</div>`;
+  }
+}
+
+function renderFilterKelas() {
+  const select = document.getElementById("filterKelas");
+  const kelasList = [...new Set(DASHBOARD_DATA.map(x => x.kelas))].sort();
+  select.innerHTML = '<option value="">Semua Kelas</option>';
+  kelasList.forEach(k => { select.innerHTML += `<option value="${k}">${k}</option>`; });
+}
+
+function renderCards() {
+  const wrap = document.getElementById("kelasContainer");
+  const selectedKelas = document.getElementById("filterKelas").value;
+  const sorted = [...DASHBOARD_DATA]
+    .sort((a,b) => ((b.statistik?.A||0)+(b.statistik?.C||0)) - ((a.statistik?.A||0)+(a.statistik?.C||0)))
+    .filter(item => !selectedKelas || item.kelas === selectedKelas);
+
+  let totalH=0, totalSI=0, totalA=0, totalBelum=0;
+  sorted.forEach(item => {
+    const s = item.statistik || {};
+    totalH += s.H||0; totalSI += (s.S||0)+(s.I||0); totalA += (s.A||0)+(s.C||0);
+    if (!item.guruList || item.guruList.length <= 0) totalBelum++;
+  });
+  document.getElementById("sumKelas").innerText = sorted.length;
+  document.getElementById("sumHadir").innerText = totalH;
+  document.getElementById("sumSI").innerText = totalSI;
+  document.getElementById("sumAlpha").innerText = totalA;
+  document.getElementById("sumBelum").innerText = totalBelum;
+
+  wrap.innerHTML = sorted.map(item => {
+    const s = item.statistik || {};
+    const guruList = Array.isArray(item.guruList) ? item.guruList : [];
+    const belumAbsen = guruList.length === 0;
+
+    // Build guru rows
+    const guruRows = guruList.map(g => {
+      const gs = g.statistik || {};
+      const totalSiswa = g.totalSiswa || (gs.H||0)+(gs.S||0)+(gs.I||0)+(gs.A||0)+(gs.C||0) || 0;
+      return `<div class="guru-row">
+        <div class="guru-row-name">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;flex-shrink:0"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span title="${g.nama || '-'}">${g.nama || '-'}</span>
+          <span class="guru-row-siswa">${totalSiswa} siswa</span>
+        </div>
+        <div class="guru-row-stats">
+          <span class="gs-h">H=${gs.H||0}</span>
+          <span class="gs-s">S=${gs.S||0}</span>
+          <span class="gs-i">I=${gs.I||0}</span>
+          <span class="gs-a">A=${gs.A||0}</span>
+          <span class="gs-c">C=${gs.C||0}</span>
+        </div>
+      </div>`;
+    }).join('');
+
+    return `
+    <div class="kelas-card status-${item.finalStatus}">
+      ${belumAbsen ? '<div class="not-yet-badge">⚠ Belum diabsen</div>' : ""}
+      <div class="kelas-header">
+        <div class="kelas-title">${item.kelas}</div>
+        <div class="kelas-badge ${item.finalStatus}">${item.finalStatus}</div>
+      </div>
+      <div class="kelas-stat-row">
+        <div class="kelas-stat-item"><span>H</span><strong>${s.H||0}</strong></div>
+        <div class="kelas-stat-item"><span>S</span><strong>${s.S||0}</strong></div>
+        <div class="kelas-stat-item"><span>I</span><strong>${s.I||0}</strong></div>
+        <div class="kelas-stat-item"><span>A</span><strong>${s.A||0}</strong></div>
+        <div class="kelas-stat-item"><span>C</span><strong>${s.C||0}</strong></div>
+      </div>
+      ${guruRows ? `<div class="guru-list-wrap">${guruRows}</div>` : ''}
+      <button class="btn btn-primary btn-full btn-sm" onclick="showDetail('${item.kelas}')">Detail Siswa</button>
+    </div>`;
+  }).join("");
+}
+
+function showDetail(kelasNama) {
+  const item = DASHBOARD_DATA.find(x => x.kelas === kelasNama);
+  if (!item) return;
+  const siswaList = item.siswaList || [];
+  let html = `<div class="card" style="margin-top:18px">
+    <div class="card-title">Detail Absensi — ${kelasNama}</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Nama Siswa</th>${Array.from({length:11},(_,i)=>`<th>${i+1}</th>`).join("")}</tr></thead>
+      <tbody>
+      ${siswaList.map(siswa => `<tr>
+        <td class="td-left td-sticky">${siswa.nama}</td>
+        ${Array.from({length:11},(_,i) => {
+          const j = i+1, st = siswa.jam?.[j] || "-";
+          const isi = st === "H" ? "✓" : st;
+          const cls = st==="H"?"badge-success":st==="A"?"badge-danger":st==="C"?"badge-purple":st==="S"?"badge-warning":st==="I"?"badge-info":"";
+          return `<td><span class="${cls?'badge '+cls:''}">${isi}</span></td>`;
+        }).join("")}
+      </tr>`).join("")}
+      </tbody>
+    </table></div>
+  </div>`;
+  const container = document.getElementById("detailContainer");
+  container.innerHTML = html;
+  window.scrollTo({ top: container.offsetTop - 20, behavior: "smooth" });
+}
+
+document.getElementById("filterKelas").addEventListener("change", renderCards);
+</script>
+</body>
+</html>

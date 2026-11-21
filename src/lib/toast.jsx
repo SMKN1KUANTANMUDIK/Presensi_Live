@@ -60,7 +60,7 @@ export function ToastProvider({ children }) {
     <ToastContext.Provider value={value}>
       {children}
 
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[120] flex flex-col items-center gap-2 px-3 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:items-end sm:px-6 lg:bottom-6">
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[120] flex flex-col items-center gap-2 px-3 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:items-end sm:px-6 lg:bottom-6 lg:pb-0">
         {items.map((t) => {
           const v = VARIANTS[t.variant] || VARIANTS.info;
           const Icon = v.icon;

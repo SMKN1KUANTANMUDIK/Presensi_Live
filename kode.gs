@@ -147,7 +147,7 @@ const APEL_HEADER = [
 
 const HEADERS = {};
 HEADERS[SHEET_GURU]    = ["nip", "nama_guru", "username", "password", "role", "mapel", "kelas_wali"];
-HEADERS[SHEET_SISWA]   = ["nisn", "nama_siswa", "kelas", "jk"];
+HEADERS[SHEET_SISWA]   = ["nisn", "nama_siswa", "kelas", "jk", "no_hp_ortu"];
 HEADERS[SHEET_KELAS]   = ["nama_kelas", "jurusan"];
 HEADERS[SHEET_MAPEL]   = ["kode", "nama"];
 HEADERS[SHEET_JAM]     = ["no_jam", "mulai", "selesai"];
@@ -529,6 +529,8 @@ const GET_ACTIONS = {
   getRiwayatAbsensi:       p => getRiwayatAbsensi(p),
   getDetailAbsensi:        p => getDetailAbsensi(p.id),
   getAbsensiGuru:          p => getAbsensiGuru(p.kelas, p.guru, p.bulan),
+  getRekapBulanan:         p => getRekapBulanan(p.kelas, p.bulan),
+  getMonitoringSiswa:      p => getMonitoringSiswa(p.nisn, p.bulan),
   getRekapGuruSemester:    p => getRekapGuruSemester(p.kelas, p.guru, p.semester, p.tahun, p.mapel, p.maks),
   getGuruData:             () => getGuruData(),
   getSiswaData:            p => getSiswaData(p.kelas),
@@ -664,10 +666,11 @@ function readSiswaMaster() {
     const nisn = str(rows[i][0]);
     if (!nisn) continue;
     out.push({
-      nisn:  nisn,
-      nama:  str(rows[i][1]),
-      kelas: str(rows[i][2]),
-      jk:    str(rows[i][3])
+      nisn:       nisn,
+      nama:       str(rows[i][1]),
+      kelas:      str(rows[i][2]),
+      jk:         str(rows[i][3]),
+      no_hp_ortu: str(rows[i][4])
     });
   }
   return out;
@@ -802,7 +805,8 @@ function getSiswa(kelas) {
         nisn:       nisn,
         nama_siswa: str(rows[i][1]),
         kelas:      kls,
-        jk:         str(rows[i][3])
+        jk:         str(rows[i][3]),
+        no_hp_ortu: str(rows[i][4])
       });
     }
     return { success: true, data: data };
@@ -2002,6 +2006,14 @@ function getDashboardPiket(tanggal, kelas) {
     const kelasList   = readKelasList();
     const targetKelas = semua ? kelasList : [filter];
 
+    const jamRows = getSheet(SHEET_JAM).getDataRange().getValues();
+    const jamTersedia = [];
+    for (let i = 1; i < jamRows.length; i++) {
+      const no = toInt(jamRows[i][0]);
+      if (no > 0) jamTersedia.push(no);
+    }
+    jamTersedia.sort((a, b) => a - b);
+
     // Kelompokkan siswa per kelas sekali jalan
     const siswaPerKelas = {};
     siswaMaster.forEach(s => {
@@ -2030,11 +2042,12 @@ function getDashboardPiket(tanggal, kelas) {
       siswaDiKelas.forEach(s => {
         const k = nisnKey(s.nisn);
         if (!k) return;
-        siswaPeta[k] = { nisn: s.nisn, nama: s.nama, jam: {} };
+        siswaPeta[k] = { nisn: s.nisn, nama: s.nama, no_hp_ortu: s.no_hp_ortu || "", jam: {} };
       });
 
       const guruSesiMap = {};
       const jamInfo = {};
+      const jamTerisiSet = {};
 
       for (let i = 0; i < absDiKelas.length; i++) {
         const r = absDiKelas[i];
@@ -2042,6 +2055,7 @@ function getDashboardPiket(tanggal, kelas) {
         const jam  = toInt(r[ABS.JAM]);
         const st   = normalizeStatus(r[ABS.STATUS]);
 
+        if (jam > 0) jamTerisiSet[jam] = true;
         if (siswaPeta[nisn]) siswaPeta[nisn].jam[jam] = st;
 
         const gr  = str(r[ABS.GURU]);
@@ -2065,6 +2079,7 @@ function getDashboardPiket(tanggal, kelas) {
             sesi.absenMap[nisn] = {
               nisn: (siswaPeta[nisn] ? siswaPeta[nisn].nisn : str(r[ABS.NISN])) || "",
               nama: namaSiswa,
+              no_hp_ortu: siswaPeta[nisn] ? (siswaPeta[nisn].no_hp_ortu || "") : "",
               status: st,
               jam: jam
             };
@@ -2075,23 +2090,51 @@ function getDashboardPiket(tanggal, kelas) {
         if (jam && !jamInfo[jam]) jamInfo[jam] = { mapel: mpl, guru: gr };
       }
 
-      // Statistik kelas (prioritas C > A > S > I > H)
+      // Statistik kelas (prioritas C > A > S > I > H) + deteksi cabut antar-jam
       const stat = { H: 0, S: 0, I: 0, A: 0, C: 0 };
       const siswaList = [];
+      const cabutAntarJam = [];
       let terabsen = 0;
 
       siswaDiKelas.forEach(s => {
-        const item = siswaPeta[nisnKey(s.nisn)] || { nisn: s.nisn, nama: s.nama, jam: {} };
+        const item = siswaPeta[nisnKey(s.nisn)] || { nisn: s.nisn, nama: s.nama, no_hp_ortu: s.no_hp_ortu || "", jam: {} };
         siswaList.push(item);
-        const values = Object.keys(item.jam).map(k => item.jam[k]);
+        const jamKeys = Object.keys(item.jam).map(Number).filter(n => n > 0).sort((a, b) => a - b);
+        const values = jamKeys.map(k => item.jam[k]);
         if (!values.length) return; // belum diabsen
         terabsen++;
+
+        let firstH = 0;
+        const jamBolos = [];
+        let bolosStatus = "";
+        jamKeys.forEach(j => {
+          const st = item.jam[j];
+          if (st === "H" && !firstH) firstH = j;
+          if (firstH && j > firstH && (st === "A" || st === "C")) {
+            jamBolos.push(j);
+            if (!bolosStatus || PRIOR[st] > PRIOR[bolosStatus]) bolosStatus = st;
+          }
+        });
+        if (firstH && jamBolos.length) {
+          cabutAntarJam.push({
+            nisn: item.nisn,
+            nama: item.nama,
+            kelas: kls,
+            no_hp_ortu: item.no_hp_ortu || "",
+            jamHadir: firstH,
+            jamBolos: jamBolos,
+            status: bolosStatus
+          });
+        }
+
         if (values.indexOf("C") >= 0) { stat.C++; return; }
         if (values.indexOf("A") >= 0) { stat.A++; return; }
         if (values.indexOf("S") >= 0) { stat.S++; return; }
         if (values.indexOf("I") >= 0) { stat.I++; return; }
         stat.H++;
       });
+
+      const jamTerisiKelas = Object.keys(jamTerisiSet).map(Number).filter(n => n > 0).sort((a, b) => a - b);
 
       const guruList = Object.keys(guruSesiMap).map(k => {
         const g = guruSesiMap[k];
@@ -2122,18 +2165,20 @@ function getDashboardPiket(tanggal, kelas) {
         : pelanggaran > 3 ? "warning" : "hadir";
 
       return {
-        kelas:       kls,
-        statistik:   stat,
-        finalStatus: finalStatus,
-        siswaList:   siswaList,
-        guruList:    guruList,
-        jamInfo:     jamInfo,
-        totalSiswa:  siswaDiKelas.length,
-        terabsen:    terabsen
+        kelas:         kls,
+        statistik:     stat,
+        finalStatus:   finalStatus,
+        siswaList:     siswaList,
+        guruList:      guruList,
+        jamInfo:       jamInfo,
+        jamTerisi:     jamTerisiKelas,
+        cabutAntarJam: cabutAntarJam,
+        totalSiswa:    siswaDiKelas.length,
+        terabsen:      terabsen
       };
     });
 
-    return { success: true, tanggal: tgl, data: result };
+    return { success: true, tanggal: tgl, jamTersedia: jamTersedia, data: result };
 
   } catch (err) {
     return fail(err);
@@ -2158,6 +2203,7 @@ function getDashboardAdmin() {
 
     // Status akhir per siswa hari ini
     const siswaHari = {};
+    const kelasTerisiHari = {};
     let urutan = 0;
 
     streamAbsensiRows(hariIni, hariIni, values => {
@@ -2165,6 +2211,9 @@ function getDashboardAdmin() {
         const r = values[i];
         if (dateKey(r[ABS.TGL]) !== hariIni) continue;
         urutan++;
+
+        const kls = str(r[ABS.KELAS]);
+        if (kls) kelasTerisiHari[kls] = true;
 
         const nisn = str(r[ABS.NISN]);
         if (!nisn) continue;
@@ -2175,7 +2224,7 @@ function getDashboardAdmin() {
         if (!rec) {
           siswaHari[nisn] = {
             siswa:   str(r[ABS.NAMA]),
-            kelas:   str(r[ABS.KELAS]),
+            kelas:   kls,
             tanggal: hariIni,
             status:  st,
             urutan:  urutan
@@ -2186,6 +2235,14 @@ function getDashboardAdmin() {
         }
       }
     });
+
+    const kelasList = readKelasList();
+    const kelasBelumInput = kelasList.filter(k => !kelasTerisiHari[k]);
+    let totalApelHariIni = 0;
+    try {
+      const apel = getApelPagi(hariIni, "SEMUA");
+      if (apel && apel.success) totalApelHariIni = apel.total || 0;
+    } catch (e) { /* abaikan */ }
 
     const stat = { H: 0, S: 0, I: 0, A: 0, C: 0 };
     const aktivitasAll = [];
@@ -2223,14 +2280,17 @@ function getDashboardAdmin() {
       data: {
         totalSiswa:  totalSiswa,
         totalGuru:   totalGuru,
-        hadirPersen: hadirPersen,
-        pelanggaran: stat.A + stat.C,
-        hadir:       stat.H,
-        sakit:       stat.S,
-        izin:        stat.I,
-        alpha:       stat.A,
-        cabut:       stat.C,
-        aktivitas:   aktivitas
+        hadirPersen:      hadirPersen,
+        pelanggaran:      stat.A + stat.C,
+        hadir:            stat.H,
+        sakit:            stat.S,
+        izin:             stat.I,
+        alpha:            stat.A,
+        cabut:            stat.C,
+        totalKelas:       kelasList.length,
+        kelasBelumInput:  kelasBelumInput,
+        totalApelHariIni: totalApelHariIni,
+        aktivitas:        aktivitas
       }
     };
 
@@ -2337,6 +2397,12 @@ function getDashboardKepsek(mode, tanggal, bulan, filterKelas, filterJurusan) {
 
     const filtered = Object.keys(siswaHariMap).map(k => siswaHariMap[k]);
 
+    const hpMap = {};
+    readSiswaMasterCached().forEach(s => {
+      const k = nisnKey(s.nisn);
+      if (k && s.no_hp_ortu) hpMap[k] = s.no_hp_ortu;
+    });
+
     const stat = { H: 0, S: 0, I: 0, A: 0, C: 0 };
     const kelasStat = {};
     const jurusanMap = {};
@@ -2359,13 +2425,23 @@ function getDashboardKepsek(mode, tanggal, bulan, filterKelas, filterJurusan) {
       jurusanMap[jur].total++;
 
       if (st === "A" || st === "C") {
-        if (!siswaCabutMap[row.nisn]) {
-          siswaCabutMap[row.nisn] = {
-            nisn: row.nisn, nama: row.nama, kelas: kls, status: st, total: 0
+        const nk = nisnKey(row.nisn) || row.nisn;
+        if (!siswaCabutMap[nk]) {
+          siswaCabutMap[nk] = {
+            nisn: row.nisn,
+            nama: row.nama,
+            kelas: kls,
+            status: st,
+            alpha: 0,
+            cabut: 0,
+            total: 0,
+            no_hp_ortu: hpMap[nk] || ""
           };
         }
-        const s = siswaCabutMap[row.nisn];
+        const s = siswaCabutMap[nk];
         s.total++;
+        if (st === "A") s.alpha++;
+        if (st === "C") s.cabut++;
         if (PRIOR[st] > PRIOR[s.status]) s.status = st;
       }
     }
@@ -2391,7 +2467,25 @@ function getDashboardKepsek(mode, tanggal, bulan, filterKelas, filterJurusan) {
     const siswaCabut = Object.keys(siswaCabutMap)
       .map(k => siswaCabutMap[k])
       .sort((a, b) => b.total - a.total)
-      .slice(0, 10);
+      .slice(0, 15);
+
+    const peringatanDini = Object.keys(siswaCabutMap)
+      .map(k => {
+        const s = siswaCabutMap[k];
+        return {
+          nisn: s.nisn,
+          nama: s.nama,
+          kelas: s.kelas,
+          alpha: s.alpha,
+          cabut: s.cabut,
+          total: s.total,
+          level: s.total >= 3 ? "KRITIS" : "PERINGATAN",
+          no_hp_ortu: s.no_hp_ortu || ""
+        };
+      })
+      .filter(s => s.total >= 2)
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 20);
 
     // ── Trend bulanan & semester (satu kali loop) ──
     const trendMap = {};
@@ -2445,11 +2539,12 @@ function getDashboardKepsek(mode, tanggal, bulan, filterKelas, filterJurusan) {
         sakit: stat.S,
         izin: stat.I
       },
-      rankingKelas:  rankingKelas,
-      grafikJurusan: grafikJurusan,
-      siswaCabut:    siswaCabut,
-      trendBulanan:  trendBulanan,
-      trendSemester: trendSemester
+      rankingKelas:   rankingKelas,
+      grafikJurusan:  grafikJurusan,
+      siswaCabut:     siswaCabut,
+      peringatanDini: peringatanDini,
+      trendBulanan:   trendBulanan,
+      trendSemester:  trendSemester
     };
 
   } catch (err) {
@@ -2495,6 +2590,11 @@ function getKasusPembinaan(filterStatus, filterKelas, role, kelasWali, filterLev
     }
 
     const all = sh.getDataRange().getValues();
+    const hpMap = {};
+    readSiswaMasterCached().forEach(s => {
+      const k = nisnKey(s.nisn);
+      if (k && s.no_hp_ortu) hpMap[k] = s.no_hp_ortu;
+    });
 
     const rows = [];
     for (let i = 1; i < all.length; i++) {
@@ -2511,12 +2611,14 @@ function getKasusPembinaan(filterStatus, filterKelas, role, kelasWali, filterLev
       if (levelFilter && level !== levelFilter) continue;
       if (roleNorm === "wali_kelas" && kelas !== kelasWaliStr) continue;
 
+      const nisnVal = str(r[2]);
       rows.push({
         id:               id,
         tanggal:          dateKey(r[1]) || str(r[1]),
-        nisn:             str(r[2]),
+        nisn:             nisnVal,
         nama_siswa:       str(r[3]),
         kelas:            kelas,
+        no_hp_ortu:       hpMap[nisnKey(nisnVal)] || "",
         jenis:            str(r[5]),
         keterangan:       str(r[6]),
         status:           status,
@@ -3210,11 +3312,12 @@ function getSiswaData(kelas) {
       const kls = str(r[2]);
       if (filter && kls !== filter) continue;
       data.push({
-        rowIndex: i + 1,
-        nisn:     nisn,
-        nama:     str(r[1]),
-        kelas:    kls,
-        jk:       str(r[3])
+        rowIndex:   i + 1,
+        nisn:       nisn,
+        nama:       str(r[1]),
+        kelas:      kls,
+        jk:         str(r[3]),
+        no_hp_ortu: str(r[4])
       });
     }
 
@@ -3235,6 +3338,7 @@ function simpanSiswa(data) {
     const nama         = str(d.nama || d.nama_siswa);
     const kelas        = str(d.kelas);
     const jk           = str(d.jk).toUpperCase();
+    const noHpOrtu     = str(d.no_hp_ortu || d.no_hp || d.no_wa);
     const originalNisn = str(d.originalNisn);
 
     if (!nisn)  return { success: false, error: "NISN wajib diisi" };
@@ -3266,13 +3370,14 @@ function simpanSiswa(data) {
       }
     }
 
-    const row = [nisn, nama, kelas, jk];
+    const row = [nisn, nama, kelas, jk, noHpOrtu];
 
     if (isUpdate) {
       sh.getRange(targetRow + 1, 1, 1, 1).setNumberFormat("@");
+      sh.getRange(targetRow + 1, 5, 1, 1).setNumberFormat("@");
       sh.getRange(targetRow + 1, 1, 1, row.length).setValues([row]);
     } else {
-      appendRows(sh, [row], HEADERS[SHEET_SISWA], [0]);
+      appendRows(sh, [row], HEADERS[SHEET_SISWA], [0, 4]);
     }
 
     tambahKelasBaru([kelas]);
@@ -3363,7 +3468,8 @@ function importSiswa(data) {
           nisn: nisn,
           nama: str(existing[i][1]),
           kelas: str(existing[i][2]),
-          jk: str(existing[i][3])
+          jk: str(existing[i][3]),
+          no_hp_ortu: str(existing[i][4])
         };
       }
     }
@@ -3378,6 +3484,7 @@ function importSiswa(data) {
       const nama  = str(r.nama || r.nama_siswa);
       const kelas = str(r.kelas);
       const jk    = str(r.jk).toUpperCase();
+      const noHp  = str(r.no_hp_ortu || r.no_hp || r.no_wa);
 
       if (!nisn || !nama || !kelas) {
         skipped++;
@@ -3392,27 +3499,36 @@ function importSiswa(data) {
         continue;
       }
 
-      if (map[nisn]) {
+      const lama = map[nisn];
+      if (lama) {
         // Jangan hitung dobel bila NISN sama muncul 2x di file.
-        if (!map[nisn]._dariFile) updated++;
+        if (!lama._dariFile) updated++;
       } else {
         added++;
       }
 
-      map[nisn] = { nisn: nisn, nama: nama, kelas: kelas, jk: jk, _dariFile: true };
+      map[nisn] = {
+        nisn: nisn,
+        nama: nama,
+        kelas: kelas,
+        jk: jk,
+        no_hp_ortu: noHp || (lama ? lama.no_hp_ortu : ""),
+        _dariFile: true
+      };
       kelasBaru[kelas] = true;
     }
 
     const finalRows = Object.keys(map).map(k => {
       const s = map[k];
-      return [s.nisn, s.nama, s.kelas, s.jk];
+      return [s.nisn, s.nama, s.kelas, s.jk, s.no_hp_ortu || ""];
     });
 
     const lastRow = sh.getLastRow();
-    if (lastRow > 1) sh.getRange(2, 1, lastRow - 1, 4).clearContent();
+    if (lastRow > 1) sh.getRange(2, 1, lastRow - 1, Math.max(sh.getLastColumn(), 5)).clearContent();
     if (finalRows.length) {
       sh.getRange(2, 1, finalRows.length, 1).setNumberFormat("@");
-      sh.getRange(2, 1, finalRows.length, 4).setValues(finalRows);
+      sh.getRange(2, 5, finalRows.length, 1).setNumberFormat("@");
+      sh.getRange(2, 1, finalRows.length, 5).setValues(finalRows);
     }
 
     const newKelas = tambahKelasBaru(Object.keys(kelasBaru));
@@ -3436,13 +3552,257 @@ function importSiswa(data) {
 }
 
 // ============================================================
+//  REKAP BULANAN CEPAT (1 request untuk 1 bulan penuh)
+// ============================================================
+
+function getRekapBulanan(kelas, bulan) {
+  try {
+    const filterKelas = str(kelas);
+    if (!filterKelas) return { success: false, error: "Kelas wajib diisi" };
+
+    const ym = monthKey(bulan) || dateKey(new Date()).slice(0, 7);
+    const start = ym + "-01";
+    const end = monthEndKey(ym);
+
+    const master = readSiswaMasterCached();
+    const siswaMap = {};
+    master.forEach(s => {
+      if (s.kelas !== filterKelas) return;
+      const k = nisnKey(s.nisn);
+      if (!k) return;
+      siswaMap[k] = {
+        nisn: s.nisn,
+        nama: s.nama,
+        jk: s.jk || "",
+        no_hp_ortu: s.no_hp_ortu || "",
+        hari: {},
+        totals: { H: 0, S: 0, I: 0, A: 0, C: 0 }
+      };
+    });
+
+    const dateSet = {};
+    const absenDateSet = {};
+
+    streamAbsensiRows(start, end, values => {
+      for (let i = 0; i < values.length; i++) {
+        const r = values[i];
+        const tgl = dateKey(r[ABS.TGL]);
+        if (!tgl || tgl < start || tgl > end) continue;
+        if (str(r[ABS.KELAS]) !== filterKelas) continue;
+
+        const nisnRaw = str(r[ABS.NISN]);
+        const nk = nisnKey(nisnRaw);
+        if (!nk) continue;
+
+        dateSet[tgl] = true;
+        const st = normalizeStatus(r[ABS.STATUS]);
+        if (st !== "H") absenDateSet[tgl] = true;
+
+        if (!siswaMap[nk]) {
+          siswaMap[nk] = {
+            nisn: nisnRaw,
+            nama: str(r[ABS.NAMA]) || "Siswa",
+            jk: "",
+            no_hp_ortu: "",
+            hari: {},
+            totals: { H: 0, S: 0, I: 0, A: 0, C: 0 }
+          };
+        }
+        const prev = siswaMap[nk].hari[tgl];
+        if (!prev || PRIOR[st] > PRIOR[prev]) siswaMap[nk].hari[tgl] = st;
+      }
+    });
+
+    const dates = Object.keys(dateSet).sort();
+    const datesWithAbsen = Object.keys(absenDateSet).sort();
+
+    const siswa = Object.keys(siswaMap).map(k => {
+      const s = siswaMap[k];
+      const totals = { H: 0, S: 0, I: 0, A: 0, C: 0 };
+      dates.forEach(d => {
+        const st = s.hari[d];
+        if (st && totals[st] !== undefined) totals[st]++;
+      });
+      s.totals = totals;
+      return s;
+    }).sort((a, b) => String(a.nama).localeCompare(String(b.nama)));
+
+    return {
+      success: true,
+      kelas: filterKelas,
+      bulan: ym,
+      dates: dates,
+      datesWithAbsen: datesWithAbsen,
+      siswa: siswa
+    };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+// ============================================================
+//  MONITORING DETAIL PER SISWA (bulanan + semester + apel + kasus)
+// ============================================================
+
+function getMonitoringSiswa(nisn, bulan) {
+  try {
+    const rawNisn = str(nisn);
+    const targetKey = nisnKey(rawNisn);
+    if (!targetKey) return { success: false, error: "NISN wajib diisi" };
+
+    const ym = monthKey(bulan) || dateKey(new Date()).slice(0, 7);
+    const bStart = ym + "-01";
+    const bEnd = monthEndKey(ym);
+
+    const refDate = parseDateKey(bStart) || new Date();
+    const semInfo = semesterRange("", "", refDate);
+    const scanStart = semInfo.start < bStart ? semInfo.start : bStart;
+    const scanEnd = semInfo.end > bEnd ? semInfo.end : bEnd;
+
+    let profil = null;
+    const master = readSiswaMasterCached();
+    for (let i = 0; i < master.length; i++) {
+      if (nisnKey(master[i].nisn) === targetKey) {
+        profil = master[i];
+        break;
+      }
+    }
+
+    const hariBulan = {};
+    const hariSemester = {};
+
+    streamAbsensiRows(scanStart, scanEnd, values => {
+      for (let i = 0; i < values.length; i++) {
+        const r = values[i];
+        const tgl = dateKey(r[ABS.TGL]);
+        if (!tgl || tgl < scanStart || tgl > scanEnd) continue;
+        if (nisnKey(str(r[ABS.NISN])) !== targetKey) continue;
+
+        if (!profil) {
+          profil = {
+            nisn: str(r[ABS.NISN]),
+            nama: str(r[ABS.NAMA]),
+            kelas: str(r[ABS.KELAS]),
+            jk: "",
+            no_hp_ortu: ""
+          };
+        }
+
+        const st = normalizeStatus(r[ABS.STATUS]);
+        const jam = toInt(r[ABS.JAM]);
+        const mapel = str(r[ABS.MAPEL]);
+        const guru = str(r[ABS.GURU]);
+
+        if (tgl >= semInfo.start && tgl <= semInfo.end) {
+          if (!hariSemester[tgl] || PRIOR[st] > PRIOR[hariSemester[tgl]]) {
+            hariSemester[tgl] = st;
+          }
+        }
+
+        if (tgl >= bStart && tgl <= bEnd) {
+          if (!hariBulan[tgl]) {
+            hariBulan[tgl] = { tanggal: tgl, status: st, jam: {}, detail: [] };
+          }
+          if (PRIOR[st] > PRIOR[hariBulan[tgl].status]) hariBulan[tgl].status = st;
+          if (jam > 0) hariBulan[tgl].jam[jam] = st;
+          hariBulan[tgl].detail.push({ jam: jam, mapel: mapel, guru: guru, status: st });
+        }
+      }
+    });
+
+    if (!profil) {
+      return { success: false, error: "Data siswa tidak ditemukan" };
+    }
+
+    const statBulan = { H: 0, S: 0, I: 0, A: 0, C: 0 };
+    const riwayatBulan = Object.keys(hariBulan).sort((a, b) => b.localeCompare(a)).map(tgl => {
+      const h = hariBulan[tgl];
+      if (statBulan[h.status] !== undefined) statBulan[h.status]++;
+      h.detail.sort((a, b) => a.jam - b.jam);
+      return h;
+    });
+
+    const statSemester = { H: 0, S: 0, I: 0, A: 0, C: 0 };
+    Object.keys(hariSemester).forEach(tgl => {
+      const st = hariSemester[tgl];
+      if (statSemester[st] !== undefined) statSemester[st]++;
+    });
+
+    // Apel pagi bulan ini + semester
+    const apelBulan = [];
+    let totalApelSemester = 0;
+    try {
+      const shApel = ensureApelSheet();
+      const lastApel = shApel.getLastRow();
+      if (lastApel >= 2) {
+        const vals = shApel.getRange(2, 1, lastApel - 1, APEL_COLS).getValues();
+        for (let i = 0; i < vals.length; i++) {
+          const r = vals[i];
+          if (nisnKey(str(r[APEL.NISN])) !== targetKey) continue;
+          const tgl = dateKey(r[APEL.TGL]);
+          if (!tgl) continue;
+          if (tgl >= semInfo.start && tgl <= semInfo.end) totalApelSemester++;
+          if (tgl >= bStart && tgl <= bEnd) {
+            apelBulan.push({
+              id: str(r[APEL.ID]),
+              tanggal: tgl,
+              jam_datang: str(r[APEL.JAM]),
+              keterangan: str(r[APEL.KET]),
+              petugas: str(r[APEL.PETUGAS])
+            });
+          }
+        }
+      }
+      apelBulan.sort((a, b) => b.tanggal.localeCompare(a.tanggal));
+    } catch (e) { /* abaikan */ }
+
+    // Kasus pembinaan
+    const kasus = [];
+    try {
+      const shKasus = ensureKasusSheet();
+      const allKasus = shKasus.getDataRange().getValues();
+      for (let i = 1; i < allKasus.length; i++) {
+        const r = allKasus[i];
+        if (!str(r[0])) continue;
+        if (nisnKey(str(r[2])) !== targetKey) continue;
+        kasus.push({
+          id: str(r[0]),
+          tanggal: dateKey(r[1]) || str(r[1]),
+          jenis: str(r[5]),
+          keterangan: str(r[6]),
+          status: str(r[7]) || "Open",
+          level: normalizeKasusLevel(r[11]) || "wali_kelas"
+        });
+      }
+      kasus.sort((a, b) => b.tanggal.localeCompare(a.tanggal));
+    } catch (e) { /* abaikan */ }
+
+    return {
+      success: true,
+      bulan: ym,
+      semesterLabel: semInfo.label,
+      tahunAjaran: semInfo.tahunAjaran,
+      siswa: profil,
+      statBulan: statBulan,
+      statSemester: statSemester,
+      riwayatBulan: riwayatBulan,
+      apelBulan: apelBulan,
+      totalApelSemester: totalApelSemester,
+      kasus: kasus
+    };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+// ============================================================
 //  VERSI & UTILITAS PEMELIHARAAN
 // ============================================================
 
 function getVersion() {
   return {
     success: true,
-    version: "v8",
+    version: "v9",
     perSiswaPerHari: true,
     fitur: [
       "baca-absensi-per-tanggal",
@@ -3458,7 +3818,12 @@ function getVersion() {
       "jam-info-harian",
       "nisn-normalisasi",
       "absensi-per-jam",
-      "rekap-harian-konsisten"
+      "rekap-harian-konsisten",
+      "rekap-bulanan-cepat",
+      "monitoring-siswa",
+      "no-hp-ortu",
+      "ews-dini",
+      "cabut-antar-jam"
     ]
   };
 }
