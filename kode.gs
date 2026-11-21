@@ -247,6 +247,8 @@ function fail(err, extra) {
  * Normalisasi berbagai bentuk tanggal menjadi "yyyy-MM-dd".
  * Mengembalikan "" bila tidak valid (tidak pernah melempar error).
  */
+const DAYS_IN_MONTH = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
 function dateKey(value) {
   if (value === null || value === undefined || value === "") return "";
 
@@ -257,6 +259,12 @@ function dateKey(value) {
 
   const s = String(value).trim();
   if (!s) return "";
+
+  // Fast path untuk format ISO "YYYY-MM-DD" (hindari regex & Date per baris)
+  if (s.length === 10 && s.charCodeAt(4) === 45 && s.charCodeAt(7) === 45) {
+    const fast = validDateKey(s.slice(0, 4), s.slice(5, 7), s.slice(8, 10));
+    if (fast) return fast;
+  }
 
   let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
   if (m) return validDateKey(m[1], m[2], m[3]);
@@ -284,10 +292,10 @@ function validDateKey(year, month, day) {
   const y = toInt(year);
   const mo = toInt(month);
   const d = toInt(day);
-  if (y < 1970 || y > 2999) return "";
-  if (mo < 1 || mo > 12) return "";
-  const daysInMonth = new Date(y, mo, 0).getDate();
-  if (d < 1 || d > daysInMonth) return "";
+  if (y < 1970 || y > 2999 || mo < 1 || mo > 12 || d < 1) return "";
+  let maxDay = DAYS_IN_MONTH[mo];
+  if (mo === 2 && ((y % 4 === 0 && y % 100 !== 0) || y % 400 === 0)) maxDay = 29;
+  if (d > maxDay) return "";
   return y + "-" + pad2(mo) + "-" + pad2(d);
 }
 
@@ -464,7 +472,25 @@ function cacheVersion() {
 /** Dipanggil setiap data master berubah (guru/siswa/kelas). */
 function bumpCache() {
   try {
-    CacheService.getScriptCache().put("dataVer", String(Date.now()), CACHE_TTL);
+    const cache = CacheService.getScriptCache();
+    const stamp = String(Date.now());
+    cache.put("dataVer", stamp, CACHE_TTL);
+    cache.put("absVer", stamp, CACHE_TTL);
+  } catch (e) { /* abaikan */ }
+}
+
+function absCacheVersion() {
+  try {
+    return CacheService.getScriptCache().get("absVer") || "0";
+  } catch (e) {
+    return "0";
+  }
+}
+
+/** Dipanggil setiap data absensi berubah (simpan/update/hapus). */
+function bumpAbsensiCache() {
+  try {
+    CacheService.getScriptCache().put("absVer", String(Date.now()), CACHE_TTL);
   } catch (e) { /* abaikan */ }
 }
 
@@ -827,6 +853,33 @@ function getSiswa(kelas) {
  * Membaca kolom tanggal dulu (1 kolom) untuk menentukan blok baris,
  * jadi tidak perlu memuat seluruh sheet ke memori.
  */
+/**
+ * Indeks rentang baris per bulan ("YYYY-MM": [firstRow, lastRow]) yang di-cache
+ * selama absVer belum berubah. Menghindari pemindaian puluhan ribu baris tanggal
+ * berulang kali saat menarik rekap bulanan/harian.
+ */
+function readAbsensiMonthIndex(sh, last) {
+  const key = "absIdx:" + absCacheVersion() + ":" + last;
+  const cached = cacheGetJson(key);
+  if (cached) return cached;
+
+  const dates = sh.getRange(2, ABS.TGL + 1, last - 1, 1).getValues();
+  const idx = {};
+  for (let i = 0; i < dates.length; i++) {
+    const k = dateKey(dates[i][0]);
+    if (!k) continue;
+    const ym = k.slice(0, 7);
+    const rowNum = i + 2;
+    if (!idx[ym]) idx[ym] = [rowNum, rowNum];
+    else {
+      if (rowNum < idx[ym][0]) idx[ym][0] = rowNum;
+      if (rowNum > idx[ym][1]) idx[ym][1] = rowNum;
+    }
+  }
+  cachePutJson(key, idx, CACHE_TTL);
+  return idx;
+}
+
 function streamAbsensiRows(startKey, endKey, onChunk) {
   const sh = getSheet(SHEET_ABSENSI);
   const last = sh.getLastRow();
@@ -843,8 +896,31 @@ function streamAbsensiRows(startKey, endKey, onChunk) {
 
   const min = lo || "0000-00-00";
   const max = hi || "9999-99-99";
-  const dates = sh.getRange(2, ABS.TGL + 1, last - 1, 1).getValues();
+  const minYm = min.slice(0, 7);
+  const maxYm = max.slice(0, 7);
 
+  // Gunakan indeks bulan ter-cache untuk menyempitkan rentang baris yang dibaca.
+  const idx = readAbsensiMonthIndex(sh, last);
+  let scanFirst = last + 1;
+  let scanLast = 0;
+  Object.keys(idx).forEach(ym => {
+    if (ym >= minYm && ym <= maxYm) {
+      if (idx[ym][0] < scanFirst) scanFirst = idx[ym][0];
+      if (idx[ym][1] > scanLast) scanLast = idx[ym][1];
+    }
+  });
+
+  if (scanLast < scanFirst) return;
+
+  const totalSpan = scanLast - scanFirst + 1;
+  // Jika rentang bulan sudah kecil (<= 1 chunk), baca sekaligus dalam 1 RPC call.
+  if (totalSpan <= CHUNK_ROWS) {
+    readAbsChunks(sh, scanFirst, totalSpan, onChunk);
+    return;
+  }
+
+  const dates = sh.getRange(scanFirst, ABS.TGL + 1, totalSpan, 1).getValues();
+  const runs = [];
   let runStart = -1;
   for (let i = 0; i <= dates.length; i++) {
     let inside = false;
@@ -855,9 +931,25 @@ function streamAbsensiRows(startKey, endKey, onChunk) {
     if (inside) {
       if (runStart < 0) runStart = i;
     } else if (runStart >= 0) {
-      readAbsChunks(sh, runStart + 2, i - runStart, onChunk);
+      runs.push([scanFirst + runStart, i - runStart]);
       runStart = -1;
     }
+  }
+
+  // Gabungkan run berdekatan (celah <= 100 baris) agar hemat panggilan getRange().
+  const merged = [];
+  for (let i = 0; i < runs.length; i++) {
+    const cur = runs[i];
+    const prev = merged[merged.length - 1];
+    if (prev && cur[0] - (prev[0] + prev[1]) <= 100) {
+      prev[1] = (cur[0] + cur[1]) - prev[0];
+    } else {
+      merged.push([cur[0], cur[1]]);
+    }
+  }
+
+  for (let i = 0; i < merged.length; i++) {
+    readAbsChunks(sh, merged[i][0], merged[i][1], onChunk);
   }
 }
 
@@ -1030,6 +1122,7 @@ function simpanAbsensi(data) {
 
     const sh = getSheet(SHEET_ABSENSI);
     appendRows(sh, rows, ABS_HEADER, [ABS.NISN]);
+    bumpAbsensiCache();
 
     // ── Kasus pembinaan otomatis (Alpha/Cabut ≥ 3 dalam semester) ──
     let kasusDibuat = 0;
@@ -1387,6 +1480,7 @@ function updateAbsensi(data) {
       vals[row - min][0] = tersimpan[row].status;
     });
     range.setValues(vals);
+    bumpAbsensiCache();
 
     // ── Sinkronkan kasus otomatis untuk kelas+tanggal terdampak ──
     let kasusDibuat = 0;
@@ -1465,6 +1559,7 @@ function hapusAbsensi(idEncoded) {
       sh.deleteRows(start, end - start + 1);
       i--;
     }
+    bumpAbsensiCache();
 
     return { success: true, deleted: rowsToDelete.length };
 
@@ -1733,6 +1828,10 @@ function getAbsensiGuru(kelas, guru, bulan) {
     const filterGuru  = str(guru);
     const bulanKey = monthKey(bulan);
 
+    const cacheKey = "absGuru:" + absCacheVersion() + ":" + cacheVersion() + ":" + filterKelas + ":" + filterGuru + ":" + bulanKey;
+    const cached = cacheGetJson(cacheKey);
+    if (cached) return cached;
+
     const start = bulanKey ? bulanKey + "-01" : "";
     const end   = bulanKey ? monthEndKey(bulanKey) : "";
 
@@ -1797,7 +1896,9 @@ function getAbsensiGuru(kelas, guru, bulan) {
       .map(k => map[k])
       .sort((a, b) => a.tanggal.localeCompare(b.tanggal) || a.nisn.localeCompare(b.nisn));
 
-    return { success: true, data: data };
+    const res = { success: true, data: data };
+    cachePutJson(cacheKey, res, 300);
+    return res;
 
   } catch (err) {
     return fail(err);
@@ -2313,6 +2414,10 @@ function getDashboardKepsek(mode, tanggal, bulan, filterKelas, filterJurusan) {
     const fKelas = str(filterKelas) || "SEMUA";
     const fJurusan = str(filterJurusan) || "SEMUA";
 
+    const cacheKey = "kepsek:" + absCacheVersion() + ":" + cacheVersion() + ":" + mode + ":" + tglRefKey + ":" + str(bulan) + ":" + fKelas + ":" + fJurusan;
+    const cached = cacheGetJson(cacheKey);
+    if (cached) return cached;
+
     let tglStart = tglRefKey;
     let tglEnd = tglRefKey;
 
@@ -2527,7 +2632,7 @@ function getDashboardKepsek(mode, tanggal, bulan, filterKelas, filterJurusan) {
           ? Math.round((semMap[sem].H / semMap[sem].total) * 100) : 0
       }));
 
-    return {
+    const res = {
       success: true,
       mode: mode,
       periode: { mulai: tglStart, selesai: tglEnd },
@@ -2546,6 +2651,8 @@ function getDashboardKepsek(mode, tanggal, bulan, filterKelas, filterJurusan) {
       trendBulanan:   trendBulanan,
       trendSemester:  trendSemester
     };
+    cachePutJson(cacheKey, res, 180);
+    return res;
 
   } catch (err) {
     return fail(err);
@@ -3561,6 +3668,10 @@ function getRekapBulanan(kelas, bulan) {
     if (!filterKelas) return { success: false, error: "Kelas wajib diisi" };
 
     const ym = monthKey(bulan) || dateKey(new Date()).slice(0, 7);
+    const cacheKey = "rekapBln:" + absCacheVersion() + ":" + cacheVersion() + ":" + filterKelas + ":" + ym;
+    const cached = cacheGetJson(cacheKey);
+    if (cached) return cached;
+
     const start = ym + "-01";
     const end = monthEndKey(ym);
 
@@ -3627,7 +3738,7 @@ function getRekapBulanan(kelas, bulan) {
       return s;
     }).sort((a, b) => String(a.nama).localeCompare(String(b.nama)));
 
-    return {
+    const res = {
       success: true,
       kelas: filterKelas,
       bulan: ym,
@@ -3635,6 +3746,8 @@ function getRekapBulanan(kelas, bulan) {
       datesWithAbsen: datesWithAbsen,
       siswa: siswa
     };
+    cachePutJson(cacheKey, res, 300);
+    return res;
   } catch (err) {
     return fail(err);
   }
