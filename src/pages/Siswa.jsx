@@ -6,7 +6,6 @@ import {
   Download,
   PencilLine,
   Plus,
-  Search,
   Trash2,
   Users,
 } from 'lucide-react';
@@ -26,6 +25,7 @@ import {
 } from '../components/ui';
 import ImportSheet from '../components/ImportSheet';
 import StudentMonitorSheet from '../components/StudentMonitorSheet';
+import SearchSuggest from '../components/SearchSuggest';
 
 const PAGE_SIZE = 50;
 
@@ -82,6 +82,18 @@ export default function Siswa() {
       return [s.nama, s.nisn].some((v) => String(v || '').toLowerCase().includes(q));
     });
   }, [list, query, kelasFilter]);
+
+  const siswaSuggestions = useMemo(() => {
+    const base = kelasFilter ? list.filter((s) => s.kelas === kelasFilter) : list;
+    return base.map((s) => ({
+      value: s.nama,
+      label: s.nama,
+      sub: `NISN ${s.nisn}${s.no_hp_ortu ? ` · WA ${s.no_hp_ortu}` : ''}`,
+      badge: s.kelas,
+      badgeTone: 'brand',
+      keywords: `${s.nisn} ${s.kelas}`,
+    }));
+  }, [list, kelasFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -180,15 +192,14 @@ export default function Siswa() {
         </div>
 
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_180px]">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cari nama atau NISN…"
-              className="h-10 w-full rounded-xl border border-line bg-sunken/50 pl-10 pr-3 text-[13px] font-semibold text-ink outline-none placeholder:font-medium placeholder:text-muted/70 focus:border-brand focus:bg-surface focus:ring-4 focus:ring-brand/10"
-            />
-          </div>
+          <SearchSuggest
+            value={query}
+            onChange={setQuery}
+            options={siswaSuggestions}
+            placeholder="Cari nama atau NISN…"
+            hintTitle={kelasFilter ? `Siswa kelas ${kelasFilter}` : 'Siswa tersedia'}
+            showToggle
+          />
           <Select value={kelasFilter} onChange={(e) => setKelasFilter(e.target.value)} className="h-10 text-[12.5px]">
             <option value="">Semua kelas</option>
             {perKelas.map(([k, n]) => (

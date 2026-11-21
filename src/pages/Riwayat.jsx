@@ -6,10 +6,8 @@ import {
   Image as ImageIcon,
   PencilLine,
   RefreshCw,
-  Search,
   Trash2,
   Users,
-  X,
 } from 'lucide-react';
 import api from '../lib/api';
 import { useToast } from '../lib/toast';
@@ -24,6 +22,7 @@ import {
   Skeleton,
 } from '../components/ui';
 import StatusPicker from '../components/StatusPicker';
+import SearchSuggest from '../components/SearchSuggest';
 
 const PRIOR = { C: 5, A: 4, S: 3, I: 2, H: 1 };
 
@@ -177,6 +176,43 @@ export default function Riwayat() {
     });
   }, [sessions, tanggal, kelas, query]);
 
+  const sessionSuggestions = useMemo(() => {
+    const mapelCount = new Map();
+    const guruCount = new Map();
+    sessions.forEach((s) => {
+      if (tanggal && String(s.tanggal) !== String(tanggal)) return;
+      if (kelas && String(s.kelas) !== String(kelas)) return;
+      if (s.mapel) mapelCount.set(s.mapel, (mapelCount.get(s.mapel) || 0) + 1);
+      if (s.guru) guruCount.set(s.guru, (guruCount.get(s.guru) || 0) + 1);
+    });
+    const out = [];
+    [...mapelCount.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .forEach(([m, n]) =>
+        out.push({
+          value: m,
+          label: m,
+          sub: `${n} sesi tersedia`,
+          badge: 'Mapel',
+          badgeTone: 'brand',
+          group: 'mapel',
+        })
+      );
+    [...guruCount.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .forEach(([g, n]) =>
+        out.push({
+          value: g,
+          label: g,
+          sub: `${n} sesi tersedia`,
+          badge: 'Guru',
+          badgeTone: 'violet',
+          group: 'guru',
+        })
+      );
+    return out;
+  }, [sessions, tanggal, kelas]);
+
   const grouped = useMemo(() => {
     const map = new Map();
     filtered.forEach((s) => {
@@ -247,6 +283,24 @@ export default function Riwayat() {
 
   const detailSummary = useMemo(() => groupDetailByStudent(detail?.rows || []), [detail?.rows]);
 
+  const detailStudentSuggestions = useMemo(
+    () =>
+      detailSummary.students.map((s) => {
+        const stObj = STATUS_MAP[s.worst] || STATUS[0];
+        const badgeTone =
+          s.worst === 'H' ? 'success' : s.worst === 'S' || s.worst === 'I' ? 'warning' : 'danger';
+        return {
+          value: s.nama_siswa,
+          label: s.nama_siswa,
+          sub: `NISN ${s.nisn || '—'}`,
+          badge: stObj.label,
+          badgeTone,
+          keywords: `${s.nisn} ${stObj.label}`,
+        };
+      }),
+    [detailSummary.students]
+  );
+
   const filteredDetailStudents = useMemo(() => {
     const q = detailQuery.trim().toLowerCase();
     return detailSummary.students.filter((s) => {
@@ -263,6 +317,24 @@ export default function Riwayat() {
   }, [detailSummary.students, detailQuery, detailStatusFilter]);
 
   const editSummary = useMemo(() => groupDetailByStudent(editRows), [editRows]);
+
+  const editStudentSuggestions = useMemo(
+    () =>
+      editSummary.students.map((s) => {
+        const stObj = STATUS_MAP[s.worst] || STATUS[0];
+        const badgeTone =
+          s.worst === 'H' ? 'success' : s.worst === 'S' || s.worst === 'I' ? 'warning' : 'danger';
+        return {
+          value: s.nama_siswa,
+          label: s.nama_siswa,
+          sub: `NISN ${s.nisn || '—'}`,
+          badge: stObj.label,
+          badgeTone,
+          keywords: `${s.nisn} ${stObj.label}`,
+        };
+      }),
+    [editSummary.students]
+  );
 
   const filteredEditStudents = useMemo(() => {
     const q = editQuery.trim().toLowerCase();
@@ -375,25 +447,14 @@ export default function Riwayat() {
               </option>
             ))}
           </Select>
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cari mapel / guru…"
-              className="h-10 w-full rounded-xl border border-line bg-sunken/50 pl-9 pr-8 text-[12.5px] font-semibold text-ink outline-none placeholder:font-medium placeholder:text-muted/70 focus:border-brand focus:bg-surface"
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={() => setQuery('')}
-                aria-label="Bersihkan pencarian"
-                className="absolute right-1.5 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded-lg text-muted hover:bg-sunken hover:text-ink"
-              >
-                <X className="size-3.5" />
-              </button>
-            )}
-          </div>
+          <SearchSuggest
+            value={query}
+            onChange={setQuery}
+            options={sessionSuggestions}
+            placeholder="Cari mapel / guru…"
+            hintTitle="Mapel & guru tersedia"
+            showToggle
+          />
         </div>
 
         {(tanggal || kelas || query) && (
@@ -608,25 +669,15 @@ export default function Riwayat() {
 
                 {/* Pencarian & Filter */}
                 <div className="flex flex-wrap items-center gap-2">
-                  <div className="relative min-w-[180px] flex-1">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
-                    <input
-                      value={detailQuery}
-                      onChange={(e) => setDetailQuery(e.target.value)}
-                      placeholder="Cari nama atau NISN siswa…"
-                      className="h-9 w-full rounded-xl border border-line bg-sunken/50 pl-9 pr-8 text-[12px] font-semibold text-ink outline-none focus:border-brand focus:bg-surface"
-                    />
-                    {detailQuery && (
-                      <button
-                        type="button"
-                        onClick={() => setDetailQuery('')}
-                        aria-label="Bersihkan"
-                        className="absolute right-1.5 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded-lg text-muted hover:bg-sunken"
-                      >
-                        <X className="size-3.5" />
-                      </button>
-                    )}
-                  </div>
+                  <SearchSuggest
+                    value={detailQuery}
+                    onChange={setDetailQuery}
+                    options={detailStudentSuggestions}
+                    placeholder="Cari nama atau NISN siswa…"
+                    hintTitle="Siswa di sesi ini"
+                    size="sm"
+                    className="min-w-[180px] flex-1"
+                  />
                   <button
                     type="button"
                     onClick={() => setDetailStatusFilter((cur) => (cur === 'ABSENT' ? 'ALL' : 'ABSENT'))}
@@ -823,25 +874,14 @@ export default function Riwayat() {
                   </div>
                 )}
 
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
-                  <input
-                    value={editQuery}
-                    onChange={(e) => setEditQuery(e.target.value)}
-                    placeholder="Cari nama atau NISN siswa…"
-                    className="h-9 w-full rounded-xl border border-line bg-sunken/50 pl-9 pr-8 text-[12px] font-semibold text-ink outline-none focus:border-brand focus:bg-surface"
-                  />
-                  {editQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setEditQuery('')}
-                      aria-label="Bersihkan"
-                      className="absolute right-1.5 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded-lg text-muted hover:bg-sunken"
-                    >
-                      <X className="size-3.5" />
-                    </button>
-                  )}
-                </div>
+                <SearchSuggest
+                  value={editQuery}
+                  onChange={setEditQuery}
+                  options={editStudentSuggestions}
+                  placeholder="Cari nama atau NISN siswa…"
+                  hintTitle="Siswa di sesi ini"
+                  size="sm"
+                />
 
                 {filteredEditStudents.length === 0 ? (
                   <p className="rounded-2xl border border-line bg-sunken/40 py-6 text-center text-[12px] font-semibold text-muted">

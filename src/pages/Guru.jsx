@@ -3,7 +3,6 @@ import {
   Download,
   PencilLine,
   Plus,
-  Search,
   Trash2,
   UserCog,
   Users,
@@ -23,6 +22,7 @@ import {
   Skeleton,
 } from '../components/ui';
 import ImportSheet from '../components/ImportSheet';
+import SearchSuggest from '../components/SearchSuggest';
 
 const ROLES = [
   { key: 'admin', label: 'Admin', tone: 'brand' },
@@ -99,6 +99,37 @@ export default function Guru() {
       );
     });
   }, [list, query, roleFilter]);
+
+  const guruSuggestions = useMemo(() => {
+    const base = roleFilter ? list.filter((g) => g.role === roleFilter) : list;
+    const out = base.map((g) => {
+      const meta = roleMeta(g.role);
+      return {
+        value: g.nama,
+        label: g.nama,
+        sub: [g.nip, g.mapel, g.kelas_wali].filter(Boolean).join(' · '),
+        badge: meta.label,
+        badgeTone: meta.tone,
+        keywords: `${g.nip} ${g.username} ${g.mapel} ${g.kelas_wali}`,
+        group: 'guru',
+      };
+    });
+    const seenMapel = new Set();
+    base.forEach((g) => {
+      if (g.mapel && !seenMapel.has(g.mapel)) {
+        seenMapel.add(g.mapel);
+        out.push({
+          value: g.mapel,
+          label: g.mapel,
+          sub: 'Filter berdasarkan mata pelajaran',
+          badge: 'Mapel',
+          badgeTone: 'brand',
+          group: 'mapel',
+        });
+      }
+    });
+    return out;
+  }, [list, roleFilter]);
 
   const counts = useMemo(() => {
     const c = { admin: 0, kepsek: 0, piket: 0, guru: 0, wali: 0 };
@@ -201,15 +232,14 @@ export default function Guru() {
         </div>
 
         <div className="mt-3 space-y-2">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cari nama, NIP, mapel…"
-              className="h-10 w-full rounded-xl border border-line bg-sunken/50 pl-10 pr-3 text-[13px] font-semibold text-ink outline-none placeholder:font-medium placeholder:text-muted/70 focus:border-brand focus:bg-surface focus:ring-4 focus:ring-brand/10"
-            />
-          </div>
+          <SearchSuggest
+            value={query}
+            onChange={setQuery}
+            options={guruSuggestions}
+            placeholder="Cari nama, NIP, mapel…"
+            hintTitle="Guru & mapel tersedia"
+            showToggle
+          />
 
           <div className="flex flex-wrap gap-1.5">
             <button
@@ -430,17 +460,15 @@ export default function Guru() {
 
             <div className="grid grid-cols-2 gap-2.5">
               <Field label="Mata pelajaran">
-                <Input
+                <SearchSuggest
                   value={form.mapel}
-                  onChange={(e) => set('mapel', e.target.value)}
-                  placeholder="Informatika"
-                  list="mapel-options"
+                  onChange={(v) => set('mapel', v)}
+                  options={mapelList}
+                  placeholder="Pilih / ketik mapel"
+                  hintTitle="Mapel tersedia"
+                  size="lg"
+                  showToggle
                 />
-                <datalist id="mapel-options">
-                  {mapelList.map((m) => (
-                    <option key={m} value={m} />
-                  ))}
-                </datalist>
               </Field>
 
               <Field label="Kelas wali" hint={form.role !== 'wali' ? 'Hanya untuk role wali' : undefined}>

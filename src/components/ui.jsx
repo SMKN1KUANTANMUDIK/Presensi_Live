@@ -1,6 +1,9 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, Loader2, X } from 'lucide-react';
 import { cn } from '../lib/utils';
+
+let openSheetCount = 0;
 
 /* ---------------------------------------------------------
    Card
@@ -176,28 +179,35 @@ export function EmptyState({ icon: Icon, title, description, action, className }
 
 /* ---------------------------------------------------------
    Sheet / Modal (bottom sheet di HP, dialog di desktop)
+   Dirender via Portal ke document.body agar selalu penuh
+   menutupi viewport & tidak terpotong container halaman.
 --------------------------------------------------------- */
 export function Sheet({ open, onClose, title, children, footer, size = 'md' }) {
   useEffect(() => {
     if (!open) return undefined;
     const onKey = (e) => e.key === 'Escape' && onClose?.();
     document.addEventListener('keydown', onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    openSheetCount += 1;
+    if (openSheetCount === 1) {
+      document.body.style.overflow = 'hidden';
+    }
     return () => {
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prev;
+      openSheetCount = Math.max(0, openSheetCount - 1);
+      if (openSheetCount === 0) {
+        document.body.style.overflow = '';
+      }
     };
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || typeof document === 'undefined') return null;
 
   const widths = { sm: 'sm:max-w-md', md: 'sm:max-w-lg', lg: 'sm:max-w-3xl', xl: 'sm:max-w-5xl' };
 
-  return (
-    <div className="fixed inset-0 z-[110] flex items-end justify-center sm:items-center">
+  return createPortal(
+    <div className="fixed inset-0 z-[110] flex items-end justify-center sm:items-center sm:p-4">
       <div
-        className="animate-backdrop absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
+        className="animate-backdrop absolute inset-0 bg-slate-950/55 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -206,12 +216,12 @@ export function Sheet({ open, onClose, title, children, footer, size = 'md' }) {
         aria-modal="true"
         aria-label={typeof title === 'string' ? title : undefined}
         className={cn(
-          'animate-sheet relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-line bg-surface shadow-float',
+          'animate-sheet relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-line bg-surface shadow-float',
           'sm:max-h-[88dvh] sm:rounded-3xl',
           widths[size]
         )}
       >
-        <div className="flex flex-col border-b border-line px-5 pb-3.5 pt-2.5 sm:pt-4">
+        <div className="flex shrink-0 flex-col border-b border-line px-5 pb-3.5 pt-2.5 sm:pt-4">
           <span className="mx-auto mb-2.5 h-1 w-10 rounded-full bg-line-strong sm:hidden" aria-hidden="true" />
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-base font-extrabold text-ink">{title}</h3>
@@ -225,10 +235,11 @@ export function Sheet({ open, onClose, title, children, footer, size = 'md' }) {
             </button>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4">{children}</div>
-        {footer ? <div className="border-t border-line bg-surface px-5 py-3 pb-safe">{footer}</div> : null}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">{children}</div>
+        {footer ? <div className="shrink-0 border-t border-line bg-surface px-5 py-3 pb-safe">{footer}</div> : null}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

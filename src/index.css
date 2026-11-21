@@ -176,11 +176,9 @@
 @keyframes pageIn {
   from {
     opacity: 0;
-    transform: translateY(6px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -254,23 +252,23 @@
 }
 
 .animate-rise {
-  animation: rise 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: rise 0.26s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
 .animate-page {
-  animation: pageIn 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: pageIn 0.18s ease-out backwards;
 }
 
 .animate-sheet {
-  animation: sheetIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: sheetIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
 .animate-backdrop {
-  animation: fadeIn 0.18s ease-out both;
+  animation: fadeIn 0.18s ease-out backwards;
 }
 
 .animate-toast {
-  animation: toastIn 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: toastIn 0.24s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
 .animate-pop {
@@ -283,7 +281,7 @@
 
 .animate-bar {
   transform-origin: left center;
-  animation: barGrow 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: barGrow 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
 .stagger-1 { animation-delay: 25ms; }

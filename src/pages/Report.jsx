@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { BarChart3, Download, FileText, Printer, School } from 'lucide-react';
 import api from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -15,6 +15,7 @@ import {
   todayISO,
 } from '../lib/utils';
 import { Badge, Button, Card, CardHeader, EmptyState, Field, Select, Skeleton } from '../components/ui';
+import SearchSuggest from '../components/SearchSuggest';
 
 const MODES = [
   { key: 'harian', label: 'Harian' },
@@ -191,6 +192,19 @@ export default function Report() {
       }
     })();
   }, []);
+
+  const guruOptions = useMemo(
+    () =>
+      guruList.map((g) => ({
+        value: g.nama,
+        label: g.nama,
+        sub: [g.nip, g.mapel].filter(Boolean).join(' · '),
+        badge: g.mapel ? 'Guru' : '',
+        badgeTone: 'brand',
+        keywords: `${g.nip || ''} ${g.mapel || ''}`,
+      })),
+    [guruList]
+  );
 
   const generate = async () => {
     if (!kelas) return toast.warning('Pilih kelas terlebih dahulu.');
@@ -824,27 +838,27 @@ export default function Report() {
               </Field>
 
               {guruPeriode === 'semester' && (
-                <Field label="Mata pelajaran" className="col-span-2">
-                  <Select value={mapel} onChange={(e) => setMapel(e.target.value)} className="h-10 text-[12.5px]">
-                    <option value="">Semua mapel</option>
-                    {mapelList.map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                  </Select>
+                <Field label="Mata pelajaran (opsional)" className="col-span-2">
+                  <SearchSuggest
+                    value={mapel}
+                    onChange={setMapel}
+                    options={mapelList}
+                    placeholder="Semua mapel — ketik untuk memilih…"
+                    hintTitle="Mata pelajaran tersedia"
+                    showToggle
+                  />
                 </Field>
               )}
 
               <Field label="Guru" className="col-span-2">
-                <Select value={guru} onChange={(e) => setGuru(e.target.value)} className="h-10 text-[12.5px]">
-                  <option value="">Pilih guru</option>
-                  {guruList.map((g) => (
-                    <option key={g.nama} value={g.nama}>
-                      {g.nama}
-                    </option>
-                  ))}
-                </Select>
+                <SearchSuggest
+                  value={guru}
+                  onChange={setGuru}
+                  options={guruOptions}
+                  placeholder="Cari & pilih nama guru…"
+                  hintTitle="Guru tersedia"
+                  showToggle
+                />
               </Field>
             </>
           )}

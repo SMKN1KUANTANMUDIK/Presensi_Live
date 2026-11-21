@@ -23,6 +23,7 @@ import { cn, formatJam, STATUS, STATUS_MAP, TONE, todayISO } from '../lib/utils'
 import { Badge, Button, Card, EmptyState, Field, Select, Sheet, Skeleton } from '../components/ui';
 import StatusPicker from '../components/StatusPicker';
 import WaButton from '../components/WaButton';
+import SearchSuggest from '../components/SearchSuggest';
 
 function jamRange(mulai, selesai) {
   const a = Number(mulai);
@@ -492,6 +493,25 @@ export default function InputAbsensi() {
       return matchText && matchStatus;
     });
   }, [siswa, query, filterStatus, worstStatusSiswa]);
+
+  const siswaSuggestions = useMemo(
+    () =>
+      siswa.map((s) => {
+        const nama = s.nama_siswa || s.nama || '';
+        const st = worstStatusSiswa(s.nisn);
+        const stObj = STATUS_MAP[st] || STATUS[0];
+        const badgeTone = st === 'H' ? 'success' : st === 'S' || st === 'I' ? 'warning' : 'danger';
+        return {
+          value: nama,
+          label: nama,
+          sub: `NISN ${s.nisn}`,
+          badge: stObj.label,
+          badgeTone,
+          keywords: `${s.nisn} ${stObj.label}`,
+        };
+      }),
+    [siswa, worstStatusSiswa]
+  );
 
   const total = siswa.length;
   const tidakHadir = total - counts.H;
@@ -1098,25 +1118,14 @@ export default function InputAbsensi() {
 
         {/* toolbar */}
         <div className="space-y-2 px-4 py-3 sm:px-5">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cari nama atau NISN…"
-              className="h-10 w-full rounded-xl border border-line bg-sunken/50 pl-10 pr-10 text-[13px] font-semibold text-ink outline-none transition placeholder:font-medium placeholder:text-muted/70 focus:border-brand focus:bg-surface focus:ring-4 focus:ring-brand/10"
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={() => setQuery('')}
-                aria-label="Bersihkan pencarian"
-                className="absolute right-1.5 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-lg text-muted hover:bg-sunken hover:text-ink"
-              >
-                <X className="size-4" />
-              </button>
-            )}
-          </div>
+          <SearchSuggest
+            value={query}
+            onChange={setQuery}
+            options={siswaSuggestions}
+            placeholder="Cari nama atau NISN…"
+            hintTitle={kelas ? `Siswa kelas ${kelas}` : 'Daftar siswa'}
+            showToggle
+          />
 
           <div className="grid grid-cols-3 gap-1.5 lg:flex lg:flex-wrap">
             {STATUS.map((s) => {

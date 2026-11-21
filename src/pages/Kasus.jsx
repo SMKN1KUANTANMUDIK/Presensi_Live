@@ -16,6 +16,7 @@ import { pesanPeringatanDini } from '../lib/whatsapp';
 import { Badge, Button, Card, EmptyState, Field, Input, Select, Sheet, Skeleton } from '../components/ui';
 import WaButton from '../components/WaButton';
 import StudentMonitorSheet from '../components/StudentMonitorSheet';
+import SearchSuggest from '../components/SearchSuggest';
 
 const LEVEL_META = {
   wali_kelas: { label: 'Wali Kelas', tone: 'info' },
@@ -39,8 +40,12 @@ export default function Kasus() {
   const [statusFilter, setStatusFilter] = useState('Open');
   const [levelFilter, setLevelFilter] = useState('');
   const [kelasFilter, setKelasFilter] = useState(isWali ? kelasWali : '');
+  const [query, setQuery] = useState('');
 
   const [tambahOpen, setTambahOpen] = useState(false);
+  const [tambahSiswaList, setTambahSiswaList] = useState([]);
+  const [tambahSiswaLoading, setTambahSiswaLoading] = useState(false);
+  const [tambahCariSiswa, setTambahCariSiswa] = useState('');
   const [tambahForm, setTambahForm] = useState({
     tanggal: todayISO(),
     nisn: '',
@@ -126,6 +131,7 @@ export default function Kasus() {
       if (!res?.success) throw new Error(res?.error || 'Gagal menambah kasus');
       toast.success('Kasus pembinaan ditambahkan.');
       setTambahOpen(false);
+      setTambahCariSiswa('');
       setTambahForm({
         tanggal: todayISO(),
         nisn: '',
@@ -205,7 +211,72 @@ export default function Kasus() {
     }
   };
 
+  useEffect(() => {
+    if (!tambahOpen) return undefined;
+    const targetKelas = isWali ? kelasWali : tambahForm.kelas;
+    if (!targetKelas) {
+      setTambahSiswaList([]);
+      return undefined;
+    }
+    let alive = true;
+    setTambahSiswaLoading(true);
+    api
+      .getSiswa(targetKelas)
+      .then((res) => {
+        if (alive) setTambahSiswaList(res?.data || []);
+      })
+      .catch(() => {
+        if (alive) setTambahSiswaList([]);
+      })
+      .finally(() => {
+        if (alive) setTambahSiswaLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [tambahOpen, tambahForm.kelas, isWali, kelasWali]);
+
   const openCount = useMemo(() => list.filter((k) => k.status === 'Open').length, [list]);
+
+  const kasusSuggestions = useMemo(
+    () =>
+      list.map((k) => ({
+        value: k.nama_siswa,
+        label: k.nama_siswa,
+        sub: `${k.kelas} · NISN ${k.nisn} · ${k.jenis}`,
+        badge: k.status === 'Open' ? 'Aktif' : 'Selesai',
+        badgeTone: k.status === 'Open' ? 'danger' : 'success',
+        keywords: `${k.nisn} ${k.kelas} ${k.jenis} ${k.keterangan || ''}`,
+      })),
+    [list]
+  );
+
+  const filteredList = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter((k) =>
+      [k.nama_siswa, k.nisn, k.kelas, k.jenis, k.keterangan].some((v) =>
+        String(v || '').toLowerCase().includes(q)
+      )
+    );
+  }, [list, query]);
+
+  const tambahSiswaSuggestions = useMemo(
+    () =>
+      tambahSiswaList.map((s) => {
+        const nama = s.nama_siswa || s.nama || '';
+        return {
+          value: nama,
+          label: nama,
+          sub: `NISN ${s.nisn}`,
+          badge: s.kelas || tambahForm.kelas || '',
+          badgeTone: 'brand',
+          keywords: `${s.nisn} ${s.kelas || ''}`,
+          raw: s,
+        };
+      }),
+    [tambahSiswaList, tambahForm.kelas]
+  );
 
   return (
     <div className="space-y-3">
@@ -218,7 +289,7 @@ export default function Kasus() {
             <div>
               <h1 className="text-[15px] font-extrabold tracking-tight text-ink">Kasus Pembinaan</h1>
               <p className="text-[11.5px] font-semibold text-muted">
-                {openCount} aktif · {list.length} total ditampilkan
+                {openCount} aktif · {filteredList.length} ditampilkan
               </p>
             </div>
           </div>
@@ -237,7 +308,16 @@ export default function Kasus() {
           Siswa yang tidak masuk tanpa keterangan (Alpha) atau membolos (Cabut) ≥ 3 hari dalam satu semester otomatis masuk ke daftar ini untuk dibina bersama orang tua.
         </p>
 
-        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <SearchSuggest
+            value={query}
+            onChange={setQuery}
+            options={kasusSuggestions}
+            placeholder="Cari siswa, NISN, jenis…"
+            hintTitle="Siswa dalam daftar kasus"
+            showToggle
+          />
+
           <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="h-10 text-[12.5px]">
             <option value="Open">Aktif (Belum selesai)</option>
             <option value="Ditutup">Sudah selesai</option>
@@ -273,17 +353,21 @@ export default function Kasus() {
             <Skeleton key={i} className="h-32 rounded-3xl" />
           ))}
         </div>
-      ) : list.length === 0 ? (
+      ) : filteredList.length === 0 ? (
         <Card>
           <EmptyState
             icon={CheckCircle2}
             title="Tidak ada kasus pembinaan"
-            description="Belum ada siswa yang tercatat melampaui ambang Alpha/Cabut pada filter ini."
+            description={
+              query
+                ? 'Tidak ada kasus yang cocok dengan kata kunci pencarian.'
+                : 'Belum ada siswa yang tercatat melampaui ambang Alpha/Cabut pada filter ini.'
+            }
           />
         </Card>
       ) : (
         <div className="space-y-2.5">
-          {list.map((k) => {
+          {filteredList.map((k) => {
             const lvl = LEVEL_META[k.level] || LEVEL_META.wali_kelas;
             const isOpen = k.status === 'Open';
             const canEscalate = isOpen && (k.level === 'wali_kelas' || k.level === 'bk');
@@ -408,7 +492,10 @@ export default function Kasus() {
       {/* Modal Tambah */}
       <Sheet
         open={tambahOpen}
-        onClose={() => setTambahOpen(false)}
+        onClose={() => {
+          setTambahOpen(false);
+          setTambahCariSiswa('');
+        }}
         title="Tambah Kasus Pembinaan"
         footer={
           <div className="flex gap-2">
@@ -422,41 +509,13 @@ export default function Kasus() {
         }
       >
         <div className="space-y-3">
-          <Field label="Tanggal">
-            <Input
-              type="date"
-              value={tambahForm.tanggal}
-              onChange={(e) => setTambahForm((f) => ({ ...f, tanggal: e.target.value }))}
-            />
-          </Field>
-          <Field label="NISN">
-            <Input
-              value={tambahForm.nisn}
-              onChange={(e) => setTambahForm((f) => ({ ...f, nisn: e.target.value }))}
-              placeholder="NISN siswa"
-            />
-          </Field>
-          <Field label="Nama Siswa">
-            <Input
-              value={tambahForm.nama_siswa}
-              onChange={(e) => setTambahForm((f) => ({ ...f, nama_siswa: e.target.value }))}
-              placeholder="Nama lengkap siswa"
-            />
-          </Field>
           <div className="grid grid-cols-2 gap-2.5">
-            <Field label="Kelas">
-              <Select
-                value={tambahForm.kelas}
-                disabled={isWali}
-                onChange={(e) => setTambahForm((f) => ({ ...f, kelas: e.target.value }))}
-              >
-                <option value="">Pilih kelas</option>
-                {kelasList.map((k) => (
-                  <option key={k} value={k}>
-                    {k}
-                  </option>
-                ))}
-              </Select>
+            <Field label="Tanggal">
+              <Input
+                type="date"
+                value={tambahForm.tanggal}
+                onChange={(e) => setTambahForm((f) => ({ ...f, tanggal: e.target.value }))}
+              />
             </Field>
             <Field label="Jenis">
               <Select
@@ -468,6 +527,74 @@ export default function Kasus() {
                 <option value="Terlambat">Terlambat</option>
                 <option value="Lainnya">Lainnya</option>
               </Select>
+            </Field>
+          </div>
+
+          <Field label="1. Pilih Kelas">
+            <Select
+              value={tambahForm.kelas}
+              disabled={isWali}
+              onChange={(e) => {
+                setTambahCariSiswa('');
+                setTambahForm((f) => ({ ...f, kelas: e.target.value, nisn: '', nama_siswa: '' }));
+              }}
+            >
+              <option value="">Pilih kelas untuk rekomendasi siswa</option>
+              {kelasList.map((k) => (
+                <option key={k} value={k}>
+                  {k}
+                </option>
+              ))}
+            </Select>
+          </Field>
+
+          <Field
+            label="2. Cari & Pilih Siswa (otomatis isi NISN & Nama)"
+            hint={
+              !tambahForm.kelas
+                ? 'Pilih kelas dulu agar daftar siswa muncul otomatis.'
+                : tambahSiswaLoading
+                  ? 'Memuat daftar siswa kelas…'
+                  : `${tambahSiswaList.length} siswa tersedia — ketuk untuk langsung mengisi.`
+            }
+          >
+            <SearchSuggest
+              value={tambahCariSiswa}
+              onChange={setTambahCariSiswa}
+              onSelect={(opt) => {
+                const s = opt.raw;
+                const nama = s?.nama_siswa || s?.nama || opt.label;
+                setTambahCariSiswa(nama);
+                setTambahForm((f) => ({
+                  ...f,
+                  nisn: s?.nisn || f.nisn,
+                  nama_siswa: nama,
+                  kelas: s?.kelas || f.kelas,
+                }));
+              }}
+              options={tambahSiswaSuggestions}
+              disabled={!tambahForm.kelas || tambahSiswaLoading}
+              placeholder={tambahForm.kelas ? 'Ketik nama atau NISN siswa…' : 'Pilih kelas terlebih dahulu'}
+              hintTitle={`Siswa kelas ${tambahForm.kelas || ''}`}
+              size="lg"
+              showToggle
+            />
+          </Field>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            <Field label="NISN">
+              <Input
+                value={tambahForm.nisn}
+                onChange={(e) => setTambahForm((f) => ({ ...f, nisn: e.target.value }))}
+                placeholder="Terisi otomatis"
+              />
+            </Field>
+            <Field label="Nama Siswa">
+              <Input
+                value={tambahForm.nama_siswa}
+                onChange={(e) => setTambahForm((f) => ({ ...f, nama_siswa: e.target.value }))}
+                placeholder="Terisi otomatis"
+              />
             </Field>
           </div>
           <Field label="Keterangan">

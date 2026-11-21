@@ -11,7 +11,6 @@ import {
   Info,
   Plus,
   RefreshCw,
-  Search,
   ShieldCheck,
   Trash2,
   Users,
@@ -25,6 +24,7 @@ import { cn, formatTanggal, hitungStatSiswa, STATUS, TONE, todayISO } from '../l
 import { Badge, Button, Card, EmptyState, Field, Input, Select, Sheet, Skeleton } from '../components/ui';
 import WaButton from '../components/WaButton';
 import StudentMonitorSheet from '../components/StudentMonitorSheet';
+import SearchSuggest from '../components/SearchSuggest';
 
 const JAM_COLS = Array.from({ length: 11 }, (_, i) => i + 1);
 const DEFAULT_JAM = Array.from({ length: 10 }, (_, i) => i + 1);
@@ -58,7 +58,9 @@ export default function Piket() {
   const [loading, setLoading] = useState(true);
   const [kelasFilter, setKelasFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState(''); // '' | 'kosong' | 'perhatian'
+  const [piketQuery, setPiketQuery] = useState('');
   const [detail, setDetail] = useState(null);
+  const [detailQuery, setDetailQuery] = useState('');
   const [monitorSiswa, setMonitorSiswa] = useState(null);
 
   // Apel pagi
@@ -158,6 +160,28 @@ export default function Piket() {
       (s) => String(s.nama_siswa || s.nama || '').toLowerCase().includes(q) || String(s.nisn || '').includes(q)
     );
   }, [apelSiswa, apelQuery]);
+
+  const apelSiswaSuggestions = useMemo(
+    () =>
+      apelSiswa.map((s) => {
+        const nisn = String(s.nisn);
+        const nama = s.nama_siswa || s.nama || '';
+        const done = sudahApelNisn.has(nisn);
+        const selected = apelSelected.includes(nisn);
+        return {
+          value: nama,
+          label: nama,
+          sub: `NISN ${nisn}${done ? ' · sudah tercatat hari ini' : ''}`,
+          badge: done ? 'Tercatat' : 'Pilih',
+          badgeTone: done ? 'neutral' : 'brand',
+          disabled: done,
+          selected,
+          keywords: nisn,
+          raw: s,
+        };
+      }),
+    [apelSiswa, sudahApelNisn, apelSelected]
+  );
 
   const openApelModal = async () => {
     if (!apelSupported) return;
@@ -395,6 +419,62 @@ export default function Piket() {
     return m;
   }, [data]);
 
+  const piketSuggestions = useMemo(() => {
+    const out = [];
+    data.forEach((item) => {
+      const stat = hitungStatSiswa(item.siswaList);
+      const belum = !(item.guruList || []).length;
+      out.push({
+        value: item.kelas,
+        label: item.kelas,
+        sub: belum
+          ? 'Belum ada absensi hari ini'
+          : `Hadir ${stat.H} · S/I ${stat.S + stat.I} · A/C ${stat.A + stat.C}`,
+        badge: 'Kelas',
+        badgeTone: belum ? 'warning' : 'brand',
+        group: 'kelas',
+        raw: { kind: 'kelas', item },
+      });
+    });
+    data.forEach((item) => {
+      (item.siswaList || []).forEach((s) => {
+        out.push({
+          value: s.nama || '',
+          label: s.nama || 'Siswa',
+          sub: `${item.kelas} · NISN ${s.nisn || '—'}`,
+          badge: 'Siswa',
+          badgeTone: 'violet',
+          group: 'siswa',
+          keywords: `${s.nisn || ''} ${item.kelas}`,
+          raw: { kind: 'siswa', item, siswa: s },
+        });
+      });
+    });
+    return out;
+  }, [data]);
+
+  const detailSiswaFiltered = useMemo(() => {
+    const list = detail?.siswaList || [];
+    const q = detailQuery.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter(
+      (s) => String(s.nama || '').toLowerCase().includes(q) || String(s.nisn || '').toLowerCase().includes(q)
+    );
+  }, [detail, detailQuery]);
+
+  const detailSiswaSuggestions = useMemo(
+    () =>
+      (detail?.siswaList || []).map((s) => ({
+        value: s.nama || '',
+        label: s.nama || 'Siswa',
+        sub: `NISN ${s.nisn || '—'}`,
+        badge: s.no_hp_ortu ? 'Ada WA' : '',
+        badgeTone: 'success',
+        keywords: String(s.nisn || ''),
+      })),
+    [detail]
+  );
+
   return (
     <div className="space-y-3">
       {/* header */}
@@ -456,8 +536,38 @@ export default function Piket() {
           ))}
         </div>
 
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <Select value={kelasFilter} onChange={(e) => setKelasFilter(e.target.value)} className="h-10 text-[12.5px]">
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          <SearchSuggest
+            value={piketQuery}
+            onChange={(v) => {
+              setPiketQuery(v);
+              if (!v) setKelasFilter('');
+            }}
+            onSelect={(opt) => {
+              const raw = opt.raw;
+              if (raw?.kind === 'kelas') {
+                setKelasFilter(raw.item.kelas);
+                setPiketQuery(raw.item.kelas);
+              } else if (raw?.kind === 'siswa') {
+                setPiketQuery('');
+                setDetail(raw.item);
+                setDetailQuery(raw.siswa?.nama || '');
+              }
+            }}
+            options={piketSuggestions}
+            placeholder="Cari kelas atau siswa…"
+            hintTitle="Kelas & siswa hari ini"
+            showToggle
+          />
+
+          <Select
+            value={kelasFilter}
+            onChange={(e) => {
+              setKelasFilter(e.target.value);
+              setPiketQuery('');
+            }}
+            className="h-10 text-[12.5px]"
+          >
             <option value="">Semua kelas</option>
             {kelasList.map((k) => (
               <option key={k} value={k}>
@@ -889,7 +999,10 @@ export default function Piket() {
 
                 <button
                   type="button"
-                  onClick={() => setDetail(item)}
+                  onClick={() => {
+                    setDetailQuery('');
+                    setDetail(item);
+                  }}
                   className="mt-3 flex w-full items-center justify-center gap-1 border-t border-line/70 py-2.5 text-[12px] font-extrabold text-brand transition hover:bg-brand-soft/50"
                 >
                   Detail siswa <ChevronRight className="size-3.5" />
@@ -903,17 +1016,31 @@ export default function Piket() {
       {/* detail sheet */}
       <Sheet
         open={Boolean(detail)}
-        onClose={() => setDetail(null)}
+        onClose={() => {
+          setDetail(null);
+          setDetailQuery('');
+        }}
         title={detail ? `Detail — ${detail.kelas}` : ''}
         size="xl"
       >
         {detail && (
           <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge tone="brand">{formatTanggal(tanggal)}</Badge>
-              <Badge tone="success">
-                <CircleCheck className="size-3" /> {hitungStatSiswa(detail.siswaList).H} hadir
-              </Badge>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge tone="brand">{formatTanggal(tanggal)}</Badge>
+                <Badge tone="success">
+                  <CircleCheck className="size-3" /> {hitungStatSiswa(detail.siswaList).H} hadir
+                </Badge>
+              </div>
+              <SearchSuggest
+                value={detailQuery}
+                onChange={setDetailQuery}
+                options={detailSiswaSuggestions}
+                placeholder="Cari nama atau NISN siswa…"
+                hintTitle={`Siswa ${detail.kelas}`}
+                size="sm"
+                className="w-full sm:w-64"
+              />
             </div>
 
             <div className="overflow-x-auto rounded-2xl border border-line">
@@ -932,7 +1059,13 @@ export default function Piket() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(detail.siswaList || []).map((s, i) => {
+                  {detailSiswaFiltered.length === 0 ? (
+                    <tr>
+                      <td colSpan={JAM_COLS.length + 2} className="px-4 py-6 text-center text-[12px] font-semibold text-muted">
+                        Tidak ada siswa yang cocok dengan pencarian.
+                      </td>
+                    </tr>
+                  ) : detailSiswaFiltered.map((s, i) => {
                     const jamNonH = JAM_COLS.filter((j) => s.jam?.[j] && s.jam[j] !== 'H');
                     const worst = jamNonH.length
                       ? jamNonH.reduce((acc, j) => {
@@ -1072,15 +1205,21 @@ export default function Piket() {
               <p className="text-[12.5px] font-bold text-ink/80">Pilih siswa</p>
               <p className="text-[11px] font-semibold text-muted">{apelSelected.length} dipilih</p>
             </div>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
-              <input
-                value={apelQuery}
-                onChange={(e) => setApelQuery(e.target.value)}
-                placeholder="Cari nama atau NISN"
-                className="h-10 w-full rounded-xl border border-line bg-sunken/50 pl-9 pr-3 text-[12.5px] font-semibold text-ink outline-none transition focus:border-brand focus:bg-surface"
-              />
-            </div>
+            <SearchSuggest
+              value={apelQuery}
+              onChange={setApelQuery}
+              onSelect={(opt) => {
+                const nisn = String(opt.raw?.nisn || '');
+                if (nisn && !sudahApelNisn.has(nisn)) {
+                  toggleApelSiswa(nisn);
+                }
+              }}
+              clearOnSelect
+              options={apelSiswaSuggestions}
+              placeholder="Cari & ketuk nama atau NISN untuk pilih cepat…"
+              hintTitle={apelKelas ? `Siswa kelas ${apelKelas}` : 'Daftar siswa'}
+              showToggle
+            />
 
             <div className="mt-2 max-h-64 overflow-y-auto rounded-2xl border border-line">
               {apelSiswaLoading ? (

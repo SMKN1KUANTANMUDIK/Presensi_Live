@@ -15,6 +15,7 @@ import { pesanPeringatanDini } from '../lib/whatsapp';
 import { Badge, Button, Card, CardHeader, EmptyState, Select, Skeleton, Stat } from '../components/ui';
 import WaButton from '../components/WaButton';
 import StudentMonitorSheet from '../components/StudentMonitorSheet';
+import SearchSuggest from '../components/SearchSuggest';
 
 /* ---------------- chart kecil (SVG, tanpa library) ---------------- */
 
@@ -159,6 +160,7 @@ export default function Kepsek() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [monitorSiswa, setMonitorSiswa] = useState(null);
+  const [rawanQuery, setRawanQuery] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -195,6 +197,34 @@ export default function Kepsek() {
   const trend = data?.trendBulanan || [];
   const semester = data?.trendSemester || [];
   const rawan = data?.peringatanDini?.length ? data.peringatanDini : data?.siswaCabut || [];
+
+  const rawanSuggestions = useMemo(
+    () =>
+      rawan.map((s) => {
+        const total = s.total || 0;
+        return {
+          value: s.nama || '',
+          label: s.nama || 'Siswa',
+          sub: `${s.kelas} · ${total}× Alpha/Cabut`,
+          badge: total >= 3 ? 'Pembinaan' : 'Pantau',
+          badgeTone: total >= 3 ? 'danger' : 'warning',
+          keywords: `${s.nisn || ''} ${s.kelas || ''}`,
+          raw: s,
+        };
+      }),
+    [rawan]
+  );
+
+  const filteredRawan = useMemo(() => {
+    const q = rawanQuery.trim().toLowerCase();
+    if (!q) return rawan;
+    return rawan.filter(
+      (s) =>
+        String(s.nama || '').toLowerCase().includes(q) ||
+        String(s.kelas || '').toLowerCase().includes(q) ||
+        String(s.nisn || '').toLowerCase().includes(q)
+    );
+  }, [rawan, rawanQuery]);
 
   const insight = useMemo(() => {
     const list = [];
@@ -416,12 +446,41 @@ export default function Kepsek() {
 
         <Card className="overflow-hidden">
           <CardHeader title="Peringatan Dini & Siswa Rawan" subtitle="Alpha / cabut terbanyak (≥ 2×)" icon={AlertTriangle} />
+          {rawan.length > 0 && (
+            <div className="px-4 pt-3">
+              <SearchSuggest
+                value={rawanQuery}
+                onChange={setRawanQuery}
+                onSelect={(opt) => {
+                  const s = opt.raw;
+                  setRawanQuery(s?.nama || opt.label);
+                  if (s) {
+                    setMonitorSiswa({
+                      nisn: s.nisn,
+                      nama: s.nama,
+                      kelas: s.kelas,
+                      no_hp_ortu: s.no_hp_ortu,
+                    });
+                  }
+                }}
+                options={rawanSuggestions}
+                placeholder="Cari siswa rawan atau kelas…"
+                hintTitle="Siswa rawan tersedia"
+                size="sm"
+                showToggle
+              />
+            </div>
+          )}
           <div className="mt-3 border-t border-line/70">
-            {rawan.length === 0 ? (
-              <EmptyState icon={AlertTriangle} title="Tidak ada siswa rawan" className="py-8" />
+            {filteredRawan.length === 0 ? (
+              <EmptyState
+                icon={AlertTriangle}
+                title={rawan.length ? 'Siswa tidak ditemukan' : 'Tidak ada siswa rawan'}
+                className="py-8"
+              />
             ) : (
               <ul className="divide-y divide-line/70">
-                {rawan.slice(0, 12).map((s, i) => {
+                {filteredRawan.slice(0, 12).map((s, i) => {
                   const total = s.total || 0;
                   const level = total >= 3 ? 'Perlu Pembinaan' : total >= 2 ? 'Perlu Dipantau' : 'Pantau';
                   const tone = total >= 3 ? 'danger' : total >= 2 ? 'warning' : 'info';

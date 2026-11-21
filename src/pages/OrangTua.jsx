@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Search, ShieldCheck, User } from 'lucide-react';
+import { ShieldCheck, User } from 'lucide-react';
 import api from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { initials } from '../lib/utils';
 import { Badge, Card, EmptyState, Select, Skeleton } from '../components/ui';
 import StudentMonitorSheet from '../components/StudentMonitorSheet';
+import SearchSuggest from '../components/SearchSuggest';
 
 export default function OrangTua() {
   const { user } = useAuth();
@@ -48,6 +49,23 @@ export default function OrangTua() {
     };
   }, [kelas]);
 
+  const siswaSuggestions = useMemo(
+    () =>
+      siswaList.map((s) => {
+        const nama = s.nama_siswa || s.nama || '';
+        return {
+          value: nama,
+          label: nama,
+          sub: `NISN ${s.nisn}${s.no_hp_ortu ? ` · WA ${s.no_hp_ortu}` : ''}`,
+          badge: s.no_hp_ortu ? 'Ada WA' : 'Lihat',
+          badgeTone: s.no_hp_ortu ? 'success' : 'brand',
+          keywords: `${s.nisn} ${s.no_hp_ortu || ''}`,
+          raw: s,
+        };
+      }),
+    [siswaList]
+  );
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return siswaList;
@@ -84,15 +102,27 @@ export default function OrangTua() {
             ))}
           </Select>
 
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cari nama atau NISN…"
-              className="h-10 w-full rounded-xl border border-line bg-sunken/50 pl-9 pr-3 text-[12.5px] font-semibold text-ink outline-none focus:border-brand focus:bg-surface"
-            />
-          </div>
+          <SearchSuggest
+            value={query}
+            onChange={setQuery}
+            onSelect={(opt) => {
+              const s = opt.raw;
+              const nama = s?.nama_siswa || s?.nama || opt.label;
+              setQuery(nama);
+              if (s) {
+                setSelected({
+                  nisn: s.nisn,
+                  nama,
+                  kelas: s.kelas || kelas,
+                  no_hp_ortu: s.no_hp_ortu || '',
+                });
+              }
+            }}
+            options={siswaSuggestions}
+            placeholder="Cari nama atau NISN…"
+            hintTitle={kelas ? `Siswa kelas ${kelas}` : 'Siswa tersedia'}
+            showToggle
+          />
         </div>
       </Card>
 
