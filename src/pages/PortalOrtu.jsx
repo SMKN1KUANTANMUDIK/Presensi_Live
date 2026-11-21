@@ -154,14 +154,17 @@ export default function PortalOrtu() {
   useEffect(() => {
     api
       .getKelas()
-      .then((res) => setKelasList(res?.data || []))
+      .then((res) => {
+        const raw = res?.data || res?.kelas || [];
+        setKelasList(raw.map((k) => String(k || '').trim()).filter(Boolean));
+      })
       .catch(() => {});
   }, []);
 
   const resolvedKelas = useMemo(() => {
-    const t = kelas.trim();
+    const t = String(kelas || '').trim();
     if (!t) return '';
-    return kelasList.find((k) => k.toLowerCase() === t.toLowerCase()) || '';
+    return kelasList.find((k) => String(k || '').toLowerCase() === t.toLowerCase()) || '';
   }, [kelas, kelasList]);
 
   useEffect(() => {
@@ -278,7 +281,7 @@ export default function PortalOrtu() {
       rows.forEach((r) => {
         if (stat[r.status] !== undefined) stat[r.status] += 1;
       });
-      const riwayat = [...rows].sort((a, b) => b.tanggal.localeCompare(a.tanggal));
+      const riwayat = [...rows].sort((a, b) => String(b.tanggal || '').localeCompare(String(a.tanggal || '')));
 
       const todayRow = piketToday?.data?.[0]?.siswaList?.find(
         (s) => String(s.nisn).replace(/^0+/, '') === keyTarget

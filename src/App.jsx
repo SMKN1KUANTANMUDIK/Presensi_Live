@@ -46,9 +46,14 @@ class AppErrorBoundary extends Component {
     return { error };
   }
 
+  componentDidCatch(error, info) {
+    console.error('[AppErrorBoundary]', error, info);
+  }
+
   render() {
     if (!this.state.error) return this.props.children;
-    const isChunk = CHUNK_ERR_RE.test(this.state.error?.message || String(this.state.error));
+    const errMsg = String(this.state.error?.message || this.state.error || '');
+    const isChunk = CHUNK_ERR_RE.test(errMsg);
     return (
       <div className="flex min-h-dvh items-center justify-center bg-canvas p-5">
         <div className="w-full max-w-sm rounded-3xl border border-line bg-surface p-6 text-center shadow-float">
@@ -74,6 +79,11 @@ class AppErrorBoundary extends Component {
           >
             <RefreshCw className="size-4" /> Muat Versi Terbaru
           </button>
+          {errMsg && (
+            <p className="mt-3 break-words text-[10.5px] font-medium text-muted/70">
+              Detail: {errMsg.slice(0, 140)}
+            </p>
+          )}
         </div>
       </div>
     );

@@ -14,17 +14,29 @@ const BADGE_TONES = {
 };
 
 function normalizeOption(opt) {
-  if (typeof opt === 'string') {
-    return { value: opt, label: opt };
+  if (typeof opt === 'string' || typeof opt === 'number') {
+    const s = String(opt);
+    return {
+      value: s,
+      label: s,
+      sub: '',
+      badge: '',
+      badgeTone: 'neutral',
+      group: '',
+      keywords: '',
+      disabled: false,
+      selected: false,
+      raw: opt,
+    };
   }
   return {
     value: String(opt?.value ?? opt?.label ?? ''),
     label: String(opt?.label ?? opt?.value ?? ''),
-    sub: opt?.sub ? String(opt.sub) : '',
-    badge: opt?.badge ? String(opt.badge) : '',
+    sub: opt?.sub != null ? String(opt.sub) : '',
+    badge: opt?.badge != null ? String(opt.badge) : '',
     badgeTone: opt?.badgeTone || 'neutral',
-    group: opt?.group ? String(opt.group) : '',
-    keywords: opt?.keywords ? String(opt.keywords) : '',
+    group: opt?.group != null ? String(opt.group) : '',
+    keywords: opt?.keywords != null ? String(opt.keywords) : '',
     disabled: Boolean(opt?.disabled),
     selected: Boolean(opt?.selected),
     raw: opt?.raw ?? opt,
@@ -80,6 +92,7 @@ export default function SearchSuggest({
   const autoId = useId();
   const listId = `${id || autoId}-listbox`;
   const wrapRef = useRef(null);
+  const portalRef = useRef(null);
   const inputRef = useRef(null);
   const [open, setOpen] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
@@ -100,10 +113,10 @@ export default function SearchSuggest({
     const contains = [];
     for (let i = 0; i < normalized.length; i++) {
       const o = normalized[i];
-      const lbl = o.label.toLowerCase();
-      const sub = o.sub.toLowerCase();
-      const kw = o.keywords.toLowerCase();
-      const val = o.value.toLowerCase();
+      const lbl = String(o.label || '').toLowerCase();
+      const sub = String(o.sub || '').toLowerCase();
+      const kw = String(o.keywords || '').toLowerCase();
+      const val = String(o.value || '').toLowerCase();
 
       if (lbl.startsWith(q) || val.startsWith(q)) {
         prefix.push(o);
@@ -143,7 +156,7 @@ export default function SearchSuggest({
     const onScrollOrResize = () => updatePos();
     const onDocDown = (e) => {
       if (wrapRef.current?.contains(e.target)) return;
-      if (e.target?.closest?.(`[data-suggest-portal="${listId}"]`)) return;
+      if (portalRef.current?.contains(e.target)) return;
       setOpen(false);
     };
     window.addEventListener('resize', onScrollOrResize);
@@ -272,6 +285,7 @@ export default function SearchSuggest({
       {showDropdown && pos && typeof document !== 'undefined'
         ? createPortal(
             <div
+              ref={portalRef}
               id={listId}
               role="listbox"
               data-suggest-portal={listId}
