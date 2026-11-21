@@ -767,6 +767,7 @@ function appendRows(sh, rows, header, textCols) {
 const GET_ACTIONS = {
   getVersion:              () => getVersion(),
   getKelas:                () => getKelas(),
+  getSiswaOrtuKelas:       p => getSiswaOrtuKelas(p.kelas),
   login:                   p => doLogin(p.username, p.password),
   getPortalOrtu:           (p, token) => getPortalOrtu(p.bulan, token),
 
@@ -983,6 +984,29 @@ function normOrtuText(v) {
     .replace(/[^a-z0-9s]/g, " ")
     .replace(/s+/g, " ")
     .trim();
+}
+
+function getSiswaOrtuKelas(kelas) {
+  try {
+    const kls = str(kelas);
+    if (!kls) return { success: false, error: "Kelas wajib dipilih" };
+    const master = readSiswaMasterCached();
+    const seen = {};
+    const out = [];
+    for (let i = 0; i < master.length; i++) {
+      const s = master[i];
+      if (s.kelas !== kls || !s.nama) continue;
+      const key = normOrtuText(s.nama);
+      if (!key || seen[key]) continue;
+      seen[key] = true;
+      // Hanya kirim nama siswa (tanpa NISN, tanpa no HP orang tua)
+      out.push({ nama: s.nama });
+    }
+    out.sort((a, b) => a.nama.localeCompare(b.nama));
+    return { success: true, data: out };
+  } catch (err) {
+    return fail(err);
+  }
 }
 
 function cariSiswaOrtu(kelas, mode, query) {

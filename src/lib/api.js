@@ -135,6 +135,12 @@ export const api = {
   },
 
   // portal orang tua
+  getSiswaOrtuKelas: (kelas) =>
+    cachedGet(
+      `ortuSiswa:${kelas || ''}`,
+      () => get({ action: 'getSiswaOrtuKelas', kelas }, { skipAuth: true }),
+      5 * 60 * 1000
+    ),
   cariSiswaOrtu: (kelas, mode, query) =>
     postRaw({ action: 'cariSiswaOrtu', kelas, mode, query }, { skipAuth: true }),
   pilihSiswaOrtu: (selectToken, nisn) =>

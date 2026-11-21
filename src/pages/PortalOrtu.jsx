@@ -20,8 +20,9 @@ import api from '../lib/api';
 import { useTheme } from '../lib/theme';
 import { hariEfektifBulan, labelLibur, liburInfo, liburNasionalBulan } from '../lib/libur';
 import { cn, formatBulan, formatTanggal, monthISO, STATUS, todayISO, TONE } from '../lib/utils';
-import { Badge, Button, Card, EmptyState, Field, Input, Select, Skeleton } from '../components/ui';
+import { Badge, Button, Card, EmptyState, Field, Input, Skeleton } from '../components/ui';
 import HelpSheet from '../components/HelpSheet';
+import SearchSuggest from '../components/SearchSuggest';
 
 const SESI_KEY = 'presensi-ortu-sesi';
 const KUNCI_KEY = 'presensi-ortu-kunci';
@@ -120,11 +121,13 @@ function initials(name) {
 export default function PortalOrtu() {
   const { dark, toggle } = useTheme();
   const [sesi, setSesi] = useState(() => readSesi());
-  const [tab, setTab] = useState('nisn'); // 'nisn' | 'nama'
+  const [tab, setTab] = useState('nama'); // 'nama' | 'nisn'
   const [inputVal, setInputVal] = useState('');
   const [kelas, setKelas] = useState('');
   const [ingat, setIngat] = useState(true);
   const [kelasList, setKelasList] = useState([]);
+  const [namaSiswaList, setNamaSiswaList] = useState([]);
+  const [loadingNama, setLoadingNama] = useState(false);
   const [pilihan, setPilihan] = useState([]);
   const [selectToken, setSelectToken] = useState('');
   const [error, setError] = useState('');
@@ -154,6 +157,62 @@ export default function PortalOrtu() {
       .then((res) => setKelasList(res?.data || []))
       .catch(() => {});
   }, []);
+
+  const resolvedKelas = useMemo(() => {
+    const t = kelas.trim();
+    if (!t) return '';
+    return kelasList.find((k) => k.toLowerCase() === t.toLowerCase()) || '';
+  }, [kelas, kelasList]);
+
+  useEffect(() => {
+    const kls = resolvedKelas;
+    if (!kls) {
+      setNamaSiswaList([]);
+      setLoadingNama(false);
+      return undefined;
+    }
+    let alive = true;
+    setLoadingNama(true);
+    (async () => {
+      try {
+        const res = await api.getSiswaOrtuKelas(kls);
+        if (res?.success && Array.isArray(res.data)) {
+          if (alive) setNamaSiswaList(res.data.map((s) => s.nama).filter(Boolean));
+          return;
+        }
+        // Fallback backend lama bila getSiswaOrtuKelas belum di-deploy
+        if (res && /Action tidak ditemukan/i.test(res.error || '')) {
+          const legacy = await api.getSiswa(kls).catch(() => null);
+          if (alive && legacy?.success && Array.isArray(legacy.data)) {
+            const names = [...new Set(legacy.data.map((s) => s.nama_siswa || s.nama).filter(Boolean))].sort((a, b) =>
+              a.localeCompare(b)
+            );
+            setNamaSiswaList(names);
+            return;
+          }
+        }
+        if (alive) setNamaSiswaList([]);
+      } catch {
+        if (alive) setNamaSiswaList([]);
+      } finally {
+        if (alive) setLoadingNama(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [resolvedKelas]);
+
+  const namaSuggestions = useMemo(
+    () =>
+      namaSiswaList.map((nama) => ({
+        value: nama,
+        label: nama,
+        badge: resolvedKelas || kelas,
+        badgeTone: 'brand',
+      })),
+    [namaSiswaList, resolvedKelas, kelas]
+  );
 
   const muatData = useCallback(async () => {
     if (!sesi) return;
@@ -261,12 +320,13 @@ export default function PortalOrtu() {
     setError('');
     setPilihan([]);
     setSelectToken('');
-    if (!kelas) return setError('Pilih kelas anak terlebih dahulu.');
+    const targetKelas = resolvedKelas || kelas.trim();
+    if (!targetKelas) return setError('Pilih kelas anak terlebih dahulu.');
     if (!inputVal.trim()) return setError(tab === 'nisn' ? 'Masukkan NISN anak.' : 'Masukkan nama anak.');
 
     setChecking(true);
     try {
-      const cariRes = await api.cariSiswaOrtu(kelas, tab, inputVal.trim());
+      const cariRes = await api.cariSiswaOrtu(targetKelas, tab, inputVal.trim());
       if (cariRes && !/Action tidak ditemukan/i.test(cariRes.error || '')) {
         if (cariRes.code === 'RATE_LIMITED') {
           setError(cariRes.error || 'Terlalu banyak percobaan gagal. Coba lagi beberapa saat.');
@@ -300,7 +360,7 @@ export default function PortalOrtu() {
       }
 
       // Fallback untuk backend v8/v9
-      const res = await api.getSiswa(kelas);
+      const res = await api.getSiswa(targetKelas);
       const list = res?.data || [];
       let matches = [];
       if (tab === 'nisn') {
@@ -429,14 +489,15 @@ export default function PortalOrtu() {
 
             <div className="mt-4 flex gap-1 rounded-xl bg-sunken p-1">
               {[
-                { key: 'nisn', label: 'NISN Anak' },
                 { key: 'nama', label: 'Nama Anak' },
+                { key: 'nisn', label: 'NISN Anak' },
               ].map((t) => (
                 <button
                   key={t.key}
                   type="button"
                   onClick={() => {
                     setTab(t.key);
+                    setInputVal('');
                     setError('');
                     setPilihan([]);
                   }}
@@ -463,31 +524,61 @@ export default function PortalOrtu() {
             )}
 
             <form onSubmit={masuk} className="mt-4 space-y-3">
-              <Field
-                label={tab === 'nisn' ? '1. Masukkan NISN Anak' : '1. Masukkan Nama Anak'}
-                hint={
-                  tab === 'nisn'
-                    ? 'NISN terdiri dari 10 angka (bisa dilihat di kartu pelajar atau rapor).'
-                    : 'Cukup ketik sebagian nama, lalu pilih dari daftar jika ada yang sama.'
-                }
-              >
-                <Input
-                  value={inputVal}
-                  onChange={(e) => setInputVal(e.target.value)}
-                  inputMode={tab === 'nisn' ? 'numeric' : 'text'}
-                  placeholder={tab === 'nisn' ? 'Contoh: 0098873773' : 'Contoh: Aditya Pratama'}
+              <Field label="1. Pilih Kelas Anak">
+                <SearchSuggest
+                  value={kelas}
+                  onChange={(v) => {
+                    setKelas(v);
+                    setPilihan([]);
+                    if (tab === 'nama') setInputVal('');
+                  }}
+                  options={kelasList}
+                  placeholder="Ketik atau pilih kelas anak…"
+                  hintTitle="Kelas tersedia"
+                  size="lg"
+                  showToggle
                 />
               </Field>
 
-              <Field label="2. Pilih Kelas Anak">
-                <Select value={kelas} onChange={(e) => setKelas(e.target.value)}>
-                  <option value="">Pilih kelas</option>
-                  {kelasList.map((k) => (
-                    <option key={k} value={k}>
-                      {k}
-                    </option>
-                  ))}
-                </Select>
+              <Field
+                label={tab === 'nisn' ? '2. Masukkan NISN Anak' : '2. Pilih atau Ketik Nama Anak'}
+                hint={
+                  tab === 'nisn'
+                    ? 'NISN terdiri dari 10 angka (bisa dilihat di kartu pelajar atau rapor).'
+                    : !kelas
+                      ? 'Pilih kelas anak di atas terlebih dahulu agar daftar nama muncul.'
+                      : loadingNama
+                        ? 'Memuat daftar nama siswa di kelas ini…'
+                        : namaSiswaList.length > 0
+                          ? `${namaSiswaList.length} nama siswa tersedia — ketuk untuk memilih cepat.`
+                          : 'Ketik sebagian nama anak, lalu tekan Lihat Kehadiran.'
+                }
+              >
+                {tab === 'nama' ? (
+                  <SearchSuggest
+                    value={inputVal}
+                    onChange={setInputVal}
+                    options={namaSuggestions}
+                    disabled={!kelas}
+                    placeholder={
+                      !kelas
+                        ? 'Pilih kelas terlebih dahulu…'
+                        : loadingNama
+                          ? 'Memuat daftar siswa…'
+                          : 'Ketik atau pilih nama anak…'
+                    }
+                    hintTitle={`Siswa kelas ${kelas}`}
+                    size="lg"
+                    showToggle
+                  />
+                ) : (
+                  <Input
+                    value={inputVal}
+                    onChange={(e) => setInputVal(e.target.value)}
+                    inputMode="numeric"
+                    placeholder="Contoh: 0098873773"
+                  />
+                )}
               </Field>
 
               <label className="flex cursor-pointer items-center gap-2 text-[12px] font-semibold text-muted">

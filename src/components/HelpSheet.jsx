@@ -121,9 +121,9 @@ const GUIDES = {
     title: 'Cara Menggunakan Portal Orang Tua',
     intro: 'Cek kehadiran dan keterlambatan anak di sekolah secara mandiri tanpa perlu password.',
     steps: [
-      'Pilih tab "NISN Anak" (10 angka di kartu pelajar/rapor) atau tab "Nama Anak".',
-      'Pilih Kelas anak saat ini, lalu tekan tombol "Lihat Kehadiran".',
-      'Centang "Ingat perangkat ini" agar lain kali langsung terbuka tanpa perlu mengetik ulang.',
+      'Pilih Kelas anak pada kolom pertama (bisa diketik atau langsung dipilih dari daftar).',
+      'Pilih Nama Anak dari rekomendasi yang muncul otomatis (atau pindah ke tab "NISN Anak" jika ingin memasukkan 10 angka NISN).',
+      'Centang "Ingat perangkat ini" agar lain kali langsung terbuka tanpa perlu memilih ulang, lalu tekan "Lihat Kehadiran".',
     ],
     tip: 'Tanggal hari Sabtu, Minggu, dan libur nasional otomatis ditandai sebagai hari libur.',
     showLegend: true,
