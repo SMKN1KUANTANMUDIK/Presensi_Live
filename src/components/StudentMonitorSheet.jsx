@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, CalendarDays, Clock, ShieldAlert } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AlertTriangle, CalendarDays, Clock, RefreshCw, ShieldAlert } from 'lucide-react';
 import api from '../lib/api';
 import { cn, formatBulan, formatTanggal, monthISO, STATUS, TONE } from '../lib/utils';
 import { hariEfektifBulan } from '../lib/libur';
 import { pesanPeringatanDini, pesanRekapSiswa } from '../lib/whatsapp';
-import { Badge, EmptyState, Sheet, Skeleton } from './ui';
+import { Badge, Button, EmptyState, Sheet, Skeleton } from './ui';
 import WaButton from './WaButton';
 
 export default function StudentMonitorSheet({ siswa, open, onClose, initialBulan }) {
@@ -12,23 +12,34 @@ export default function StudentMonitorSheet({ siswa, open, onClose, initialBulan
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const reqRef = useRef(0);
 
   const nisn = siswa?.nisn || '';
   const kelas = siswa?.kelas || '';
   const nama = siswa?.nama || siswa?.nama_siswa || 'Siswa';
 
+  useEffect(() => {
+    if (open) {
+      setData(null);
+      setError('');
+    }
+  }, [open, nisn]);
+
   const load = useCallback(async () => {
     if (!open || !nisn) return;
+    const reqId = ++reqRef.current;
     setLoading(true);
     setError('');
     try {
       const res = await api.getMonitoringSiswa(nisn, bulan);
+      if (reqId !== reqRef.current) return;
       if (res?.success) {
         setData(res);
         return;
       }
       throw new Error(res?.error || 'Gagal memuat monitoring siswa');
     } catch (err) {
+      if (reqId !== reqRef.current) return;
       // Fallback bila backend masih versi v8 (belum ada getMonitoringSiswa)
       if (/Action tidak ditemukan/i.test(err?.message || '') && kelas) {
         try {
@@ -37,6 +48,7 @@ export default function StudentMonitorSheet({ siswa, open, onClose, initialBulan
             api.getApelPagi('', kelas, bulan, nisn).catch(() => null),
             api.getKasusPembinaan({ kelas }).catch(() => null),
           ]);
+          if (reqId !== reqRef.current) return;
           const rows = (absRes?.data || []).filter(
             (r) => String(r.nisn).replace(/^0+/, '') === String(nisn).replace(/^0+/, '')
           );
@@ -51,7 +63,7 @@ export default function StudentMonitorSheet({ siswa, open, onClose, initialBulan
                 detail: [{ jam: r.jam || 0, mapel: r.mapel || '', guru: r.guru || '', status: r.status }],
               };
             })
-            .sort((a, b) => b.tanggal.localeCompare(a.tanggal));
+            .sort((a, b) => String(b.tanggal || '').localeCompare(String(a.tanggal || '')));
           const kasus = (kasusRes?.data || []).filter(
             (k) => String(k.nisn).replace(/^0+/, '') === String(nisn).replace(/^0+/, '')
           );
@@ -72,10 +84,12 @@ export default function StudentMonitorSheet({ siswa, open, onClose, initialBulan
           /* lanjut tampilkan error awal */
         }
       }
-      setData(null);
-      setError(err.message || 'Gagal memuat monitoring siswa.');
+      if (reqId === reqRef.current) {
+        setData(null);
+        setError(err.message || 'Gagal memuat monitoring siswa.');
+      }
     } finally {
-      setLoading(false);
+      if (reqId === reqRef.current) setLoading(false);
     }
   }, [open, nisn, kelas, nama, siswa?.no_hp_ortu, bulan]);
 
@@ -159,8 +173,11 @@ export default function StudentMonitorSheet({ siswa, open, onClose, initialBulan
             <Skeleton className="h-32 rounded-2xl" />
           </div>
         ) : error ? (
-          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-[12px] font-semibold text-rose-700 dark:text-rose-300">
-            {error}
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-[12px] font-semibold text-rose-700 dark:text-rose-300">
+            <span>{error}</span>
+            <Button size="sm" variant="outline" onClick={load}>
+              <RefreshCw className="size-3.5" /> Muat ulang
+            </Button>
           </div>
         ) : (
           <>

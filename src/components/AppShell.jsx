@@ -256,8 +256,8 @@ export default function AppShell({ children }) {
       </main>
 
       {/* ============ BOTTOM NAV (mobile) ============ */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 pb-safe backdrop-blur-xl lg:hidden">
-        <div className="mx-auto flex max-w-lg items-stretch justify-center">
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 pb-safe shadow-[0_-8px_24px_-16px_rgba(15,23,42,.22)] backdrop-blur-xl lg:hidden">
+        <div className="mx-auto flex max-w-lg items-stretch justify-center px-1">
           {mobilePrimary.map((item) => {
             const Icon = ICONS[item.icon];
             return (
@@ -266,7 +266,7 @@ export default function AppShell({ children }) {
                 to={item.to}
                 className={({ isActive }) =>
                   cn(
-                    'relative flex min-w-[68px] max-w-[124px] flex-1 flex-col items-center gap-1 py-2 text-[10.5px] font-bold transition-colors active:scale-95',
+                    'relative flex min-w-0 max-w-[120px] flex-1 flex-col items-center gap-0.5 py-2 text-[10.5px] font-bold transition-colors active:scale-95',
                     isActive ? 'text-brand' : 'text-muted'
                   )
                 }
@@ -275,13 +275,13 @@ export default function AppShell({ children }) {
                   <>
                     <span
                       className={cn(
-                        'grid h-8 w-12 place-items-center rounded-xl transition-all duration-150',
+                        'grid h-8 w-11 place-items-center rounded-xl transition-all duration-150',
                         isActive && 'scale-105 bg-brand-soft shadow-xs'
                       )}
                     >
                       <Icon className="size-[19px]" strokeWidth={isActive ? 2.5 : 2} />
                     </span>
-                    <span className="truncate px-1">{item.label}</span>
+                    <span className="max-w-full truncate px-0.5">{item.label}</span>
                   </>
                 )}
               </NavLink>
@@ -291,12 +291,12 @@ export default function AppShell({ children }) {
           <button
             type="button"
             onClick={() => setMenuOpen(true)}
-            className="relative flex min-w-[68px] max-w-[124px] flex-1 flex-col items-center gap-1 py-2 text-[10.5px] font-bold text-muted transition active:scale-95"
+            className="relative flex min-w-0 max-w-[120px] flex-1 flex-col items-center gap-0.5 py-2 text-[10.5px] font-bold text-muted transition active:scale-95"
           >
-            <span className="grid h-8 w-12 place-items-center rounded-xl">
+            <span className="grid h-8 w-11 place-items-center rounded-xl">
               <MoreHorizontal className="size-[19px]" />
             </span>
-            <span>Menu</span>
+            <span className="truncate px-0.5">Menu</span>
           </button>
         </div>
       </nav>

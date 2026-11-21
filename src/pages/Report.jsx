@@ -951,12 +951,15 @@ export default function Report() {
               </Button>
             </div>
           </div>
-          <p className="no-print mb-3 rounded-xl bg-brand-soft/50 px-3 py-2 text-[11.5px] font-semibold text-muted">
+          <p className="no-print mb-2 rounded-xl bg-brand-soft/50 px-3 py-2 text-[11.5px] font-semibold text-muted">
             Tip: Untuk menyimpan file PDF, tekan <b className="text-ink">Cetak / PDF</b> lalu pilih printer{' '}
             <b className="text-ink">Simpan sebagai PDF</b>.
           </p>
+          <p className="no-print mb-2 text-[11px] font-semibold text-muted sm:hidden">
+            ← Geser tabel ke kanan untuk melihat seluruh kolom laporan →
+          </p>
 
-          <div className="text-slate-900">
+          <div className="rounded-2xl bg-white p-3 text-slate-900 ring-1 ring-slate-200/80 sm:p-5 print:rounded-none print:p-0 print:ring-0">
             <KopSurat />
             <h2 className="text-center text-[15px] font-extrabold uppercase tracking-wide">{title}</h2>
             <p className="mt-1 text-center text-[11.5px] font-semibold text-slate-700">{subtitle}</p>

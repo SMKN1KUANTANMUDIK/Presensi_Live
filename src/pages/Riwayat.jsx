@@ -644,27 +644,32 @@ export default function Riwayat() {
             ) : (
               <>
                 {/* Ringkasan 5 Status — ketuk kartu untuk menyaring siswa */}
-                <div className="grid grid-cols-5 gap-1.5">
-                  {STATUS.map((s) => {
-                    const t = TONE[s.tone];
-                    const active = detailStatusFilter === s.key;
-                    return (
-                      <button
-                        key={s.key}
-                        type="button"
-                        onClick={() => setDetailStatusFilter((cur) => (cur === s.key ? 'ALL' : s.key))}
-                        className={cn(
-                          'rounded-xl border py-2 text-center transition active:scale-95',
-                          active ? cn(t.border, t.soft, 'ring-2 ring-brand/25') : 'border-line bg-sunken/40 hover:bg-sunken'
-                        )}
-                      >
-                        <span className={cn('text-[10px] font-extrabold uppercase', t.text)}>{s.label}</span>
-                        <p className="mt-0.5 text-[15px] font-extrabold tabular-nums text-ink">
-                          {detailSummary.counts[s.key] || 0}
-                        </p>
-                      </button>
-                    );
-                  })}
+                <div className="space-y-1.5">
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {STATUS.map((s) => {
+                      const t = TONE[s.tone];
+                      const active = detailStatusFilter === s.key;
+                      return (
+                        <button
+                          key={s.key}
+                          type="button"
+                          onClick={() => setDetailStatusFilter((cur) => (cur === s.key ? 'ALL' : s.key))}
+                          className={cn(
+                            'rounded-xl border px-1 py-2 text-center transition active:scale-95',
+                            active ? cn(t.border, t.soft, 'ring-2 ring-brand/25') : 'border-line bg-sunken/40 hover:bg-sunken'
+                          )}
+                        >
+                          <span className={cn('block truncate text-[10px] font-extrabold uppercase', t.text)}>{s.label}</span>
+                          <p className="mt-0.5 text-[15px] font-extrabold tabular-nums text-ink">
+                            {detailSummary.counts[s.key] || 0}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10.5px] font-medium text-muted">
+                    Ketuk salah satu kotak status di atas untuk langsung menyaring siswa.
+                  </p>
                 </div>
 
                 {/* Pencarian & Filter */}

@@ -730,7 +730,7 @@ export default function PortalOrtu() {
                   type="month"
                   value={bulan}
                   onChange={(e) => setBulan(e.target.value)}
-                  className="h-9 rounded-xl border border-line bg-sunken/50 px-2.5 text-[12px] font-bold text-ink"
+                  className="h-10 w-full rounded-xl border border-line bg-sunken/50 px-3 text-[12.5px] font-bold text-ink outline-none focus:border-brand focus:bg-surface sm:h-9 sm:w-auto"
                 />
               </div>
 

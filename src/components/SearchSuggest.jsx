@@ -136,13 +136,22 @@ export default function SearchSuggest({
     const el = wrapRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - r.bottom;
-    const spaceAbove = r.top;
-    const dropUp = spaceBelow < 210 && spaceAbove > spaceBelow;
-    const maxHeight = Math.min(280, Math.max(140, (dropUp ? spaceAbove : spaceBelow) - 16));
+    const vv = window.visualViewport;
+    const vpHeight = vv ? vv.height : window.innerHeight;
+    const vpWidth = vv ? vv.width : window.innerWidth;
+    const vpTop = vv ? vv.offsetTop : 0;
+    const vpLeft = vv ? vv.offsetLeft : 0;
+
+    const spaceBelow = vpTop + vpHeight - r.bottom;
+    const spaceAbove = r.top - vpTop;
+    const dropUp = spaceBelow < 190 && spaceAbove > spaceBelow;
+    const maxHeight = Math.min(270, Math.max(120, (dropUp ? spaceAbove : spaceBelow) - 14));
+    const width = Math.min(r.width, vpWidth - 16);
+    const left = Math.max(vpLeft + 8, Math.min(r.left, vpLeft + vpWidth - width - 8));
+
     setPos({
-      left: Math.max(8, Math.min(r.left, window.innerWidth - r.width - 8)),
-      width: Math.min(r.width, window.innerWidth - 16),
+      left,
+      width,
       top: dropUp ? undefined : r.bottom + 6,
       bottom: dropUp ? window.innerHeight - r.top + 6 : undefined,
       maxHeight,
@@ -159,17 +168,22 @@ export default function SearchSuggest({
       if (portalRef.current?.contains(e.target)) return;
       setOpen(false);
     };
+    const vv = window.visualViewport;
     window.addEventListener('resize', onScrollOrResize);
     window.addEventListener('scroll', onScrollOrResize, true);
+    vv?.addEventListener('resize', onScrollOrResize);
+    vv?.addEventListener('scroll', onScrollOrResize);
     document.addEventListener('mousedown', onDocDown);
     document.addEventListener('touchstart', onDocDown, { passive: true });
     return () => {
       window.removeEventListener('resize', onScrollOrResize);
       window.removeEventListener('scroll', onScrollOrResize, true);
+      vv?.removeEventListener('resize', onScrollOrResize);
+      vv?.removeEventListener('scroll', onScrollOrResize);
       document.removeEventListener('mousedown', onDocDown);
       document.removeEventListener('touchstart', onDocDown);
     };
-  }, [open, updatePos, listId]);
+  }, [open, updatePos]);
 
   useEffect(() => {
     setActiveIdx(0);
@@ -184,8 +198,8 @@ export default function SearchSuggest({
     }
     if (clearOnSelect) {
       onChange?.('');
-    } else if (onSelect && !clearOnSelect) {
-      // onSelect bisa memilih sendiri apakah mengubah value; biarkan default tetap sinkron bila tidak di-override
+    } else {
+      inputRef.current?.blur();
     }
     setOpen(false);
   };

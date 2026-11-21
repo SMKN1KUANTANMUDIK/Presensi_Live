@@ -518,20 +518,21 @@ export default function Piket() {
         </div>
 
         {/* summary */}
-        <div className="mt-3 grid grid-cols-4 gap-2">
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {[
-            { label: 'Hadir', value: summary.hadir, cls: 'text-emerald-600 dark:text-emerald-400' },
-            { label: 'Sakit / Izin', value: summary.si, cls: 'text-amber-600 dark:text-amber-400' },
-            { label: 'Alpha / Cabut', value: summary.alpha, cls: 'text-rose-600 dark:text-rose-400' },
+            { label: 'Hadir', value: summary.hadir, cls: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/[0.06] border-emerald-500/20' },
+            { label: 'Sakit / Izin', value: summary.si, cls: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/[0.06] border-amber-500/20' },
+            { label: 'Alpha / Cabut', value: summary.alpha, cls: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-500/[0.06] border-rose-500/20' },
             {
               label: summary.jamKosong > 0 ? 'Belum / Kosong' : 'Belum Absen',
               value: summary.belum + summary.jamKosong,
               cls: 'text-violet-600 dark:text-violet-400',
+              bg: 'bg-violet-500/[0.06] border-violet-500/20',
             },
           ].map((s) => (
-            <div key={s.label} className="rounded-2xl border border-line bg-sunken/40 px-2 py-2 text-center">
-              <p className={cn('text-lg font-extrabold leading-none tabular-nums', s.cls)}>{s.value}</p>
-              <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-muted">{s.label}</p>
+            <div key={s.label} className={cn('rounded-2xl border px-2.5 py-2.5 text-center', s.bg)}>
+              <p className={cn('text-xl font-extrabold leading-none tabular-nums', s.cls)}>{s.value}</p>
+              <p className="mt-1 text-[10.5px] font-bold uppercase tracking-wide text-muted">{s.label}</p>
             </div>
           ))}
         </div>
@@ -1043,6 +1044,9 @@ export default function Piket() {
               />
             </div>
 
+            <p className="text-[11px] font-semibold text-muted sm:hidden">
+              ← Geser tabel ke kanan untuk melihat Jam 1–11 &amp; tombol WA →
+            </p>
             <div className="overflow-x-auto rounded-2xl border border-line">
               <table className="w-full min-w-[680px] border-collapse">
                 <thead className="bg-sunken/60">

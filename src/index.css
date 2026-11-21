@@ -65,11 +65,13 @@
   html {
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
+    overscroll-behavior-y: none;
   }
 
   body {
     @apply bg-canvas text-ink font-sans;
     overflow-x: hidden;
+    overscroll-behavior-y: none;
     background-image:
       radial-gradient(65% 40% at 100% 0%, hsl(221 90% 56% / 0.06), transparent 65%),
       radial-gradient(50% 35% at 0% 100%, hsl(262 83% 58% / 0.05), transparent 60%);
@@ -101,10 +103,30 @@
     color: inherit;
   }
 
+  button,
+  a,
+  label,
+  input,
+  select {
+    touch-action: manipulation;
+  }
+
+  /* Cegah auto-zoom Safari/Chrome iOS saat mengetuk input < 16px di perangkat sentuh */
+  @media (pointer: coarse) and (max-width: 639px) {
+    input:not([type='checkbox']):not([type='radio']),
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+
   /* date/time picker di iOS & Android */
   input[type='date'],
-  input[type='month'] {
-    min-height: 2.75rem;
+  input[type='month'],
+  input[type='time'] {
+    min-height: 2.5rem;
+    min-width: 0;
+    max-width: 100%;
     appearance: none;
   }
 

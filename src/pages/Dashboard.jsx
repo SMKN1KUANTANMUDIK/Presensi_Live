@@ -8,6 +8,7 @@ import {
   GraduationCap,
   History,
   Percent,
+  RefreshCw,
   ShieldAlert,
   ShieldCheck,
   UserCog,
@@ -77,9 +78,11 @@ export default function Dashboard() {
   const toast = useToast();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
     let alive = true;
+    setLoading(true);
     (async () => {
       try {
         const res = await api.getDashboardAdmin();
@@ -95,10 +98,11 @@ export default function Dashboard() {
     return () => {
       alive = false;
     };
-  }, [toast]);
+  }, [toast, refreshTick]);
 
   const d = data || {};
   const belumInput = d.kelasBelumInput || [];
+  const firstName = String(name || 'Admin').trim().split(/\s+/)[0] || 'Admin';
 
   return (
     <div className="space-y-3.5">
@@ -118,18 +122,28 @@ export default function Dashboard() {
               <p className="text-[11px] font-bold uppercase tracking-widest text-white/75">
                 {sapaanWaktu()} · Admin
               </p>
-              <h1 className="mt-0.5 text-[22px] font-extrabold leading-tight tracking-tight sm:text-[26px]">
-                Halo, {name.split(' ')[0]}
+              <h1 className="mt-0.5 truncate text-[21px] font-extrabold leading-tight tracking-tight sm:text-[26px]">
+                Halo, {firstName}
               </h1>
               <p className="mt-0.5 text-[12.5px] font-medium text-white/85">{formatTanggal(todayISO())}</p>
             </div>
           </div>
-          <Link
-            to="/input"
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-white px-4 text-sm font-extrabold text-brand shadow-md transition hover:bg-white/95 active:scale-[.97]"
-          >
-            Input absensi <ArrowRight className="size-4" />
-          </Link>
+          <div className="flex w-full items-center gap-2 sm:w-auto">
+            <button
+              type="button"
+              onClick={() => setRefreshTick((n) => n + 1)}
+              aria-label="Segarkan dashboard"
+              className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white/15 text-white ring-1 ring-white/25 transition hover:bg-white/25 active:scale-95"
+            >
+              <RefreshCw className={cn('size-4', loading && 'animate-spin')} />
+            </button>
+            <Link
+              to="/input"
+              className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-white px-4 text-sm font-extrabold text-brand shadow-md transition hover:bg-white/95 active:scale-[.97] sm:flex-initial"
+            >
+              Input absensi <ArrowRight className="size-4" />
+            </Link>
+          </div>
         </div>
       </Card>
 
@@ -172,9 +186,13 @@ export default function Dashboard() {
           {belumInput.length > 0 && (
             <div className="mt-2.5 flex flex-wrap gap-1.5">
               {belumInput.slice(0, 12).map((k) => (
-                <span key={k} className="rounded-lg bg-sunken px-2.5 py-1 text-[11px] font-bold text-muted">
+                <Link
+                  key={k}
+                  to="/piket"
+                  className="rounded-lg bg-sunken px-2.5 py-1 text-[11px] font-bold text-muted transition hover:bg-brand-soft hover:text-brand"
+                >
                   {k}
-                </span>
+                </Link>
               ))}
               {belumInput.length > 12 && (
                 <Link to="/piket" className="rounded-lg bg-brand-soft px-2.5 py-1 text-[11px] font-extrabold text-brand transition hover:bg-brand/15">

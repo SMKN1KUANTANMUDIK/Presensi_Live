@@ -93,14 +93,14 @@ export function Button({
 --------------------------------------------------------- */
 export function Field({ label, hint, children, className, htmlFor }) {
   return (
-    <div className={cn('flex flex-col gap-1.5', className)}>
+    <div className={cn('flex min-w-0 flex-col gap-1.5', className)}>
       {label ? (
-        <label htmlFor={htmlFor} className="text-[12.5px] font-bold text-ink/80">
+        <label htmlFor={htmlFor} className="truncate text-[12.5px] font-bold text-ink/80">
           {label}
         </label>
       ) : null}
       {children}
-      {hint ? <p className="text-[11.5px] font-medium text-muted">{hint}</p> : null}
+      {hint ? <p className="text-[11.5px] font-medium leading-snug text-muted">{hint}</p> : null}
     </div>
   );
 }
