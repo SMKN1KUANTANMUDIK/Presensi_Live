@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   BarChart3,
@@ -19,12 +19,15 @@ import {
   Users,
   WifiOff,
 } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useAuth, displayName, roleLabel } from '../lib/auth';
 import { useTheme } from '../lib/theme';
 import { useToast } from '../lib/toast';
 import { cn, initials } from '../lib/utils';
 import { Sheet } from './ui';
 import HelpSheet from './HelpSheet';
+import { ScrollProgress, useGsap } from '../lib/motion';
+import { PageTransition } from './PageTransition';
 
 const ICONS = {
   dashboard: LayoutDashboard,
@@ -81,6 +84,78 @@ const TITLES = {
   '/orangtua': 'Monitoring Siswa',
 };
 
+/* ------------ sidebar nav link animasi ------------ */
+function SideNavItem({ to, label, icon: IconKey }) {
+  const Icon = ICONS[IconKey];
+  const reduce = useReducedMotion();
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        cn(
+          'group relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-[13.5px] font-bold transition-all duration-150 active:scale-[.98]',
+          isActive
+            ? 'bg-gradient-to-r from-brand to-blue-600 text-white shadow-[0_10px_24px_-12px_var(--brand)]'
+            : 'text-muted hover:bg-sunken hover:text-ink'
+        )
+      }
+    >
+      {({ isActive }) => (
+        <>
+          {isActive && !reduce && (
+            <motion.span
+              layoutId="sidebar-active"
+              className="absolute inset-0 rounded-2xl bg-gradient-to-r from-brand to-blue-600"
+              style={{ zIndex: -1 }}
+              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            />
+          )}
+          <Icon className="size-[18px] shrink-0 transition-transform duration-150 group-hover:scale-105" />
+          {label}
+        </>
+      )}
+    </NavLink>
+  );
+}
+
+/* ------------ mobile bottom nav item ------------ */
+function BottomNavItem({ to, label, icon: IconKey }) {
+  const Icon = ICONS[IconKey];
+  const reduce = useReducedMotion();
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        cn(
+          'relative flex min-w-0 max-w-[120px] flex-1 flex-col items-center gap-0.5 py-2 text-[10.5px] font-bold transition-colors active:scale-95',
+          isActive ? 'text-brand' : 'text-muted'
+        )
+      }
+    >
+      {({ isActive }) => (
+        <>
+          <span
+            className={cn(
+              'grid h-8 w-11 place-items-center rounded-xl transition-all duration-150',
+              isActive && 'scale-105 bg-brand-soft shadow-xs'
+            )}
+          >
+            <Icon className="size-[19px]" strokeWidth={isActive ? 2.5 : 2} />
+          </span>
+          <span className="max-w-full truncate px-0.5">{label}</span>
+          {isActive && !reduce && (
+            <motion.span
+              layoutId="bottom-active-dot"
+              className="absolute -top-px mx-auto h-0.5 w-7 rounded-full bg-brand"
+              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            />
+          )}
+        </>
+      )}
+    </NavLink>
+  );
+}
+
 export default function AppShell({ children }) {
   const { user, role, logout } = useAuth();
   const { dark, toggle } = useTheme();
@@ -90,7 +165,21 @@ export default function AppShell({ children }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
-  const [offline, setOffline] = useState(() => (typeof navigator !== 'undefined' ? !navigator.onLine : false));
+  const [offline, setOffline] = useState(() =>
+    typeof navigator !== 'undefined' ? !navigator.onLine : false
+  );
+
+  // GSAP sidebar entrance — sekali saat mount
+  const sidebarRef = useGsap((gsap) => {
+    gsap.from('.sidebar-nav-item', {
+      x: -20,
+      opacity: 0,
+      duration: 0.5,
+      stagger: 0.055,
+      ease: 'power3.out',
+      delay: 0.08,
+    });
+  }, []);
 
   useEffect(() => {
     const onOff = () => setOffline(true);
@@ -129,8 +218,14 @@ export default function AppShell({ children }) {
 
   return (
     <div className="min-h-dvh bg-canvas">
+      {/* Scroll progress bar */}
+      <ScrollProgress />
+
       {/* ============ SIDEBAR (desktop) ============ */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-line bg-surface/85 px-3 py-5 backdrop-blur-xl lg:flex">
+      <aside
+        ref={sidebarRef}
+        className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-line bg-surface/85 px-3 py-5 backdrop-blur-xl lg:flex"
+      >
         <div className="flex items-center gap-3 px-2">
           <img
             src="./logo_sekolah.webp"
@@ -144,27 +239,14 @@ export default function AppShell({ children }) {
         </div>
 
         <nav className="mt-6 flex-1 space-y-1 overflow-y-auto pr-0.5">
-          <p className="px-2 pb-1 text-[10.5px] font-extrabold uppercase tracking-widest text-muted/70">Menu Utama</p>
-          {items.map((item) => {
-            const Icon = ICONS[item.icon];
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  cn(
-                    'group relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-[13.5px] font-bold transition-all duration-150 active:scale-[.98]',
-                    isActive
-                      ? 'bg-gradient-to-r from-brand to-blue-600 text-white shadow-[0_10px_24px_-12px_var(--brand)]'
-                      : 'text-muted hover:bg-sunken hover:text-ink'
-                  )
-                }
-              >
-                <Icon className="size-[18px] shrink-0 transition-transform duration-150 group-hover:scale-105" />
-                {item.label}
-              </NavLink>
-            );
-          })}
+          <p className="px-2 pb-1 text-[10.5px] font-extrabold uppercase tracking-widest text-muted/70">
+            Menu Utama
+          </p>
+          {items.map((item) => (
+            <div key={item.to} className="sidebar-nav-item">
+              <SideNavItem to={item.to} label={item.label} icon={item.icon} />
+            </div>
+          ))}
         </nav>
 
         <div className="space-y-1 border-t border-line pt-3">
@@ -208,7 +290,18 @@ export default function AppShell({ children }) {
             className="size-9 shrink-0 rounded-xl bg-white p-0.5 shadow-xs ring-1 ring-line"
           />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[15px] font-extrabold leading-tight tracking-tight text-ink">{title}</p>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.p
+                key={location.pathname}
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 6 }}
+                transition={{ duration: 0.2, ease: 'easeInOut' }}
+                className="truncate text-[15px] font-extrabold leading-tight tracking-tight text-ink"
+              >
+                {title}
+              </motion.p>
+            </AnimatePresence>
             <p className="truncate text-[11px] font-semibold text-muted">
               {userName} · {userRole}
             </p>
@@ -234,60 +327,40 @@ export default function AppShell({ children }) {
       </header>
 
       {/* ============ OFFLINE BANNER ============ */}
-      {offline && (
-        <div className="lg:pl-64">
-          <div className="animate-rise mx-auto max-w-6xl px-3 pt-3 sm:px-5 lg:px-8">
-            <div className="flex items-center gap-2.5 rounded-2xl border border-amber-500/35 bg-amber-500/12 px-3.5 py-2.5 text-[12px] font-bold text-amber-800 dark:text-amber-200">
-              <WifiOff className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
-              <span>Sedang tidak ada koneksi internet. Sambungkan WiFi atau data seluler untuk menyimpan data.</span>
+      <AnimatePresence>
+        {offline && (
+          <motion.div
+            className="lg:pl-64"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.25 }}
+          >
+            <div className="mx-auto max-w-6xl px-3 pt-3 sm:px-5 lg:px-8">
+              <div className="flex items-center gap-2.5 rounded-2xl border border-amber-500/35 bg-amber-500/12 px-3.5 py-2.5 text-[12px] font-bold text-amber-800 dark:text-amber-200">
+                <WifiOff className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                <span>
+                  Sedang tidak ada koneksi internet. Sambungkan WiFi atau data seluler untuk menyimpan data.
+                </span>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ============ CONTENT ============ */}
       <main className="lg:pl-64">
-        <div
-          key={location.pathname}
-          className="animate-page mx-auto w-full max-w-6xl px-3 pb-nav pt-3 sm:px-5 lg:px-8 lg:pb-10 lg:pt-8"
-        >
-          {children}
+        <div className="mx-auto w-full max-w-6xl px-3 pb-nav pt-3 sm:px-5 lg:px-8 lg:pb-10 lg:pt-8">
+          <PageTransition>{children}</PageTransition>
         </div>
       </main>
 
       {/* ============ BOTTOM NAV (mobile) ============ */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 pb-safe shadow-[0_-8px_24px_-16px_rgba(15,23,42,.22)] backdrop-blur-xl lg:hidden">
         <div className="mx-auto flex max-w-lg items-stretch justify-center px-1">
-          {mobilePrimary.map((item) => {
-            const Icon = ICONS[item.icon];
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  cn(
-                    'relative flex min-w-0 max-w-[120px] flex-1 flex-col items-center gap-0.5 py-2 text-[10.5px] font-bold transition-colors active:scale-95',
-                    isActive ? 'text-brand' : 'text-muted'
-                  )
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    <span
-                      className={cn(
-                        'grid h-8 w-11 place-items-center rounded-xl transition-all duration-150',
-                        isActive && 'scale-105 bg-brand-soft shadow-xs'
-                      )}
-                    >
-                      <Icon className="size-[19px]" strokeWidth={isActive ? 2.5 : 2} />
-                    </span>
-                    <span className="max-w-full truncate px-0.5">{item.label}</span>
-                  </>
-                )}
-              </NavLink>
-            );
-          })}
-
+          {mobilePrimary.map((item) => (
+            <BottomNavItem key={item.to} to={item.to} label={item.label} icon={item.icon} />
+          ))}
           <button
             type="button"
             onClick={() => setMenuOpen(true)}
@@ -328,10 +401,7 @@ export default function AppShell({ children }) {
 
           <button
             type="button"
-            onClick={() => {
-              setMenuOpen(false);
-              setHelpOpen(true);
-            }}
+            onClick={() => { setMenuOpen(false); setHelpOpen(true); }}
             className="flex w-full items-center gap-3 rounded-2xl bg-brand-soft/60 px-3 py-3 text-[14px] font-extrabold text-brand transition hover:bg-brand-soft"
           >
             <HelpCircle className="size-[18px]" />
@@ -348,10 +418,7 @@ export default function AppShell({ children }) {
           </button>
           <button
             type="button"
-            onClick={() => {
-              setMenuOpen(false);
-              setAccountOpen(true);
-            }}
+            onClick={() => { setMenuOpen(false); setAccountOpen(true); }}
             className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-[14px] font-bold text-ink transition hover:bg-sunken"
           >
             <UserRound className="size-[18px]" />

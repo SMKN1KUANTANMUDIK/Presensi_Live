@@ -6,6 +6,7 @@ import { AuthProvider, homeForRole, useAuth } from './lib/auth';
 import { ThemeProvider } from './lib/theme';
 import { ToastProvider } from './lib/toast';
 import { PWAProvider, usePWA } from './lib/pwa';
+import { MotionProvider } from './lib/motion';
 
 import AppShell from './components/AppShell';
 import Login from './pages/Login';
@@ -113,7 +114,10 @@ function PageFallback() {
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => {
-    window.scrollTo(0, 0);
+    // Lenis handles smooth scroll; fallback ke native bila Lenis belum siap
+    const lenis = window.__lenis;
+    if (lenis) lenis.scrollTo(0, { immediate: true });
+    else window.scrollTo(0, 0);
   }, [pathname]);
   return null;
 }
@@ -299,11 +303,13 @@ export default function App() {
       <ToastProvider>
         <PWAProvider>
           <AuthProvider>
-            <HashRouter>
-              <AppErrorBoundary>
-                <AppRoutes />
-              </AppErrorBoundary>
-            </HashRouter>
+            <MotionProvider>
+              <HashRouter>
+                <AppErrorBoundary>
+                  <AppRoutes />
+                </AppErrorBoundary>
+              </HashRouter>
+            </MotionProvider>
           </AuthProvider>
         </PWAProvider>
       </ToastProvider>

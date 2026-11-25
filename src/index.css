@@ -353,6 +353,55 @@
   animation: shimmer 1.4s infinite;
 }
 
+/* ---------------------------------------------------------
+   Lenis smooth scroll — override scroll behavior agar
+   tidak konflik dengan Lenis (Lenis manage sendiri)
+--------------------------------------------------------- */
+html.lenis,
+html.lenis body {
+  height: auto;
+  overflow-y: auto; /* Lenis pakai overflow native, bukan override */
+}
+
+/* ---------------------------------------------------------
+   Motion / GSAP: will-change hints untuk compositing layer
+--------------------------------------------------------- */
+.will-change-transform {
+  will-change: transform;
+}
+
+/* Transition GPU composited untuk kartu TiltCard */
+[data-tilt] {
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* ---------------------------------------------------------
+   Scroll progress bar (Motion) — z di atas segalanya
+--------------------------------------------------------- */
+/* handled inline via motion component */
+
+/* ---------------------------------------------------------
+   Upgrade animasi rise — lebih halus dengan blur microscopik
+--------------------------------------------------------- */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0px);
+  }
+}
+
+/* ---------------------------------------------------------
+   Animasi page — sekarang dihandle Motion (PageTransition.jsx)
+   Class ini dipertahankan untuk backward compat komponen lain
+--------------------------------------------------------- */
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -361,6 +410,7 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+    filter: none !important;
   }
 }
 
