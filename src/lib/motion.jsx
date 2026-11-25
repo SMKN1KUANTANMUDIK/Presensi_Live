@@ -36,10 +36,13 @@ export function MotionProvider({ children }) {
         const { default: Lenis } = await import('lenis');
         if (destroyed) return;
         inst = new Lenis({
-          duration: 1.15,
-          easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // expo-out
+          duration: 0.68,
+          easing: (t) => 1 - Math.pow(1 - t, 3), // cubic-out — terasa responsif, bukan "mengambang"
           smoothWheel: true,
+          wheelMultiplier: 1.1,
+          touchMultiplier: 1.5,
           syncTouch: false,
+          infinite: false,
         });
         lenisInstance = inst;
         window.__lenis = inst; // expose untuk ScrollToTop
