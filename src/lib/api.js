@@ -129,9 +129,10 @@ export const api = {
     }
     return res;
   },
-  logout: () => {
+  logout: (explicitToken = '') => {
     invalidateClientCache();
-    return postRaw({ action: 'logout' }).catch(() => null);
+    const body = explicitToken ? { action: 'logout', token: explicitToken } : { action: 'logout' };
+    return postRaw(body, explicitToken ? { skipAuth: true } : undefined).catch(() => null);
   },
 
   // portal orang tua

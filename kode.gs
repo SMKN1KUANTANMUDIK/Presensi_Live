@@ -164,7 +164,8 @@ const RIWAYAT_LIMIT_DEFAULT = 0;    // 0 = tanpa batas jumlah sesi
 const RIWAYAT_BUDGET_MS = 12000;    // < timeout frontend 20 detik
 const MAKS_FOTO_BYTE = 6 * 1024 * 1024;
 const MAKS_JAM = 20;
-const SESSION_TTL = 21600;        // 6 jam (batas maksimal CacheService)
+const SESSION_TTL = 1800;         // 30 menit tidak aktif → wajib login ulang (sliding)
+const ORTU_SESSION_TTL = 21600;   // 6 jam untuk token Portal Orang Tua
 const LOGIN_MAX_FAIL = 5;
 const LOGIN_LOCK_SEC = 120;
 
@@ -681,7 +682,7 @@ function issueParentToken(siswa) {
     kelas: str(siswa.kelas)
   };
   try {
-    CacheService.getScriptCache().put("ortu:" + token, JSON.stringify(payload), SESSION_TTL);
+    CacheService.getScriptCache().put("ortu:" + token, JSON.stringify(payload), ORTU_SESSION_TTL);
   } catch (e) { /* abaikan */ }
   return token;
 }
@@ -693,7 +694,7 @@ function getParentSession(token) {
     const cache = CacheService.getScriptCache();
     const raw = cache.get("ortu:" + t);
     if (!raw) return null;
-    cache.put("ortu:" + t, raw, SESSION_TTL);
+    cache.put("ortu:" + t, raw, ORTU_SESSION_TTL);
     return JSON.parse(raw);
   } catch (e) {
     return null;

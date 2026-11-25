@@ -63,6 +63,8 @@
   }
 
   html {
+    min-height: 100%;
+    min-height: 100dvh;
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
     overscroll-behavior-y: none;
@@ -70,12 +72,36 @@
 
   body {
     @apply bg-canvas text-ink font-sans;
+    min-height: 100%;
+    min-height: 100dvh;
     overflow-x: hidden;
     overscroll-behavior-y: none;
     background-image:
       radial-gradient(65% 40% at 100% 0%, hsl(221 90% 56% / 0.06), transparent 65%),
       radial-gradient(50% 35% at 0% 100%, hsl(262 83% 58% / 0.05), transparent 60%);
     background-attachment: fixed;
+  }
+
+  #root {
+    min-height: 100%;
+    min-height: 100dvh;
+  }
+
+  /* Mode PWA terpasang (fullscreen / standalone): cegah seleksi teks UI yang tidak sengaja */
+  @media all and (display-mode: fullscreen), all and (display-mode: standalone) {
+    html,
+    body {
+      min-height: 100dvh;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    input,
+    textarea,
+    [contenteditable='true'] {
+      user-select: text;
+      -webkit-user-select: text;
+    }
   }
 
   .dark body {
@@ -160,7 +186,7 @@
 }
 
 @utility pt-safe {
-  padding-top: env(safe-area-inset-top);
+  padding-top: max(0.625rem, calc(env(safe-area-inset-top) + 0.375rem));
 }
 
 @utility pb-safe {

@@ -22,7 +22,7 @@ export function ThemeProvider({ children }) {
     }
     document
       .querySelectorAll('meta[name="theme-color"]')
-      .forEach((meta) => meta.setAttribute('content', dark ? '#0b1220' : '#2563eb'));
+      .forEach((meta) => meta.setAttribute('content', dark ? '#070b14' : '#f4f6fb'));
   }, [dark]);
 
   // Ikuti perubahan tema sistem bila user belum memilih manual

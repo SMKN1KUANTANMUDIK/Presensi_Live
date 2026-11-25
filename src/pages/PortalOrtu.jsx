@@ -451,7 +451,7 @@ export default function PortalOrtu() {
   const acBulan = dataBulan.stat.A + dataBulan.stat.C;
 
   return (
-    <div className="min-h-dvh bg-canvas px-4 py-5 pb-safe">
+    <div className="min-h-dvh bg-canvas px-4 pb-safe pt-[max(1.25rem,env(safe-area-inset-top))]">
       <div className="mx-auto max-w-lg space-y-3">
         {/* topbar */}
         <div className="flex items-center justify-between gap-2">
