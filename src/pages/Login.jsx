@@ -322,10 +322,7 @@ export default function Login() {
           <div className="mt-6 flex items-center justify-center gap-1.5 text-[11px] font-semibold text-muted/80 lg:hidden">
             © 2027 SMKN 1 Kuantan Mudik
           </div>
-          <div className="mt-6 flex items-center justify-center gap-1.5 text-[8px] font-semibold text-muted/80 lg:hidden">
-            <p>by Waldo Guntala, S.Kom</p>
-             <p>Untuk SMKN 1 KUANTAN MUDIK</p>
-          </div>
+         
         </div>
       </div>
 
