@@ -144,8 +144,8 @@ export default function SearchSuggest({
 
     const spaceBelow = vpTop + vpHeight - r.bottom;
     const spaceAbove = r.top - vpTop;
-    const dropUp = spaceBelow < 190 && spaceAbove > spaceBelow;
-    const maxHeight = Math.min(270, Math.max(120, (dropUp ? spaceAbove : spaceBelow) - 14));
+    const dropUp = spaceBelow < 230 && spaceAbove > spaceBelow;
+    const maxHeight = Math.min(380, Math.max(160, (dropUp ? spaceAbove : spaceBelow) - 14));
     const width = Math.min(r.width, vpWidth - 16);
     const left = Math.max(vpLeft + 8, Math.min(r.left, vpLeft + vpWidth - width - 8));
 
@@ -380,6 +380,12 @@ export default function SearchSuggest({
                     );
                   })}
                 </ul>
+              )}
+              {/* Footer: indikator scroll kalau list panjang */}
+              {matched.items.length > 6 && (
+                <div className="border-t border-line/70 bg-sunken/40 px-3 py-1.5 text-center text-[10px] font-semibold text-muted">
+                  Gulir untuk lihat semua · ketik untuk mempersempit
+                </div>
               )}
             </div>,
             document.body

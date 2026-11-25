@@ -261,7 +261,7 @@ export default function Login() {
                   spellCheck={false}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Contoh: waldo atau NIP"
+                  placeholder="Masukkan Username"
                   className="h-12 w-full rounded-2xl border border-line bg-surface pl-11 pr-4 text-[14px] font-semibold text-ink outline-none transition placeholder:font-medium placeholder:text-muted/70 focus:border-brand focus:ring-4 focus:ring-brand/10"
                 />
               </span>

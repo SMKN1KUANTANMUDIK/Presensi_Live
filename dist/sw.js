@@ -4,7 +4,7 @@
    jadi aplikasi tetap bisa dipasang walau di-hosting di subfolder.
 ========================================================= */
 
-const VERSION = 'v2.8.0-dea8b07d';
+const VERSION = 'v2.8.0-a7f7de2c';
 const CACHE = `presensi-${VERSION}`;
 const SCOPE = self.registration ? self.registration.scope : self.location.href;
 const url = (p) => new URL(p, SCOPE).href;

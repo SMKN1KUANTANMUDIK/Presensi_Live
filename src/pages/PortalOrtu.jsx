@@ -537,9 +537,10 @@ export default function PortalOrtu() {
                   }}
                   options={kelasList}
                   placeholder="Ketik atau pilih kelas anak…"
-                  hintTitle="Kelas tersedia"
+                  hintTitle="Semua kelas tersedia"
                   size="lg"
                   showToggle
+                  maxItems={999}
                 />
               </Field>
 
@@ -553,7 +554,7 @@ export default function PortalOrtu() {
                       : loadingNama
                         ? 'Memuat daftar nama siswa di kelas ini…'
                         : namaSiswaList.length > 0
-                          ? `${namaSiswaList.length} nama siswa tersedia — ketuk untuk memilih cepat.`
+                          ? `${namaSiswaList.length} siswa tersedia — ketuk ikon ▼ untuk lihat semua, atau ketik nama untuk mempersempit.`
                           : 'Ketik sebagian nama anak, lalu tekan Lihat Kehadiran.'
                 }
               >
@@ -573,6 +574,7 @@ export default function PortalOrtu() {
                     hintTitle={`Siswa kelas ${kelas}`}
                     size="lg"
                     showToggle
+                    maxItems={999}
                   />
                 ) : (
                   <Input
