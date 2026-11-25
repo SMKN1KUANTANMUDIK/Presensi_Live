@@ -216,11 +216,11 @@ export default function Login() {
               alt="Logo SMKN 1 Kuantan Mudik"
               className="mb-4 size-20 rounded-3xl bg-white p-2 shadow-[0_18px_40px_-20px_rgba(37,99,235,.65)] ring-1 ring-line"
             />
-            <h2 className="text-[26px] font-extrabold leading-tight tracking-tight text-ink">
+            <h2 className="text-[22px] font-extrabold leading-tight tracking-tight text-ink">
               SMKN 1 KUANTAN MUDIK
             </h2>
             <p className="mt-1 text-[13.5px] font-medium text-muted">
-              Sistem Monitoring Presensi Siswa
+              Sistem Monitoring Kehadiran Murid
             </p>
           </div>
 
