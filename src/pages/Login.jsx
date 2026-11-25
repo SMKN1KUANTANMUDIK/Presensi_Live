@@ -217,10 +217,10 @@ export default function Login() {
               className="mb-4 size-20 rounded-3xl bg-white p-2 shadow-[0_18px_40px_-20px_rgba(37,99,235,.65)] ring-1 ring-line"
             />
             <h2 className="text-[26px] font-extrabold leading-tight tracking-tight text-ink">
-              Selamat datang
+              SMKN 1 KUANTAN MUDIK
             </h2>
             <p className="mt-1 text-[13.5px] font-medium text-muted">
-              Masuk untuk mencatat kehadiran siswa
+              Sistem Monitoring Presensi Siswa
             </p>
           </div>
 
@@ -320,7 +320,11 @@ export default function Login() {
           </p>
 
           <div className="mt-6 flex items-center justify-center gap-1.5 text-[11px] font-semibold text-muted/80 lg:hidden">
-            © 2026 SMKN 1 Kuantan Mudik
+            © 2027 SMKN 1 Kuantan Mudik
+          </div>
+          <div className="mt-6 flex items-center justify-center gap-1.5 text-[8px] font-semibold text-muted/80 lg:hidden">
+            <p>by Waldo Guntala, S.Kom</p>
+             <p>Untuk SMKN 1 KUANTAN MUDIK</p>
           </div>
         </div>
       </div>
