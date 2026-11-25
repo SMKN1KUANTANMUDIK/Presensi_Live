@@ -1,5 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   animate as motionAnimate,
   AnimatePresence,
@@ -13,69 +12,25 @@ import {
 import { cn } from './utils';
 
 /* =========================================================
-   Lenis smooth-scroll provider (dengan fallback aman)
+   MotionProvider — wrapper konteks ringan, tanpa library scroll.
+   Native browser scroll dipakai sepenuhnya (momentum iOS/Android
+   tetap bekerja 100%). CSS scroll-behavior: smooth di <html>
+   menangani anchor/programmatic scroll dengan mulus.
 ========================================================= */
-const LenisCtx = createContext(null);
-let lenisInstance = null;
-
-export function useLenis() {
-  return useContext(LenisCtx)?.lenis || null;
+export function MotionProvider({ children }) {
+  return children;
 }
 
-export function MotionProvider({ children }) {
-  const [lenis, setLenis] = useState(null);
-
-  useEffect(() => {
-    let rafId;
-    let destroyed = false;
-    let inst = null;
-    (async () => {
-      const prefersReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-      if (prefersReduced) return; // hormati preferensi aksesibilitas
-      try {
-        const { default: Lenis } = await import('lenis');
-        if (destroyed) return;
-        inst = new Lenis({
-          duration: 0.68,
-          easing: (t) => 1 - Math.pow(1 - t, 3), // cubic-out — terasa responsif, bukan "mengambang"
-          smoothWheel: true,
-          wheelMultiplier: 1.1,
-          touchMultiplier: 1.5,
-          syncTouch: false,
-          infinite: false,
-        });
-        lenisInstance = inst;
-        window.__lenis = inst; // expose untuk ScrollToTop
-        const raf = (time) => {
-          inst?.raf(time);
-          rafId = requestAnimationFrame(raf);
-        };
-        rafId = requestAnimationFrame(raf);
-        setLenis(inst);
-      } catch {
-        /* Lenis gagal dimuat — browser scroll native tetap bekerja */
-      }
-    })();
-    return () => {
-      destroyed = true;
-      if (rafId) cancelAnimationFrame(rafId);
-      inst?.destroy?.();
-      lenisInstance = null;
-      window.__lenis = null;
-    };
-  }, []);
-
-  const scrollTo = useCallback((target, opts = {}) => {
-    if (lenisInstance) lenisInstance.scrollTo(target, { offset: -16, ...opts });
-    else {
-      const el = typeof target === 'string' ? document.querySelector(target) : target;
-      (el instanceof Element ? el : window).scrollIntoView?.({ behavior: 'smooth' });
-    }
-  }, []);
-
-  const value = useMemo(() => ({ lenis, scrollTo }), [lenis, scrollTo]);
-
-  return <LenisCtx.Provider value={value}>{children}</LenisCtx.Provider>;
+/** scrollTo helper — pakai native scrollIntoView / scrollTo */
+export function scrollTo(target, opts = {}) {
+  if (typeof target === 'number') {
+    window.scrollTo({ top: target, behavior: opts.behavior ?? 'smooth' });
+    return;
+  }
+  const el = typeof target === 'string' ? document.querySelector(target) : target;
+  if (el instanceof Element) {
+    el.scrollIntoView({ behavior: opts.behavior ?? 'smooth', block: opts.block ?? 'start' });
+  }
 }
 
 /* =========================================================
@@ -110,13 +65,12 @@ export function useGsap(setup, deps = [], opts = {}) {
     if (!el) return undefined;
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) return undefined;
 
-    let gsap;
     let tween;
     let observer;
     let cancelled = false;
 
     const run = async () => {
-      gsap = await loadGsap();
+      const gsap = await loadGsap();
       if (cancelled || !ref.current) return;
       tween = gsap.context(() => setupRef.current(gsap), ref.current);
     };
@@ -147,7 +101,7 @@ export function useGsap(setup, deps = [], opts = {}) {
   return ref;
 }
 
-/** Parallax halus untuk elemen dekoratif (background orb, grid, dsb.) */
+/** Parallax halus untuk elemen dekoratif mengikuti pointer (desktop only) */
 export function useGsapParallax(strength = 40, opts = {}) {
   const { scale = 1, rotate = 0, rotateStrength = 0 } = opts;
   const ref = useRef(null);
@@ -155,13 +109,14 @@ export function useGsapParallax(strength = 40, opts = {}) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return undefined;
+    // Hanya aktif di desktop (pointer: fine) agar tidak mengganggu touch
+    if (!window.matchMedia?.('(pointer: fine)')?.matches) return undefined;
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) return undefined;
 
     let cleanup;
     (async () => {
       const gsap = await loadGsap();
       if (!ref.current) return;
-      const q = gsap.utils;
       const move = (e) => {
         const cx = window.innerWidth / 2;
         const cy = window.innerHeight / 2;
@@ -186,7 +141,7 @@ export function useGsapParallax(strength = 40, opts = {}) {
   return ref;
 }
 
-/** SplitText sederhana per baris (fallback ringan, tanpa plugin berbayar) */
+/** SplitText sederhana per baris */
 export function useTextReveal(delay = 0) {
   const ref = useRef(null);
   useEffect(() => {
@@ -222,11 +177,11 @@ export function Reveal({
 }) {
   const reduce = useReducedMotion();
   const variants = {
-    rise: { opacity: 0, y: 18 },
-    fade: { opacity: 0 },
-    scale: { opacity: 0, scale: 0.94 },
+    rise:      { opacity: 0, y: 18 },
+    fade:      { opacity: 0 },
+    scale:     { opacity: 0, scale: 0.94 },
     slideLeft: { opacity: 0, x: 24 },
-    blur: { opacity: 0, filter: 'blur(6px)', y: 8 },
+    blur:      { opacity: 0, filter: 'blur(6px)', y: 8 },
   };
   if (reduce) return <Tag className={className}>{children}</Tag>;
   return (
@@ -242,7 +197,7 @@ export function Reveal({
   );
 }
 
-/** Container yang stagger anak-anaknya (pola dashboard grid) */
+/** Container yang stagger anak-anaknya */
 export function Stagger({ children, className, gap = 0.07, delayChildren = 0.05, as: Tag = motion.div, ...rest }) {
   const reduce = useReducedMotion();
   const container = {
@@ -258,12 +213,9 @@ export function Stagger({ children, className, gap = 0.07, delayChildren = 0.05,
     : Array.isArray(children)
       ? children.map((child, i) =>
           child ? (
-            <Tag key={child.key ?? i} className="contents">
-              {/* biome-ignore: pattern wrapper */}
-              <motion.div variants={item} className="h-full">
-                {child}
-              </motion.div>
-            </Tag>
+            <motion.div key={child.key ?? i} variants={item} className="h-full">
+              {child}
+            </motion.div>
           ) : null
         )
       : children;
@@ -274,7 +226,10 @@ export function Stagger({ children, className, gap = 0.07, delayChildren = 0.05,
   );
 }
 
-/** Kartu interaktif dengan tilt 3D halus mengikuti pointer (GSAP quickTo) */
+/**
+ * Kartu interaktif dengan tilt 3D halus (desktop pointer only).
+ * Di mobile tidak aktif agar tidak mengganggu touch scroll.
+ */
 export function TiltCard({ children, className, max = 8, glare = true, ...rest }) {
   const ref = useRef(null);
   const reduce = useReducedMotion();
@@ -282,8 +237,10 @@ export function TiltCard({ children, className, max = 8, glare = true, ...rest }
   useEffect(() => {
     const el = ref.current;
     if (!el || reduce) return undefined;
+    // Hanya aktif saat ada mouse (pointer: fine) — tidak di touchscreen
+    if (!window.matchMedia?.('(pointer: fine)')?.matches) return undefined;
+
     let cleanup;
-    let tweenVars = {};
     (async () => {
       const gsap = await loadGsap();
       if (!ref.current) return;
@@ -297,18 +254,11 @@ export function TiltCard({ children, className, max = 8, glare = true, ...rest }
         rY(px * max * 2);
         rX(-py * max * 2);
         if (glareEl) {
-          gsap.to(glareEl, {
-            opacity: 0.5,
-            xPercent: px * 120,
-            yPercent: py * 120,
-            duration: 0.5,
-            overwrite: 'auto',
-          });
+          gsap.to(glareEl, { opacity: 0.5, xPercent: px * 120, yPercent: py * 120, duration: 0.5, overwrite: 'auto' });
         }
       };
       const onLeave = () => {
-        rX(0);
-        rY(0);
+        rX(0); rY(0);
         if (glareEl) gsap.to(glareEl, { opacity: 0, duration: 0.4 });
       };
       el.addEventListener('pointermove', onMove);
@@ -330,19 +280,15 @@ export function TiltCard({ children, className, max = 8, glare = true, ...rest }
           data-tilt-glare
           aria-hidden="true"
           className="pointer-events-none absolute -inset-1 rounded-[inherit] opacity-0"
-          style={{
-            background:
-              'radial-gradient(60% 60% at 50% 50%, rgba(255,255,255,0.35), transparent 70%)',
-            borderRadius: 'inherit',
-          }}
+          style={{ background: 'radial-gradient(60% 60% at 50% 50%, rgba(255,255,255,0.35), transparent 70%)', borderRadius: 'inherit' }}
         />
       )}
     </div>
   );
 }
 
-/** Nomor statistik animasi count-up (Motion) */
-export function CountUp({ value = 0, duration = 1.1, format, className }) {
+/** Nomor statistik animasi count-up */
+export function CountUp({ value = 0, format, className }) {
   const mv = useMotionValue(0);
   const spring = useSpring(mv, { stiffness: 90, damping: 24, mass: 0.8 });
   const [display, setDisplay] = useState(0);
@@ -351,27 +297,21 @@ export function CountUp({ value = 0, duration = 1.1, format, className }) {
   const reduce = useReducedMotion();
 
   useEffect(() => {
-    if (reduce) {
-      setDisplay(Number(value) || 0);
-      return undefined;
-    }
+    if (reduce) { setDisplay(Number(value) || 0); return undefined; }
     if (inView) mv.set(Number(value) || 0);
   }, [inView, value, mv, reduce]);
 
   useEffect(() => spring.on('change', (v) => setDisplay(v)), [spring]);
+
   const text = useMemo(
     () => (typeof format === 'function' ? format(display) : Math.round(display).toLocaleString('id-ID')),
     [display, format]
   );
-  return (
-    <span ref={inViewRef} className={cn('tabular-nums', className)}>
-      {text}
-    </span>
-  );
+  return <span ref={inViewRef} className={cn('tabular-nums', className)}>{text}</span>;
 }
 
 /* =========================================================
-   Scroll progress bar (atas layar, Motion)
+   Scroll progress bar
 ========================================================= */
 export function ScrollProgress() {
   const [p, setP] = useState(0);
@@ -397,7 +337,7 @@ export function ScrollProgress() {
 }
 
 /* =========================================================
-   Magnetic button — menoleh ke arah pointer
+   Magnetic button — pointer-only, tidak aktif di touch
 ========================================================= */
 export function Magnetic({ children, strength = 0.35, className, ...rest }) {
   const ref = useRef(null);
@@ -405,6 +345,8 @@ export function Magnetic({ children, strength = 0.35, className, ...rest }) {
   useEffect(() => {
     const el = ref.current;
     if (!el || reduce) return undefined;
+    if (!window.matchMedia?.('(pointer: fine)')?.matches) return undefined;
+
     let cleanup;
     (async () => {
       const gsap = await loadGsap();
@@ -416,10 +358,7 @@ export function Magnetic({ children, strength = 0.35, className, ...rest }) {
         xTo((e.clientX - (r.left + r.width / 2)) * strength);
         yTo((e.clientY - (r.top + r.height / 2)) * strength);
       };
-      const onLeave = () => {
-        xTo(0);
-        yTo(0);
-      };
+      const onLeave = () => { xTo(0); yTo(0); };
       el.addEventListener('pointermove', onMove);
       el.addEventListener('pointerleave', onLeave);
       cleanup = () => {
@@ -436,4 +375,4 @@ export function Magnetic({ children, strength = 0.35, className, ...rest }) {
   );
 }
 
-export { AnimatePresence, motion, useMotionValue, useReducedMotion, useTransform, motionAnimate };
+export { AnimatePresence, motion, motionAnimate, useMotionValue, useReducedMotion, useTransform };

@@ -114,10 +114,7 @@ function PageFallback() {
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => {
-    // Lenis handles smooth scroll; fallback ke native bila Lenis belum siap
-    const lenis = window.__lenis;
-    if (lenis) lenis.scrollTo(0, { immediate: true });
-    else window.scrollTo(0, 0);
+    window.scrollTo(0, 0);
   }, [pathname]);
   return null;
 }
